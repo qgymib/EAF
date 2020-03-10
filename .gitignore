@@ -51,6 +51,25 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# pre-defined build directory
+/bin
+/build
+/test/bin
+/test/build
+
+# visual studio files
+/.vs
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+
 # vscode files
 *.code-workspace
 /.vscode
+
+# eclipse files
+.cproject
+.project
