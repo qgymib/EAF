@@ -14,6 +14,7 @@ extern "C" {
 #include "EAF/utils/log.h"
 #include "EAF/utils/map.h"
 #include "EAF/utils/map_low.h"
+#include "EAF/utils/ringbuffer.h"
 
 #ifdef __cplusplus
 }
