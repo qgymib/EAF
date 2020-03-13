@@ -7,6 +7,10 @@ extern "C" {
 #include <stdlib.h>
 #include <assert.h>
 
+/************************************************************************/
+/* TEST                                                                 */
+/************************************************************************/
+
 #ifdef __cplusplus
 #	define TEST_INITIALIZER(f) \
 		void f(void); \
@@ -44,11 +48,11 @@ extern "C" {
 #define TEST_CLASS_TEAREDOWN(class_name)	\
 	static void TEST_CLASS_TEARDOWN_##class_name(void)
 
-	/**
-	* 测试用例
-	* @param class_name	所属用例集
-	* @param case_name	用例名
-	*/
+/**
+* 测试用例
+* @param class_name	所属用例集
+* @param case_name	用例名
+*/
 #define TEST_F(class_name, case_name)	\
 	static void TEST_##class_name##_##case_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##class_name##_##case_name) {\
@@ -138,6 +142,45 @@ void test_assert_flt_lt(double a, double b, const char* s_a, const char* s_b, co
 void test_assert_flt_le(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
 void test_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
 void test_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
+
+/************************************************************************/
+/* Argument Parser                                                      */
+/************************************************************************/
+
+typedef enum test_optparse_argtype {
+	OPTPARSE_NONE,
+	OPTPARSE_REQUIRED,
+	OPTPARSE_OPTIONAL
+}test_optparse_argtype_t;
+
+typedef struct test_optparse_long_opt {
+	const char*				longname;
+	int						shortname;
+	test_optparse_argtype_t	argtype;
+}test_optparse_long_opt_t;
+
+typedef struct test_optparse {
+	char**					argv;
+	int						permute;
+	int						optind;
+	int						optopt;
+	char*					optarg;
+	char					errmsg[64];
+	int						subopt;
+}test_optparse_t;
+
+void test_optparse_init(test_optparse_t *options, char **argv);
+int test_optparse_long(test_optparse_t *options, const test_optparse_long_opt_t *longopts, int *longindex);
+
+/************************************************************************/
+/* LOG                                                                  */
+/************************************************************************/
+
+#define TEST_LOG(fmt, ...)	\
+	test_log(__FILE__, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+
+void test_log(const char* file, const char* func, int line, const char* fmt, ...);
+
 
 #ifdef __cplusplus
 }

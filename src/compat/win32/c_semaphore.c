@@ -19,7 +19,7 @@ void eaf_sem_exit(eaf_sem_t* handler)
 int eaf_sem_pend(eaf_sem_t* handler, unsigned timeout)
 {
 	return WaitForSingleObject(handler->sem, timeout == -1 ? INFINITE : timeout)
-		== WAIT_OBJECT_0 ? eaf_errno_success : eaf_errno_unknown;
+		== WAIT_OBJECT_0 ? eaf_errno_success : eaf_errno_timeout;
 }
 
 int eaf_sem_post(eaf_sem_t* handler)

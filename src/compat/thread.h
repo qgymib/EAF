@@ -4,10 +4,13 @@
 extern "C" {
 #endif
 
-#include "s_thread.h"
+#include "c_thread.h"
 
 struct eaf_thread;
 typedef struct eaf_thread eaf_thread_t;
+
+struct eaf_thread_storage;
+typedef struct eaf_thread_storage eaf_thread_storage_t;
 
 typedef struct eaf_thread_attr
 {
@@ -37,6 +40,34 @@ int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* attr, eaf_th
 * @param handler	句柄
 */
 void eaf_thread_exit(eaf_thread_t* handler);
+
+/**
+* 初始化线程私有变量
+* @param handler	句柄
+* @return			eaf_errno
+*/
+int eaf_thread_storage_init(eaf_thread_storage_t* handler);
+
+/**
+* 销毁线程私有变量
+* @param handler	句柄
+*/
+void eaf_thread_storage_exit(eaf_thread_storage_t* handler);
+
+/**
+* 设置线程私有变量
+* @param handler	句柄
+* @param val		值
+* @return			eaf_errno
+*/
+int eaf_thread_storage_set(eaf_thread_storage_t* handler, void* val);
+
+/**
+* 获取线程私有变量
+* @param handler	句柄
+* @return			值
+*/
+void* eaf_thread_storage_get(eaf_thread_storage_t* handler);
 
 /**
 * 获取线程ID

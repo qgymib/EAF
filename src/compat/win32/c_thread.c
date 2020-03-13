@@ -47,3 +47,28 @@ void eaf_thread_sleep(unsigned timeout)
 
 	Sleep(timeout);
 }
+
+int eaf_thread_storage_init(eaf_thread_storage_t* handler)
+{
+	handler->storage = TlsAlloc();
+	if (handler->storage == TLS_OUT_OF_INDEXES)
+	{
+		return eaf_errno_unknown;
+	}
+	return eaf_errno_success;
+}
+
+void eaf_thread_storage_exit(eaf_thread_storage_t* handler)
+{
+	TlsFree(handler->storage);
+}
+
+int eaf_thread_storage_set(eaf_thread_storage_t* handler, void* val)
+{
+	return TlsSetValue(handler->storage, val) ? eaf_errno_success : eaf_errno_unknown;
+}
+
+void* eaf_thread_storage_get(eaf_thread_storage_t* handler)
+{
+	return TlsGetValue(handler->storage);
+}

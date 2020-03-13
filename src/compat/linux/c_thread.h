@@ -8,9 +8,14 @@ extern "C" {
 
 struct eaf_thread
 {
-	pthread_t	thr;
-	void	(*proc)(void* arg);
-	void*	priv;
+	pthread_t		thr;
+	void			(*proc)(void* arg);
+	void*			priv;
+};
+
+struct eaf_thread_storage
+{
+	pthread_key_t	storage;
 };
 
 #ifdef __cplusplus

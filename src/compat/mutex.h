@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "s_mutex.h"
+#include "c_mutex.h"
 
 struct eaf_mutex;
 typedef struct eaf_mutex eaf_mutex_t;

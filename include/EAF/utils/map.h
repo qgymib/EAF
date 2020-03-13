@@ -4,11 +4,13 @@
 extern "C" {
 #endif	/* __cplusplus */
 
+#include <stddef.h>
+#include "EAF/utils/map_low.h"
+
 struct eaf_map;
 typedef struct eaf_map eaf_map_t;
 
-struct eaf_map_node;
-typedef struct eaf_map_node eaf_map_node_t;
+typedef eaf_map_low_node_t eaf_map_node_t;
 
 /**
 * KEY对比函数
@@ -17,24 +19,11 @@ typedef struct eaf_map_node eaf_map_node_t;
 * @param arg	自定义参数
 * @return		当Key_1小于Key_2时，返回小于0的值；当Key_1等于Key_2时，返回0；当Key_1大于Key_2时，返回大于0的值
 */
-typedef int (*eaf_map_cmp_fn)(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
-
-/**
-* 侵入对象，红黑树节点。
-* 此结构体需要作为外部对象的成员变量。
-*/
-struct eaf_map_node
-{
-	unsigned long		color;	/** 颜色 */
-	eaf_map_node_t*		parent;	/** 父节点 */
-	eaf_map_node_t*		left;	/** 左子节点 */
-	eaf_map_node_t*		right;	/** 右子节点 */
-};
+typedef int(*eaf_map_cmp_fn)(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
 
 struct eaf_map
 {
-	eaf_map_node_t		root;	/** 根节点 */
-	eaf_map_node_t		nil;	/** 空节点 */
+	eaf_map_low_t		map_low;
 
 	struct
 	{
@@ -109,12 +98,28 @@ eaf_map_node_t* eaf_map_find_upper(const eaf_map_t* handler, const eaf_map_node_
 eaf_map_node_t* eaf_map_begin(const eaf_map_t* handler);
 
 /**
+* 取得此树的游标
+* 游标处于末尾位置
+* @param handler	红黑树
+* @return			游标
+*/
+eaf_map_node_t* eaf_map_end(const eaf_map_t* handler);
+
+/**
 * 取得下一个节点
 * @param handler	红黑树
 * @param node		当前节点
 * @return			下一个节点
 */
 eaf_map_node_t* eaf_map_next(const eaf_map_t* handler, const eaf_map_node_t* node);
+
+/**
+* 取得上一个节点
+* @param handler	红黑树
+* @param node		当前节点
+* @return			下一个节点
+*/
+eaf_map_node_t* eaf_map_prev(const eaf_map_t* handler, const eaf_map_node_t* node);
 
 #ifdef __cplusplus
 };

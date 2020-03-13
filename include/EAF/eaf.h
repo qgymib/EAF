@@ -7,9 +7,13 @@ extern "C" {
 #include "EAF/core/load.h"
 #include "EAF/core/message.h"
 #include "EAF/core/service.h"
+#include "EAF/filber/filber.h"
 #include "EAF/utils/define.h"
 #include "EAF/utils/errno.h"
 #include "EAF/utils/list.h"
+#include "EAF/utils/log.h"
+#include "EAF/utils/map.h"
+#include "EAF/utils/map_low.h"
 
 #ifdef __cplusplus
 }

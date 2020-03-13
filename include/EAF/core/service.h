@@ -9,7 +9,7 @@ extern "C" {
 typedef struct eaf_service_msgmap
 {
 	uint32_t						msg_id;			/** 请求消息ID */
-	eaf_msg_handle_fn				fn;				/** 消息处理函数 */
+	eaf_req_handle_fn				fn;				/** 消息处理函数 */
 }eaf_service_msgmap_t;
 
 typedef struct eaf_service_info

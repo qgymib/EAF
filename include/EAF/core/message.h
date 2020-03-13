@@ -13,7 +13,7 @@ extern "C" {
 * @param msg	数据地址
 * @return		TYPE*
 */
-#define EAF_MSG_ACCESS(TYPE, msg)	((TYPE*)eaf_msg_get_data(msg, NULL))
+#define EAF_MSG_ACCESS(TYPE, msg)	(*(TYPE*)eaf_msg_get_data(msg, NULL))
 
 typedef enum eaf_msg_type
 {
@@ -27,13 +27,20 @@ typedef struct eaf_msg
 	eaf_msg_type_t	type;	/** 消息类型 */
 	uint32_t		id;		/** 消息ID */
 	uint32_t		from;	/** 发送者服务ID */
+	uint32_t		to;		/** 接受者服务ID */
 }eaf_msg_t;
 
 /**
- * 消息处理函数
- * @param msg		消息
- */
-typedef void(*eaf_msg_handle_fn)(eaf_msg_t* msg);
+* 请求消息处理函数
+* @param msg		消息
+*/
+typedef void(*eaf_req_handle_fn)(eaf_msg_t* msg);
+
+/**
+* 响应消息处理函数
+* @param msg		消息
+*/
+typedef void(*eaf_rsp_handle_fn)(eaf_msg_t* msg);
 
 /**
 * 事件处理函数
@@ -49,7 +56,7 @@ typedef void(*eaf_evt_handle_fn)(eaf_msg_t* msg, void* arg);
  * @param rsp_fn	处理响应消息函数
  * @return			消息句柄
  */
-eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_msg_handle_fn rsp_fn);
+eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rsp_fn);
 
 /**
  * 创建响应

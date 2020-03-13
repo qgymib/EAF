@@ -10,7 +10,7 @@ typedef struct eaf_errno_table
 static eaf_errno_table_t err_table[] = {
 #define __EAF_HEADER_MULTI_READ__
 #undef EAF_DEFINE_ERRNO
-#define EAF_DEFINE_ERRNO(err, destribe) { err, destribe },
+#define EAF_DEFINE_ERRNO(err, describe) { err, describe },
 #include "errno.h"
 #undef __EAF_HEADER_MULTI_READ__
 };

@@ -56,3 +56,23 @@ void eaf_thread_sleep(unsigned timeout)
 	usleep(timeout * 1000);
 	return;
 }
+
+int eaf_thread_storage_init(eaf_thread_storage_t* handler)
+{
+	return pthread_key_create(&handler->storage, NULL) == 0 ? eaf_errno_success : eaf_errno_unknown;
+}
+
+void eaf_thread_storage_exit(eaf_thread_storage_t* handler)
+{
+	pthread_key_delete(handler->storage);
+}
+
+int eaf_thread_storage_set(eaf_thread_storage_t* handler, void* val)
+{
+	return pthread_setspecific(handler->storage, val) == 0 ? eaf_errno_success : eaf_errno_unknown;
+}
+
+void* eaf_thread_storage_get(eaf_thread_storage_t* handler)
+{
+	return pthread_getspecific(handler->storage);
+}

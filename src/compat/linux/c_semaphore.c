@@ -19,7 +19,7 @@ int eaf_sem_pend(eaf_sem_t* handler, unsigned timeout)
 	if (timeout == (unsigned)-1)
 	{
 		while ((ret = sem_wait(&handler->sem)) != 0 && errno == EINTR);
-		return ret;
+		return ret == 0 ? eaf_errno_success : eaf_errno_unknown;
 	}
 
 	if (timeout == 0)
@@ -33,7 +33,7 @@ int eaf_sem_pend(eaf_sem_t* handler, unsigned timeout)
 		eaf_thread_sleep(10);
 	}
 
-	return ret == 0 ? 0 : -1;
+	return ret == 0 ? eaf_errno_success : eaf_errno_timeout;
 }
 
 int eaf_sem_post(eaf_sem_t* handler)

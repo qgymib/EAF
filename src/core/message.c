@@ -20,6 +20,7 @@ static eaf_msg_full_t* _eaf_msg_create(eaf_msg_type_t type, uint32_t id, size_t 
 	msg->msg.type = type;
 	msg->msg.id = id;
 	msg->msg.from = -1;
+	msg->msg.to = -1;
 	msg->cnt.refcnt = 1;
 	msg->data.size = size;
 
@@ -32,7 +33,7 @@ static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 	EAF_FREE(msg);
 }
 
-eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_msg_handle_fn rsp_fn)
+eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rsp_fn)
 {
 	eaf_msg_full_t* msg = _eaf_msg_create(eaf_msg_type_req, msg_id, size);
 	if (msg == NULL)
@@ -40,9 +41,7 @@ eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_msg_handle_fn rs
 		return NULL;
 	}
 
-	msg->info.req.req_fn = NULL;
 	msg->info.req.rsp_fn = rsp_fn;
-	msg->info.req.to = -1;
 
 	return EAF_MSG_C2I(msg);
 }
@@ -56,8 +55,8 @@ eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size)
 		return NULL;
 	}
 
+	msg->msg.to = real_req->msg.from;
 	msg->info.rsp.rsp_fn = real_req->info.req.rsp_fn;
-	msg->info.rsp.to = real_req->msg.from;
 
 	return &msg->msg;
 }

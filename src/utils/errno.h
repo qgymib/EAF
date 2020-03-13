@@ -11,16 +11,17 @@ extern "C" {
 #include "EAF/utils/errno.h"
 
 #ifndef EAF_DEFINE_ERRNO
-#	define EAF_DEFINE_ERRNO(err, destribe)
+#	define EAF_DEFINE_ERRNO(err, describe)
 #endif
 
-EAF_DEFINE_ERRNO(eaf_errno_success,		"operation success")
+EAF_DEFINE_ERRNO(eaf_errno_success,		"success")
 EAF_DEFINE_ERRNO(eaf_errno_unknown,		"unknown or system error")
-EAF_DEFINE_ERRNO(eaf_errno_duplicate,	"duplicated operation or resource")
-EAF_DEFINE_ERRNO(eaf_errno_memory,		"no memory")
-EAF_DEFINE_ERRNO(eaf_errno_state,		"resource is in wrong state")
-EAF_DEFINE_ERRNO(eaf_errno_notfound,	"resource not found")
-EAF_DEFINE_ERRNO(eaf_errno_overflow,	"msgq overflow")
+EAF_DEFINE_ERRNO(eaf_errno_duplicate,	"duplicated operation or request")
+EAF_DEFINE_ERRNO(eaf_errno_memory,		"memory lack")
+EAF_DEFINE_ERRNO(eaf_errno_state,		"wrong state")
+EAF_DEFINE_ERRNO(eaf_errno_notfound,	"not found")
+EAF_DEFINE_ERRNO(eaf_errno_overflow,	"overflow")
+EAF_DEFINE_ERRNO(eaf_errno_timeout,		"timeout")
 
 #ifdef __cplusplus
 }

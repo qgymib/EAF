@@ -8,7 +8,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/cases SRC_FILES)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cases/service SRC_FILES)
 
 find_package(Threads)
-add_executable(${PROJECT_NAME} ${SRC_FILES})
+add_executable(${PROJECT_NAME} ${SRC_FILES} ${SRC_ASMS})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(TEST eaf_test)

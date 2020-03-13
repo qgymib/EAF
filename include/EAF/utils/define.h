@@ -29,6 +29,15 @@ extern "C" {
 */
 #define EAF_ARRAY_SIZE(arr)		(sizeof(arr) / sizeof(arr[0]))
 
+/**
+* 将size对齐至algin的整数倍
+* @param size	被对齐数字
+* @param align	对齐倍率
+* @return		对齐之后的数据
+*/
+#define EAF_ALIGN(size, align)	\
+	(((uintptr_t)(size) + ((uintptr_t)(align) - 1)) & ~((uintptr_t)(align) - 1))
+
 #ifdef __cplusplus
 }
 #endif

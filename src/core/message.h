@@ -27,15 +27,12 @@ typedef struct eaf_msg_full
 	{
 		struct
 		{
-			eaf_msg_handle_fn	req_fn;		/** 请求处理函数 */
-			eaf_msg_handle_fn	rsp_fn;		/** 响应处理函数 */
-			uint32_t			to;			/** 接收方ID */
+			eaf_rsp_handle_fn	rsp_fn;		/** 响应处理函数 */
 		}req;
 
 		struct
 		{
-			eaf_msg_handle_fn	rsp_fn;		/** 响应处理函数 */
-			uint32_t			to;			/** 接收方ID */
+			eaf_rsp_handle_fn	rsp_fn;		/** 响应处理函数 */
 		}rsp;
 	}info;
 

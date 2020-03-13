@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "s_semaphore.h"
+#include "c_semaphore.h"
 
 struct eaf_sem;
 typedef struct eaf_sem eaf_sem_t;
