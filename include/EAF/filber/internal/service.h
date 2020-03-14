@@ -7,15 +7,20 @@ extern "C" {
 struct eaf_jmpbuf;
 
 /**
-* 获取跳转上下文
+* (内部接口)获取跳转上下文
 * @return		上下文
 */
 struct eaf_jmpbuf* eaf_service_get_jmpbuf(void);
 
 /**
-* 进行上下文切换
+* (内部接口)上下文切换
 */
-void eaf_service_context_switch(void);
+void eaf_filber_context_switch(void);
+
+/**
+* (内部接口)协程栈返回
+*/
+void eaf_filber_context_return(void);
 
 #ifdef __cplusplus
 }

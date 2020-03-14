@@ -18,7 +18,15 @@ extern "C" {
 		if (eaf_asm_setjmp(eaf_service_get_jmpbuf()) != 0) {\
 			break;\
 		}\
-		eaf_service_context_switch();\
+		eaf_filber_context_switch();\
+	} while (0)
+
+/**
+* 从协程中返回
+*/
+#define eaf_filber_return	\
+	do {\
+		eaf_filber_context_return();\
 	} while (0)
 
 /**

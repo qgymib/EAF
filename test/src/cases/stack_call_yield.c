@@ -39,6 +39,7 @@ static void _test_stackcall_body(void* arg)
 static void _test_stackcall_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
 	eaf_stack_call(_stack_mem, _stack_mem_size, _test_stackcall_body, msg);
+	eaf_filber_return;
 }
 
 static void _test_stackcall_s2_on_evt(eaf_msg_t* msg, void* arg)

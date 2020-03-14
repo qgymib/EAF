@@ -30,6 +30,7 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
 
 	ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
+	eaf_filber_return;
 }
 
 static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)

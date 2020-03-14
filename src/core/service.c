@@ -45,7 +45,10 @@
 		tmp_record.data.priv = NULL;\
 		\
 		eaf_mutex_enter(&(_group)->objlock);\
-		for ((_rec_evt)->data.service->subscribe.cbiter = eaf_map_find_upper(&(_group)->subscribe.table, &tmp_record.node);\
+		if ((_rec_evt)->data.service->subscribe.cbiter == NULL) {\
+			(_rec_evt)->data.service->subscribe.cbiter = eaf_map_find_upper(&(_group)->subscribe.table, &tmp_record.node);\
+		}\
+		for (;\
 			(_rec_evt)->data.service->subscribe.cbiter != NULL;\
 			(_rec_evt)->data.service->subscribe.cbiter = eaf_map_next(&(_group)->subscribe.table, (_rec_evt)->data.service->subscribe.cbiter)) {\
 			eaf_subscribe_record_t* orig = EAF_CONTAINER_OF((_rec_evt)->data.service->subscribe.cbiter, eaf_subscribe_record_t, node);\
@@ -156,6 +159,7 @@ typedef struct eaf_service_group
 	{
 		eaf_sem_t					sem;		/** 信号量 */
 		eaf_list_t					que;		/** 消息队列 */
+		eaf_list_t					msg_gc;		/** GC队列 */
 		unsigned					wait_time;	/** 等待时间 */
 	}msgq;
 
@@ -269,53 +273,86 @@ static unsigned _eaf_service_thread_process_normal_resume(eaf_service_group_t* g
 	return 0;
 }
 
+static void _eaf_service_destroy_msg_record(eaf_msgq_record_t* record)
+{
+	eaf_msg_dec_ref(EAF_MSG_C2I(record->data.msg));
+	EAF_FREE(record);
+}
+
+static void _eaf_service_msgq_gc(eaf_service_group_t* group)
+{
+	eaf_list_node_t* it;
+	while (1)
+	{
+		eaf_mutex_enter(&group->objlock);
+		it = eaf_list_pop_front(&group->msgq.msg_gc);
+		eaf_mutex_leave(&group->objlock);
+		if (it == NULL)
+		{
+			break;
+		}
+
+		eaf_msgq_record_t* record = EAF_CONTAINER_OF(it, eaf_msgq_record_t, node);
+		_eaf_service_destroy_msg_record(record);
+	}
+}
+
+static void _eaf_service_thread_loop(eaf_service_group_t* group)
+{
+	_eaf_service_msgq_gc(group);
+
+	/* 若存在就绪状态的协程，则恢复协程上下文 */
+	_eaf_service_thread_process_normal_resume(group);
+
+	do
+	{
+		group->filber.cur_msg = _eaf_service_pop_record(group);
+		if (group->filber.cur_msg == NULL)
+		{
+			group->msgq.wait_time = -1;
+			break;
+		}
+		group->msgq.wait_time = 0;
+		group->filber.cur_run = group->filber.cur_msg->data.service;
+
+		/* 服务可用时直接处理 */
+		switch (group->filber.cur_msg->data.msg->msg.type)
+		{
+		case eaf_msg_type_req:
+			EAF_SERVICE_HANDLE_REQ(group, group->filber.cur_msg);
+			break;
+
+		case eaf_msg_type_rsp:
+			EAF_SERVICE_HANDLE_RSP(group, group->filber.cur_msg);
+			break;
+
+		case eaf_msg_type_evt:
+			EAF_SERVICE_HANDLE_EVT(group, group->filber.cur_msg);
+			break;
+		}
+
+		_eaf_service_destroy_msg_record(group->filber.cur_msg);
+		group->filber.cur_run = NULL;
+		group->filber.cur_msg = NULL;
+	} while (0);
+
+	eaf_sem_pend(&group->msgq.sem, group->msgq.wait_time);
+}
+
 /**
 * 事件循环。此处会处理本线程中所有服务的数据。
 * 由于协程切换所依赖的setjmp仅保留当前栈帧的LR，因此若setjmp与longjmp之间调用栈层次大于1，则会导致异常
 * 因此消息处理必须在本函数中直接执行
 * @parm group	服务组
 */
-static void _eaf_service_thread_looping(eaf_service_group_t* group)
+static void _eaf_service_thread_body(eaf_service_group_t* group)
 {
 	eaf_asm_setjmp(&group->filber.jmpbuf);
 
+	/* 事件循环 */
 	while (g_eaf_ctx->state == eaf_ctx_state_busy)
 	{
-		_eaf_service_thread_process_normal_resume(group);
-
-		do 
-		{
-			group->filber.cur_msg = _eaf_service_pop_record(group);
-			if (group->filber.cur_msg == NULL)
-			{
-				group->msgq.wait_time = -1;
-				break;
-			}
-			group->msgq.wait_time = 0;
-			group->filber.cur_run = group->filber.cur_msg->data.service;
-
-			/* 服务可用时直接处理 */
-			switch (group->filber.cur_msg->data.msg->msg.type)
-			{
-			case eaf_msg_type_req:
-				EAF_SERVICE_HANDLE_REQ(group, group->filber.cur_msg);
-				break;
-
-			case eaf_msg_type_rsp:
-				EAF_SERVICE_HANDLE_RSP(group, group->filber.cur_msg);
-				break;
-
-			case eaf_msg_type_evt:
-				EAF_SERVICE_HANDLE_EVT(group, group->filber.cur_msg);
-				break;
-			}
-
-			eaf_msg_dec_ref(EAF_MSG_C2I(group->filber.cur_msg->data.msg));
-			EAF_FREE(group->filber.cur_msg);
-			group->filber.cur_msg = NULL;
-		} while (0);
-
-		eaf_sem_pend(&group->msgq.sem, group->msgq.wait_time);
+		_eaf_service_thread_loop(group);
 	}
 }
 
@@ -376,7 +413,7 @@ static void _eaf_service_thread(void* arg)
 	}
 
 	/* 处理消息 */
-	_eaf_service_thread_looping(group);
+	_eaf_service_thread_body(group);
 
 cleanup:
 	for (i = 0; i < init_idx; i++)
@@ -533,6 +570,7 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 	{
 		g_eaf_ctx->group.table[init_idx]->service.size = info[init_idx].service.size;
 		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->msgq.que);
+		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->msgq.msg_gc);
 		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->filber.ready_list);
 		eaf_map_init(&g_eaf_ctx->group.table[init_idx]->subscribe.table, _eaf_service_on_cmp_subscribe_record, NULL);
 		if (eaf_mutex_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_mutex_attr_normal) < 0)
@@ -839,7 +877,7 @@ struct eaf_jmpbuf* eaf_service_get_jmpbuf(void)
 	return service != NULL ? &service->filber.jmpbuf : NULL;
 }
 
-void eaf_service_context_switch(void)
+void eaf_filber_context_switch(void)
 {
 	eaf_service_group_t* group;
 	eaf_service_t* service = _eaf_get_current_service(&group);
@@ -860,6 +898,26 @@ void eaf_service_context_switch(void)
 	} while (0);
 	eaf_mutex_leave(&group->objlock);
 
+	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
+}
+
+void eaf_filber_context_return(void)
+{
+	eaf_service_group_t* group;
+	eaf_service_t* service = _eaf_get_current_service(&group);
+	if (service == NULL)
+	{
+		return;
+	}
+
+	eaf_mutex_enter(&group->objlock);
+	do 
+	{
+		eaf_list_push_back(&group->msgq.msg_gc, &group->filber.cur_msg->node);
+	} while (0);
+	eaf_mutex_leave(&group->objlock);
+
+	group->filber.cur_msg = NULL;
 	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
 }
 
