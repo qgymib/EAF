@@ -1,5 +1,5 @@
-#ifndef __EAF_ARCH_I386_ASM_EAF_JUMPBUF_INTERNAL_H__
-#define __EAF_ARCH_I386_ASM_EAF_JUMPBUF_INTERNAL_H__
+#ifndef __EAF_ARCH_X86_ASM_EAF_JUMPBUF_INTERNAL_H__
+#define __EAF_ARCH_X86_ASM_EAF_JUMPBUF_INTERNAL_H__
 #ifdef __cplusplus
 extern "C" {
 #endif	/* __cplusplus */
@@ -23,4 +23,4 @@ struct eaf_jmpbuf
 #ifdef __cplusplus
 };
 #endif	/* __cplusplus */
-#endif	/* __EAF_ARCH_I386_ASM_EAF_JUMPBUF_INTERNAL_H__ */
+#endif	/* __EAF_ARCH_X86_ASM_EAF_JUMPBUF_INTERNAL_H__ */
