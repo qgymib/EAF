@@ -1,6 +1,6 @@
-.global eaf_setjmp
-.type eaf_setjmp,@function
-eaf_setjmp:
+.global eaf_asm_setjmp
+.type eaf_asm_setjmp,@function
+eaf_asm_setjmp:
 	mov		4(%esp),	%eax
 	mov		%ebx,		(%eax)
 	mov		%esi,		4(%eax)

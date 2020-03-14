@@ -15,7 +15,7 @@ typedef struct eaf_jmpbuf eaf_jmpbuf_t;
 * @param env	保存环境
 * @return		0：首次返回；<0：二次返回
 */
-int eaf_setjmp(eaf_jmpbuf_t* env);
+int eaf_asm_setjmp(eaf_jmpbuf_t* env);
 
 /**
 * 跳转
@@ -23,7 +23,7 @@ int eaf_setjmp(eaf_jmpbuf_t* env);
 * @param env	跳转环境
 * @param val	值
 */
-void eaf_longjmp(eaf_jmpbuf_t* env, int val);
+void eaf_asm_longjmp(eaf_jmpbuf_t* env, int val);
 
 #ifdef __cplusplus
 };

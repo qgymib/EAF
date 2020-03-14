@@ -1,6 +1,6 @@
-.global eaf_longjmp
-.type eaf_longjmp,@function
-eaf_longjmp:
+.global eaf_asm_longjmp
+.type eaf_asm_longjmp,@function
+eaf_asm_longjmp:
 	mov		%rsi,		%rax		/* val will be longjmp return */
 	test	%rax,		%rax
 	jnz		1f

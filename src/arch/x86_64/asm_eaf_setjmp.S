@@ -1,6 +1,6 @@
-.global eaf_setjmp
-.type eaf_setjmp,@function
-eaf_setjmp:
+.global eaf_asm_setjmp
+.type eaf_asm_setjmp,@function
+eaf_asm_setjmp:
 	mov		%rbx,		(%rdi)			/* rdi is jmp_buf, move registers onto it */
 	mov		%rbp,		8(%rdi)
 	mov		%r12,		16(%rdi)

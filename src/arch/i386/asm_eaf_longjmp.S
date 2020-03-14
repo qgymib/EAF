@@ -1,6 +1,6 @@
-.global eaf_longjmp
-.type eaf_longjmp,@function
-eaf_longjmp:
+.global eaf_asm_longjmp
+.type eaf_asm_longjmp,@function
+eaf_asm_longjmp:
 	mov  4(%esp),%edx
 	mov  8(%esp),%eax
 	test    %eax,%eax

@@ -1,7 +1,7 @@
 .syntax unified
-.global eaf_setjmp
-.type eaf_setjmp,%function
-eaf_setjmp:
+.global eaf_asm_setjmp
+.type eaf_asm_setjmp,%function
+eaf_asm_setjmp:
 	mov ip,r0
 	stmia ip!,{v1,v2,v3,v4,v5,v6,sl,fp}
 	mov r2,sp

@@ -1,12 +1,6 @@
-.global __setjmp
-.global _setjmp
-.global setjmp
-.type __setjmp,@function
-.type _setjmp,@function
-.type setjmp,@function
-__setjmp:
-_setjmp:
-setjmp:
+.global eaf_asm_setjmp
+.type eaf_asm_setjmp,@function
+eaf_asm_setjmp:
 	// IHI0055B_aapcs64.pdf 5.1.1, 5.1.2 callee saved registers
 	stp x19, x20, [x0,#0]
 	stp x21, x22, [x0,#16]

@@ -19,7 +19,7 @@ size_t eaf_jmpbuf_size(void);
 * @param jmpbuf	上下文
 * @return		0：首次返回；!0：二次返回
 */
-extern int eaf_setjmp(struct eaf_jmpbuf* jmpbuf);
+extern int eaf_asm_setjmp(struct eaf_jmpbuf* jmpbuf);
 
 #ifdef __cplusplus
 }

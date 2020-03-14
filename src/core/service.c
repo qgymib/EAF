@@ -264,7 +264,7 @@ static unsigned _eaf_service_thread_process_normal_resume(eaf_service_group_t* g
 	group->filber.cur_msg = EAF_CONTAINER_OF(eaf_list_pop_front(&service->filber.msg_cache), eaf_msgq_record_t, node);
 
 	/* Ìø×ª */
-	eaf_longjmp(&service->filber.jmpbuf, JMP_STATE_SWITCH);
+	eaf_asm_longjmp(&service->filber.jmpbuf, JMP_STATE_SWITCH);
 	assert(0);
 
 	return 0;
@@ -278,7 +278,7 @@ static unsigned _eaf_service_thread_process_normal_resume(eaf_service_group_t* g
 */
 static void _eaf_service_thread_looping(eaf_service_group_t* group)
 {
-	eaf_setjmp(&group->filber.jmpbuf);
+	eaf_asm_setjmp(&group->filber.jmpbuf);
 
 	while (g_eaf_ctx->state == eaf_ctx_state_busy)
 	{
@@ -816,7 +816,7 @@ void eaf_service_context_switch(void)
 	} while (0);
 	eaf_mutex_leave(&group->objlock);
 
-	eaf_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
+	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
 }
 
 int eaf_filber_resume(uint32_t srv_id)

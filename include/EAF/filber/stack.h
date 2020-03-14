@@ -17,7 +17,7 @@ extern "C" {
 #define eaf_stack_call(addr, size, fn, arg)	\
 	do {\
 		struct eaf_jmpbuf* p_buf = eaf_stack_calculate_jmpbuf(addr, size);\
-		if (eaf_setjmp(p_buf) != 0) {\
+		if (eaf_asm_setjmp(p_buf) != 0) {\
 			break;\
 		}\
 		eaf_asm_stackcall(p_buf, fn, arg);\

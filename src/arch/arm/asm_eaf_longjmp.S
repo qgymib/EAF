@@ -1,7 +1,7 @@
 .syntax unified
-.global eaf_longjmp
-.type eaf_longjmp,%function
-eaf_longjmp:
+.global eaf_asm_longjmp
+.type eaf_asm_longjmp,%function
+eaf_asm_longjmp:
 	mov ip,r0
 	movs r0,r1
 	moveq r0,#1
