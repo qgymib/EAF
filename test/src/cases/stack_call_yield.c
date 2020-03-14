@@ -33,7 +33,7 @@ static void _test_stackcall_body(void* arg)
 	_s_nodes[1].ret = -1;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
 
-	assert(eaf_sem_post(&_s_ret_sem) == 0);
+	ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
 }
 
 static void _test_stackcall_s1_on_evt(eaf_msg_t* msg, void* arg)
@@ -49,12 +49,12 @@ static void _test_stackcall_s2_on_evt(eaf_msg_t* msg, void* arg)
 	_s_nodes[3].ret = -2;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[3].node);
 
-	assert(eaf_filber_resume(TEST_SERVICE_S1) == 0);
+	ASSERT(eaf_filber_resume(TEST_SERVICE_S1) == 0);
 }
 
 static int _test_stackcall_s1_on_init(void)
 {
-	assert(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_stackcall_s1_on_evt, NULL) == 0);
+	ASSERT(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_stackcall_s1_on_evt, NULL) == 0);
 	return 0;
 }
 
@@ -64,7 +64,7 @@ static void _test_stackcall_s1_on_exit(void)
 
 static int _test_stackcall_s2_on_init(void)
 {
-	assert(eaf_service_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_stackcall_s2_on_evt, NULL) == 0);
+	ASSERT(eaf_service_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_stackcall_s2_on_evt, NULL) == 0);
 	return 0;
 }
 

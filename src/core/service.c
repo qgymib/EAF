@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "EAF/core/load.h"
 #include "EAF/filber/filber.h"
 #include "EAF/utils/list.h"
@@ -157,6 +156,7 @@ typedef struct eaf_service_group
 	{
 		eaf_sem_t					sem;		/** 信号量 */
 		eaf_list_t					que;		/** 消息队列 */
+		unsigned					wait_time;	/** 等待时间 */
 	}msgq;
 
 	struct
@@ -265,7 +265,6 @@ static unsigned _eaf_service_thread_process_normal_resume(eaf_service_group_t* g
 
 	/* 跳转 */
 	eaf_asm_longjmp(&service->filber.jmpbuf, JMP_STATE_SWITCH);
-	assert(0);
 
 	return 0;
 }
@@ -282,17 +281,17 @@ static void _eaf_service_thread_looping(eaf_service_group_t* group)
 
 	while (g_eaf_ctx->state == eaf_ctx_state_busy)
 	{
-		unsigned timeout_1 = _eaf_service_thread_process_normal_resume(group);
+		_eaf_service_thread_process_normal_resume(group);
 
-		unsigned timeout_2 = 0;
 		do 
 		{
 			group->filber.cur_msg = _eaf_service_pop_record(group);
 			if (group->filber.cur_msg == NULL)
 			{
-				timeout_2 = -1;
+				group->msgq.wait_time = -1;
 				break;
 			}
+			group->msgq.wait_time = 0;
 			group->filber.cur_run = group->filber.cur_msg->data.service;
 
 			/* 服务可用时直接处理 */
@@ -316,7 +315,7 @@ static void _eaf_service_thread_looping(eaf_service_group_t* group)
 			group->filber.cur_msg = NULL;
 		} while (0);
 
-		eaf_sem_pend(&group->msgq.sem, timeout_1 < timeout_2 ? timeout_1 : timeout_2);
+		eaf_sem_pend(&group->msgq.sem, group->msgq.wait_time);
 	}
 }
 
@@ -330,7 +329,10 @@ static void _eaf_service_thread(void* arg)
 	eaf_service_group_t* group = arg;
 
 	/* 设置线程私有变量 */
-	assert(eaf_thread_storage_set(&g_eaf_ctx->tls, group) == 0);
+	if (eaf_thread_storage_set(&g_eaf_ctx->tls, group) < 0)
+	{
+		return;
+	}
 
 	/* 等待就绪 */
 	while (g_eaf_ctx->state == eaf_ctx_state_init)
@@ -501,8 +503,19 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 		return eaf_errno_memory;
 	}
 	g_eaf_ctx->state = eaf_ctx_state_init;
-	assert(eaf_sem_init(&g_eaf_ctx->ready, 0) == 0);
-	assert(eaf_thread_storage_init(&g_eaf_ctx->tls) == 0);
+	if (eaf_sem_init(&g_eaf_ctx->ready, 0) < 0)
+	{
+		EAF_FREE(g_eaf_ctx);
+		g_eaf_ctx = NULL;
+		return eaf_errno_unknown;
+	}
+	if (eaf_thread_storage_init(&g_eaf_ctx->tls) < 0)
+	{
+		eaf_sem_exit(&g_eaf_ctx->ready);
+		EAF_FREE(g_eaf_ctx);
+		g_eaf_ctx = NULL;
+		return eaf_errno_unknown;
+	}
 
 	/* 修复数组地址 */
 	g_eaf_ctx->group.size = size;
@@ -515,26 +528,57 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 	}
 
 	/* 资源初始化 */
-	for (i = 0; i < size; i++)
+	size_t init_idx;
+	for (init_idx = 0; init_idx < size; init_idx++)
 	{
-		g_eaf_ctx->group.table[i]->service.size = info[i].service.size;
-		eaf_list_init(&g_eaf_ctx->group.table[i]->msgq.que);
-		eaf_list_init(&g_eaf_ctx->group.table[i]->filber.ready_list);
-		eaf_map_init(&g_eaf_ctx->group.table[i]->subscribe.table, _eaf_service_on_cmp_subscribe_record, NULL);
-		assert(eaf_mutex_init(&g_eaf_ctx->group.table[i]->objlock, eaf_mutex_attr_normal) == 0);
-		assert(eaf_sem_init(&g_eaf_ctx->group.table[i]->msgq.sem, 0) == 0);
-		assert(eaf_thread_init(&g_eaf_ctx->group.table[i]->working, NULL, _eaf_service_thread, g_eaf_ctx->group.table[i]) == 0);
+		g_eaf_ctx->group.table[init_idx]->service.size = info[init_idx].service.size;
+		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->msgq.que);
+		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->filber.ready_list);
+		eaf_map_init(&g_eaf_ctx->group.table[init_idx]->subscribe.table, _eaf_service_on_cmp_subscribe_record, NULL);
+		if (eaf_mutex_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_mutex_attr_normal) < 0)
+		{
+			goto err;
+		}
+		if (eaf_sem_init(&g_eaf_ctx->group.table[init_idx]->msgq.sem, 0) < 0)
+		{
+			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+			goto err;
+		}
+		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, NULL, _eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
+		{
+			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+			eaf_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+			goto err;
+		}
 
 		size_t idx;
-		for (idx = 0; idx < info[i].service.size; idx++)
+		for (idx = 0; idx < info[init_idx].service.size; idx++)
 		{
-			g_eaf_ctx->group.table[i]->service.table[idx].service_id = info[i].service.table[idx].srv_id;
-			g_eaf_ctx->group.table[i]->service.table[idx].msgq.capacity = info[i].service.table[idx].msgq_size;
-			eaf_list_init(&g_eaf_ctx->group.table[i]->service.table[idx].filber.msg_cache);
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].service_id = info[init_idx].service.table[idx].srv_id;
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity = info[init_idx].service.table[idx].msgq_size;
+			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].filber.msg_cache);
 		}
 	}
 
 	return eaf_errno_success;
+
+err:
+	for (i = 0; i < init_idx; i++)
+	{
+		eaf_sem_post(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+
+		eaf_thread_exit(&g_eaf_ctx->group.table[init_idx]->working);
+		eaf_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+		eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+	}
+
+	eaf_thread_storage_exit(&g_eaf_ctx->tls);
+	eaf_sem_exit(&g_eaf_ctx->ready);
+
+	EAF_FREE(g_eaf_ctx);
+	g_eaf_ctx = NULL;
+
+	return eaf_errno_unknown;
 }
 
 int eaf_load(void)

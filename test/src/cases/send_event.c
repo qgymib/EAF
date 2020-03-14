@@ -20,13 +20,13 @@ static void _test_send_event_s1_on_evt(eaf_msg_t* msg, void* arg)
 
 static int _test_send_event_s1_on_init(void)
 {
-	assert(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S2_EVT, _test_send_event_s1_on_evt, NULL) == 0);
+	ASSERT(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S2_EVT, _test_send_event_s1_on_evt, NULL) == 0);
 
 	eaf_msg_t* evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
-	assert(evt != NULL);
+	ASSERT(evt != NULL);
 
 	EAF_MSG_ACCESS(int, evt) = 199;
-	assert(eaf_service_send_evt(TEST_SERVICE_S1, evt) == 0);
+	ASSERT(eaf_service_send_evt(TEST_SERVICE_S1, evt) == 0);
 	eaf_msg_dec_ref(evt);
 
 	return 0;
@@ -45,7 +45,7 @@ static void _test_send_event_s2_on_evt(eaf_msg_t* msg, void* arg)
 
 static int _test_send_event_s2_on_init(void)
 {
-	assert(eaf_service_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_send_event_s2_on_evt, NULL) == 0);
+	ASSERT(eaf_service_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_send_event_s2_on_evt, NULL) == 0);
 
 	return 0;
 }

@@ -81,6 +81,9 @@ extern "C" {
 	}\
 	static void TEST_##case_name(void)
 
+#define ASSERT(x)	\
+	((void)((x) || (test_assert_fail(#x, __FILE__, __LINE__, __func__),0)))
+
 #define ASSERT_PTR_EQ(a, b)		test_assert_ptr_eq(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_PTR_NE(a, b)		test_assert_ptr_ne(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_STR_EQ(a, b)		test_assert_str_eq(a, b, #a, #b, __FILE__, __LINE__)
@@ -141,6 +144,7 @@ void test_register_cases(test_case_t* cases);
 */
 int test_run_tests(int argc, char* argv[]);
 
+void test_assert_fail(const char *expr, const char *file, int line, const char *func);
 void test_assert_ptr_eq(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line);
 void test_assert_ptr_ne(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line);
 void test_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line);

@@ -20,10 +20,10 @@ static void _test_send_request_s1_on_rsp(eaf_msg_t* msg)
 static int _test_send_request_s1_on_init(void)
 {
 	eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S2_MSG, sizeof(int), _test_send_request_s1_on_rsp);
-	assert(req != NULL);
+	ASSERT(req != NULL);
 	EAF_MSG_ACCESS(int, req) = 99;
 
-	assert(eaf_service_send_req(TEST_SERVICE_S1, TEST_SERVICE_S2, req) == 0);
+	ASSERT(eaf_service_send_req(TEST_SERVICE_S1, TEST_SERVICE_S2, req) == 0);
 	eaf_msg_dec_ref(req);
 
 	return 0;
@@ -52,11 +52,11 @@ static void _test_send_request_s1_on_req(eaf_msg_t* msg)
 static void _test_send_request_s2_on_req(eaf_msg_t* req)
 {
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));
-	assert(rsp != NULL);
+	ASSERT(rsp != NULL);
 
 	EAF_MSG_ACCESS(int, rsp) = EAF_MSG_ACCESS(int, req) * 2;
 
-	assert(eaf_service_send_rsp(TEST_SERVICE_S2, rsp) == 0);
+	ASSERT(eaf_service_send_rsp(TEST_SERVICE_S2, rsp) == 0);
 	eaf_msg_dec_ref(rsp);
 }
 

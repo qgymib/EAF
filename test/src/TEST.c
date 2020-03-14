@@ -30,7 +30,7 @@
 			printf("%s:%d: excepton\n"\
 					"\tyou are not allowed to call assert functions outside test thread.\n",\
 					_file, _line);\
-			assert(0);\
+			ASSERT(0);\
 		}\
 		if (_cmp) {\
 			break;\
@@ -256,6 +256,13 @@ fin:
 	}
 
 	return 0;
+}
+
+void test_assert_fail(const char *expr, const char *file, int line, const char *func)
+{
+	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
+	fflush(NULL);
+	abort();
 }
 
 void test_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
