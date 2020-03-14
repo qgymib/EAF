@@ -13,7 +13,7 @@ extern "C" {
 * 让度执行权，直到显式resume
 * @note	无栈协程，只能在顶层调用
 */
-#define eaf_filber_yield()	\
+#define eaf_yield	\
 	do {\
 		if (eaf_asm_setjmp(eaf_service_get_jmpbuf()) != 0) {\
 			break;\
@@ -24,7 +24,7 @@ extern "C" {
 /**
 * 从协程中返回
 */
-#define eaf_filber_return	\
+#define eaf_return	\
 	do {\
 		eaf_filber_context_return();\
 	} while (0)
@@ -34,7 +34,7 @@ extern "C" {
 * @param srv_id	服务ID
 * @return		eaf_errno
 */
-int eaf_filber_resume(uint32_t srv_id);
+int eaf_resume(uint32_t srv_id);
 
 #ifdef __cplusplus
 }

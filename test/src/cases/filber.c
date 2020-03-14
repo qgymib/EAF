@@ -24,13 +24,13 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 	_s_nodes[0].ret = EAF_MSG_ACCESS(int, msg);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
 
-	eaf_filber_yield();
+	eaf_yield;
 
 	_s_nodes[1].ret = -1;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
 
 	ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
-	eaf_filber_return;
+	eaf_return;
 }
 
 static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
@@ -41,7 +41,7 @@ static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
 	_s_nodes[3].ret = -2;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[3].node);
 
-	ASSERT(eaf_filber_resume(TEST_SERVICE_S1) == 0);
+	ASSERT(eaf_resume(TEST_SERVICE_S1) == 0);
 }
 
 static int _test_filber_s1_on_init(void)

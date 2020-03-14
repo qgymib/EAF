@@ -28,7 +28,7 @@ static void _test_stackcall_body(void* arg)
 	_s_nodes[0].ret = EAF_MSG_ACCESS(int, msg);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
 
-	eaf_filber_yield();
+	eaf_yield;
 
 	_s_nodes[1].ret = -1;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
@@ -39,7 +39,7 @@ static void _test_stackcall_body(void* arg)
 static void _test_stackcall_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
 	eaf_stack_call(_stack_mem, _stack_mem_size, _test_stackcall_body, msg);
-	eaf_filber_return;
+	eaf_return;
 }
 
 static void _test_stackcall_s2_on_evt(eaf_msg_t* msg, void* arg)
@@ -50,7 +50,7 @@ static void _test_stackcall_s2_on_evt(eaf_msg_t* msg, void* arg)
 	_s_nodes[3].ret = -2;
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[3].node);
 
-	ASSERT(eaf_filber_resume(TEST_SERVICE_S1) == 0);
+	ASSERT(eaf_resume(TEST_SERVICE_S1) == 0);
 }
 
 static int _test_stackcall_s1_on_init(void)

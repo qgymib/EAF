@@ -921,7 +921,7 @@ void eaf_filber_context_return(void)
 	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
 }
 
-int eaf_filber_resume(uint32_t srv_id)
+int eaf_resume(uint32_t srv_id)
 {
 	eaf_service_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
