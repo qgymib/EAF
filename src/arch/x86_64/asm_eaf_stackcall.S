@@ -10,4 +10,4 @@ eaf_asm_stackcall:
 
 	mov		%r15,	%rdi	/* 此处栈可能被破坏，由于通过寄存器传参，可以忽略 */
 	mov		%r15,	%rsi
-	jmp		eaf_asm_longjmp
+	jmp		longjmp

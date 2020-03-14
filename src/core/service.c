@@ -4,7 +4,6 @@
 #include "EAF/utils/errno.h"
 #include "EAF/utils/define.h"
 #include "EAF/utils/map.h"
-#include "arch/eaf_setjmp.h"
 #include "compat/mutex.h"
 #include "compat/thread.h"
 #include "compat/semaphore.h"
@@ -121,7 +120,7 @@ typedef struct eaf_service
 	{
 		eaf_list_t					msg_cache;	/** 缓存的消息 */
 		eaf_list_node_t				node;		/** 侵入式节点 */
-		eaf_jmpbuf_t				jmpbuf;		/** 跳转上下文 */
+		eaf_jmp_buf_t				jmpbuf;		/** 跳转上下文 */
 	}filber;
 
 	struct
@@ -147,7 +146,7 @@ typedef struct eaf_service_group
 		eaf_msgq_record_t*			cur_msg;	/** 正在处理的消息 */
 
 		eaf_list_t					ready_list;	/** 执行列表 */
-		eaf_jmpbuf_t				jmpbuf;		/** 跳转上下文 */
+		eaf_jmp_buf_t				jmpbuf;		/** 跳转上下文 */
 	}filber;
 
 	struct
@@ -268,7 +267,7 @@ static unsigned _eaf_service_thread_process_normal_resume(eaf_service_group_t* g
 	group->filber.cur_msg = EAF_CONTAINER_OF(eaf_list_pop_front(&service->filber.msg_cache), eaf_msgq_record_t, node);
 
 	/* 跳转 */
-	eaf_asm_longjmp(&service->filber.jmpbuf, JMP_STATE_SWITCH);
+	longjmp(service->filber.jmpbuf.env, JMP_STATE_SWITCH);
 
 	return 0;
 }
@@ -347,7 +346,7 @@ static void _eaf_service_thread_loop(eaf_service_group_t* group)
 */
 static void _eaf_service_thread_body(eaf_service_group_t* group)
 {
-	eaf_asm_setjmp(&group->filber.jmpbuf);
+	setjmp(group->filber.jmpbuf.env);
 
 	/* 事件循环 */
 	while (g_eaf_ctx->state == eaf_ctx_state_busy)
@@ -871,7 +870,7 @@ int eaf_service_send_evt(uint32_t from, eaf_msg_t* evt)
 	return eaf_errno_success;
 }
 
-struct eaf_jmpbuf* eaf_service_get_jmpbuf(void)
+eaf_jmp_buf_t* eaf_service_get_jmpbuf(void)
 {
 	eaf_service_t* service = _eaf_get_current_service(NULL);
 	return service != NULL ? &service->filber.jmpbuf : NULL;
@@ -898,7 +897,7 @@ void eaf_filber_context_switch(void)
 	} while (0);
 	eaf_mutex_leave(&group->objlock);
 
-	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
+	longjmp(group->filber.jmpbuf.env, JMP_STATE_SWITCH);
 }
 
 void eaf_filber_context_return(void)
@@ -918,7 +917,7 @@ void eaf_filber_context_return(void)
 	eaf_mutex_leave(&group->objlock);
 
 	group->filber.cur_msg = NULL;
-	eaf_asm_longjmp(&group->filber.jmpbuf, JMP_STATE_SWITCH);
+	longjmp(group->filber.jmpbuf.env, JMP_STATE_SWITCH);
 }
 
 int eaf_resume(uint32_t srv_id)

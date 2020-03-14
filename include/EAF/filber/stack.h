@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-#include "EAF/filber/internal/jmpbuf.h"
 #include "EAF/filber/internal/stack.h"
 
 /**
@@ -16,8 +15,8 @@ extern "C" {
 */
 #define eaf_stack_call(addr, size, fn, arg)	\
 	do {\
-		struct eaf_jmpbuf* p_buf = eaf_stack_calculate_jmpbuf(addr, size);\
-		if (eaf_asm_setjmp(p_buf) != 0) {\
+		eaf_jmp_buf_t* p_buf = eaf_stack_calculate_jmpbuf(addr, size);\
+		if (setjmp(p_buf->env) != 0) {\
 			break;\
 		}\
 		eaf_asm_stackcall(p_buf, fn, arg);\

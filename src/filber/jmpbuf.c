@@ -1,12 +1,7 @@
-#include "EAF/filber/internal/jmpbuf.h"
-#include "arch/eaf_setjmp.h"
+#include <setjmp.h>
+#include "EAF/filber/internal/stack.h"
 
-size_t eaf_jmpbuf_size(void)
+eaf_jmp_buf_t* eaf_stack_calculate_jmpbuf(void* addr, size_t size)
 {
-	return sizeof(eaf_jmpbuf_t);
-}
-
-struct eaf_jmpbuf* eaf_stack_calculate_jmpbuf(void* addr, size_t size)
-{
-	return (struct eaf_jmpbuf*)((char*)addr + size - eaf_jmpbuf_size());
+	return (eaf_jmp_buf_t*)((char*)addr + size - sizeof(jmp_buf));
 }

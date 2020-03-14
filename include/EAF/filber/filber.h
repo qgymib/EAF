@@ -7,7 +7,6 @@ extern "C" {
 #include <inttypes.h>
 
 #include "EAF/filber/internal/service.h"
-#include "EAF/filber/internal/jmpbuf.h"
 
 /**
 * 让度执行权，直到显式resume
@@ -15,7 +14,7 @@ extern "C" {
 */
 #define eaf_yield	\
 	do {\
-		if (eaf_asm_setjmp(eaf_service_get_jmpbuf()) != 0) {\
+		if (setjmp(eaf_service_get_jmpbuf()->env) != 0) {\
 			break;\
 		}\
 		eaf_filber_context_switch();\
@@ -25,9 +24,7 @@ extern "C" {
 * 从协程中返回
 */
 #define eaf_return	\
-	do {\
-		eaf_filber_context_return();\
-	} while (0)
+		eaf_filber_context_return()
 
 /**
 * 允许指定服务继续执行

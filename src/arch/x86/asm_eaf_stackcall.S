@@ -16,4 +16,4 @@ eaf_asm_stackcall:
 
 	push	%edi					/* 构造longjmp参数 */
 	push	%edi
-	jmp		eaf_asm_longjmp
+	jmp		longjmp

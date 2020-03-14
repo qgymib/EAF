@@ -4,13 +4,13 @@
 extern "C" {
 #endif
 
-struct eaf_jmpbuf;
+#include "EAF/filber/internal/stack.h"
 
 /**
 * (内部接口)获取跳转上下文
 * @return		上下文
 */
-struct eaf_jmpbuf* eaf_service_get_jmpbuf(void);
+eaf_jmp_buf_t* eaf_service_get_jmpbuf(void);
 
 /**
 * (内部接口)上下文切换
