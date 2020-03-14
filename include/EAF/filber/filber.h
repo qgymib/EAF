@@ -5,8 +5,8 @@ extern "C" {
 #endif
 
 #include <inttypes.h>
-#include <stddef.h>
 
+#include "EAF/filber/internal/service.h"
 #include "EAF/filber/internal/jmpbuf.h"
 
 /**
@@ -15,10 +15,10 @@ extern "C" {
 */
 #define eaf_filber_yield()	\
 	do {\
-		if (eaf_setjmp(eaf_get_jmpbuf()) != 0) {\
+		if (eaf_setjmp(eaf_service_get_jmpbuf()) != 0) {\
 			break;\
 		}\
-		eaf_filber_context_switch();\
+		eaf_service_context_switch();\
 	} while (0)
 
 /**

@@ -66,6 +66,21 @@ extern "C" {
 	}\
 	static void TEST_##class_name##_##case_name(void)
 
+/**
+* ≤‚ ‘”√¿˝
+* @param case_name	”√¿˝√˚
+*/
+#define TEST(case_name)	\
+	static void TEST_##case_name(void);\
+	TEST_INITIALIZER(TEST_INIT_##case_name) {\
+		static test_case_item_t cases[] = {\
+			{ NULL, #case_name, test_case_type_normal, TEST_##case_name },\
+		};\
+		static test_case_t item = { { NULL, NULL }, { sizeof(cases) / sizeof(cases[0]), cases } };\
+		test_register_cases(&item);\
+	}\
+	static void TEST_##case_name(void)
+
 #define ASSERT_PTR_EQ(a, b)		test_assert_ptr_eq(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_PTR_NE(a, b)		test_assert_ptr_ne(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_STR_EQ(a, b)		test_assert_str_eq(a, b, #a, #b, __FILE__, __LINE__)

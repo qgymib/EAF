@@ -120,13 +120,21 @@ static test_list_node_t* _test_list_next(const test_list_t* handler, const test_
 
 static void _test_run_case(void)
 {
-	/* 判断是否需要运行 */
-	if (g_test_ctx.filter.str != NULL)
+	if (g_test_ctx.runtime.cur_case->data.cases[0].class_name == NULL)
+	{
+		snprintf(g_test_ctx.match_buf, sizeof(g_test_ctx.match_buf), "%s",
+			g_test_ctx.runtime.cur_case->data.cases[0].case_name);
+	}
+	else
 	{
 		snprintf(g_test_ctx.match_buf, sizeof(g_test_ctx.match_buf), "%s.%s",
 			g_test_ctx.runtime.cur_case->data.cases[0].class_name,
 			g_test_ctx.runtime.cur_case->data.cases[0].case_name);
+	}
 
+	/* 判断是否需要运行 */
+	if (g_test_ctx.filter.str != NULL)
+	{
 		size_t str_orig_len = strlen(g_test_ctx.match_buf);
 		size_t min_str_len = str_orig_len < g_test_ctx.filter.str_len ? str_orig_len : g_test_ctx.filter.str_len;
 
@@ -139,10 +147,7 @@ static void _test_run_case(void)
 	g_test_ctx.runtime.flag_failed = 0;
 	g_test_ctx.runtime.cur_idx = 0;
 	g_test_ctx.counter.total++;
-
-	printf("[ RUN      ] %s.%s\n",
-		g_test_ctx.runtime.cur_case->data.cases[0].class_name,
-		g_test_ctx.runtime.cur_case->data.cases[0].case_name);
+	printf("[ RUN      ] %s\n", g_test_ctx.match_buf);
 
 	if (setjmp(g_test_ctx.jmpbuf) != 0)
 	{
@@ -158,9 +163,7 @@ static void _test_run_case(void)
 			g_test_ctx.runtime.cur_idx = 2;
 		}
 
-		printf("[  FAILED  ] %s.%s\n",
-			g_test_ctx.runtime.cur_case->data.cases[0].class_name,
-			g_test_ctx.runtime.cur_case->data.cases[0].case_name);
+		printf("[  FAILED  ] %s\n", g_test_ctx.match_buf);
 	}
 
 	for (;g_test_ctx.runtime.cur_idx < g_test_ctx.runtime.cur_case->data.size;
@@ -171,10 +174,7 @@ static void _test_run_case(void)
 
 	if (!g_test_ctx.runtime.flag_failed)
 	{
-		printf("[       OK ] %s.%s\n",
-			g_test_ctx.runtime.cur_case->data.cases[0].class_name,
-			g_test_ctx.runtime.cur_case->data.cases[0].case_name);
-
+		printf("[       OK ] %s\n", g_test_ctx.match_buf);
 		g_test_ctx.counter.success++;
 	}
 }

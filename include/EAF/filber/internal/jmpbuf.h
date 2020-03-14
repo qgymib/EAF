@@ -4,18 +4,15 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+
 struct eaf_jmpbuf;
 
 /**
-* 获取跳转上下文
-* @return		上下文
+* 获取jmpbuf大小
+* @return		sizeof(struct eaf_jmpbuf)
 */
-struct eaf_jmpbuf* eaf_get_jmpbuf(void);
-
-/**
-* 进行上下文切换
-*/
-void eaf_filber_context_switch(void);
+size_t eaf_jmpbuf_size(void);
 
 /**
 * 保存上下文

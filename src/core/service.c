@@ -789,13 +789,13 @@ int eaf_service_send_evt(uint32_t from, eaf_msg_t* evt)
 	return eaf_errno_success;
 }
 
-struct eaf_jmpbuf* eaf_get_jmpbuf(void)
+struct eaf_jmpbuf* eaf_service_get_jmpbuf(void)
 {
 	eaf_service_t* service = _eaf_get_current_service(NULL);
 	return service != NULL ? &service->filber.jmpbuf : NULL;
 }
 
-void eaf_filber_context_switch(void)
+void eaf_service_context_switch(void)
 {
 	eaf_service_group_t* group;
 	eaf_service_t* service = _eaf_get_current_service(&group);
