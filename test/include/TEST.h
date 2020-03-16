@@ -36,6 +36,14 @@ extern "C" {
 #	error "INITIALIZER not support on your arch"
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#	define TEST_NOINLINE	__attribute__((noinline))
+#elif defined(_MSC_VER)
+#	define TEST_NOINLINE	__declspec(noinline)
+#else
+#	define TEST_NOINLINE
+#endif
+
 /**
 * 初始化用例集
 */

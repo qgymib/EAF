@@ -21,10 +21,9 @@ static eaf_list_t			_s_ret_list;
 void*	_stack_mem;
 size_t	_stack_mem_size;
 
-static void _test_stackcall_body(void* arg)
+TEST_NOINLINE
+static void _test_stackcall_body_2(eaf_msg_t* msg)
 {
-	eaf_msg_t* msg = arg;
-
 	_s_nodes[0].ret = EAF_MSG_ACCESS(int, msg);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
 
@@ -36,9 +35,24 @@ static void _test_stackcall_body(void* arg)
 	ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
 }
 
+TEST_NOINLINE
+static void _test_stackcall_body_1(void* arg)
+{
+	/**
+	* 再次嵌套
+	*/
+	_test_stackcall_body_2((eaf_msg_t*)arg);
+
+	/* 此处由于嵌套函数返回，若eaf_stack_call无效，则返回地址被破坏，此处会core dump */
+}
+
+TEST_NOINLINE
 static void _test_stackcall_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
-	eaf_stack_call(_stack_mem, _stack_mem_size, _test_stackcall_body, msg);
+	/**
+	* 通过指定栈调用，则可以在栈中进行yield
+	*/
+	eaf_stack_call(_stack_mem, _stack_mem_size, _test_stackcall_body_1, msg);
 	eaf_return;
 }
 
