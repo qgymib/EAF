@@ -1,0 +1,2 @@
+# EAF
+Embedded Application Framework
