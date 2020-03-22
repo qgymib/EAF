@@ -8,7 +8,7 @@ static void _test_stack_call(void* arg)
 	_test_ret = *(size_t*)arg;
 }
 
-TEST(stack_call_normal)
+TEST(stack, call_normal)
 {
 	_test_ret = 0;
 

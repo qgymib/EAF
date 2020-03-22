@@ -47,7 +47,7 @@ TEST_CLASS_SETUP(subscribe)
 		_test_subscribe_s1_on_init,
 		_test_ssubscribe_s1_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_service_info_t s2_info = {
@@ -55,7 +55,7 @@ TEST_CLASS_SETUP(subscribe)
 		_test_subscribe_s2_on_init,
 		_test_subscribe_s2_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
 	ASSERT_NUM_EQ(eaf_load(), 0);
@@ -70,12 +70,12 @@ TEST_CLASS_TEAREDOWN(subscribe)
 TEST_F(subscribe, twice)
 {
 	/* 首次订阅应该成功 */
-	ASSERT_NUM_EQ(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_success);
+	ASSERT_NUM_EQ(eaf_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_success);
 	/* 二次订阅应该失败 */
-	ASSERT_NUM_EQ(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_duplicate);
+	ASSERT_NUM_EQ(eaf_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_duplicate);
 
 	/* 首次取消订阅应该成功 */
-	ASSERT_NUM_EQ(eaf_service_unsubscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_success);
+	ASSERT_NUM_EQ(eaf_unsubscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_success);
 	/* 二次取消订阅应该失败 */
-	ASSERT_NUM_EQ(eaf_service_unsubscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_notfound);
+	ASSERT_NUM_EQ(eaf_unsubscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_subscribe_on_evt, NULL), eaf_errno_notfound);
 }

@@ -4,7 +4,44 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+#include <stddef.h>
+#include "EAF/core/internal/service.h"
 #include "EAF/core/message.h"
+
+/**
+* 在指定栈中调用函数
+* @param addr	内存地址
+* @param size	内存大小，必须为sizeof(void*)的整数倍
+* @param proc	用户函数
+* @param priv	用户参数
+*/
+#define eaf_stack_call(addr, size, fn, arg)	\
+	do {\
+		eaf_jmp_buf_t* p_buf = eaf_stack_calculate_jmpbuf(addr, size);\
+		if (setjmp(p_buf->env) != 0) {\
+			break;\
+		}\
+		eaf_asm_stackcall(p_buf, fn, arg);\
+	} while (0)
+
+/**
+* 让度执行权，直到显式resume
+* @note	无栈协程，只能在顶层调用
+*/
+#define eaf_yield	\
+	do {\
+		if (setjmp(eaf_service_get_jmpbuf()->env) != 0) {\
+			break;\
+		}\
+		eaf_filber_context_switch();\
+	} while (0)
+
+/**
+* 从协程中返回
+*/
+#define eaf_return	\
+		eaf_filber_context_return(); return
 
 typedef struct eaf_service_msgmap
 {
@@ -31,13 +68,60 @@ typedef struct eaf_service_info
 	void (*on_exit)(void);
 }eaf_service_info_t;
 
+typedef struct eaf_service_table
+{
+	uint32_t						srv_id;			/** 服务ID */
+	uint32_t						msgq_size;		/** 消息队列大小 */
+}eaf_service_table_t;
+
+typedef struct eaf_thread_table
+{
+	uint8_t							proprity;		/** 线程优先级 */
+	uint8_t							cpuno;			/** CPU核心亲和性 */
+	uint16_t						stacksize;		/** 线程栈大小。真实栈大小 = stacksize << 4 */
+
+	struct
+	{
+		size_t						size;			/** 配置表大小 */
+		eaf_service_table_t*		table;			/** 配置表 */
+	}service;
+}eaf_thread_table_t;
+
+/**
+* 允许指定服务继续执行
+* @param srv_id	服务ID
+* @return		eaf_errno
+*/
+int eaf_resume(uint32_t srv_id);
+
+/**
+* 配置EAF平台
+* @param info	信息列表。必须为全局变量
+* @param size	列表长度
+* @return		eaf_errno
+*/
+int eaf_setup(const eaf_thread_table_t* info, size_t size);
+
+/**
+* 开启EAF平台
+* 函数返回时，所有服务均已初始化完毕
+* @return		eaf_errno
+*/
+int eaf_load(void);
+
+/**
+* 清理EAF平台
+* @return		eaf_errno
+*/
+int eaf_cleanup(void);
+
 /**
 * 注册服务
 * @param srv_id	服务ID
 * @param info	服务信息。必须为全局变量
 * @return		eaf_errno
 */
-int eaf_service_register(uint32_t srv_id, const eaf_service_info_t* info);
+int eaf_register(uint32_t srv_id, const eaf_service_info_t* info);
 
 /**
 * 事件订阅
@@ -47,7 +131,7 @@ int eaf_service_register(uint32_t srv_id, const eaf_service_info_t* info);
 * @param arg	自定义参数
 * @return		eaf_errno
 */
-int eaf_service_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
+int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
 /**
 * 取消事件订阅
@@ -57,7 +141,7 @@ int eaf_service_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn
 * @param arg	自定义参数
 * @return		eaf_errno
 */
-int eaf_service_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
+int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
 /**
 * 发送请求数据
@@ -66,7 +150,7 @@ int eaf_service_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn 
 * @param req	请求数据
 * @return		eaf_errno
 */
-int eaf_service_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
+int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
 
 /**
 * 发送响应数据
@@ -74,7 +158,7 @@ int eaf_service_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
 * @param rsp	响应数据
 * @return		eaf_errno
 */
-int eaf_service_send_rsp(uint32_t from, eaf_msg_t* rsp);
+int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp);
 
 /**
 * 发送广播数据
@@ -82,7 +166,7 @@ int eaf_service_send_rsp(uint32_t from, eaf_msg_t* rsp);
 * @param evt	广播数据
 * @return		eaf_errno
 */
-int eaf_service_send_evt(uint32_t from, eaf_msg_t* evt);
+int eaf_send_evt(uint32_t from, eaf_msg_t* evt);
 
 #ifdef __cplusplus
 }

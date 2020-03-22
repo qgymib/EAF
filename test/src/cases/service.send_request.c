@@ -23,7 +23,7 @@ static int _test_send_request_s1_on_init(void)
 	ASSERT(req != NULL);
 	EAF_MSG_ACCESS(int, req) = 99;
 
-	ASSERT(eaf_service_send_req(TEST_SERVICE_S1, TEST_SERVICE_S2, req) == 0);
+	ASSERT(eaf_send_req(TEST_SERVICE_S1, TEST_SERVICE_S2, req) == 0);
 	eaf_msg_dec_ref(req);
 
 	return 0;
@@ -56,7 +56,7 @@ static void _test_send_request_s2_on_req(eaf_msg_t* req)
 
 	EAF_MSG_ACCESS(int, rsp) = EAF_MSG_ACCESS(int, req) * 2;
 
-	ASSERT(eaf_service_send_rsp(TEST_SERVICE_S2, rsp) == 0);
+	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, rsp) == 0);
 	eaf_msg_dec_ref(rsp);
 }
 
@@ -84,7 +84,7 @@ TEST_CLASS_SETUP(send_request)
 		_test_send_request_s1_on_init,
 		_test_send_request_s1_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_service_msgmap_t s2_msg_table[] = {
@@ -95,7 +95,7 @@ TEST_CLASS_SETUP(send_request)
 		_test_send_request_s2_on_init,
 		_test_send_request_s2_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
 	ASSERT_NUM_EQ(eaf_load(), 0);

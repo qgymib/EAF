@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 /************************************************************************/
@@ -47,47 +48,47 @@ extern "C" {
 /**
 * 初始化用例集
 */
-#define TEST_CLASS_SETUP(class_name)	\
-	static void TEST_CLASS_SETUP_##class_name(void)
+#define TEST_CLASS_SETUP(test_fixture)	\
+	static void TEST_CLASS_SETUP_##test_fixture(void)
 
 /**
 * 卸载用例集
 */
-#define TEST_CLASS_TEAREDOWN(class_name)	\
-	static void TEST_CLASS_TEARDOWN_##class_name(void)
+#define TEST_CLASS_TEAREDOWN(test_fixture)	\
+	static void TEST_CLASS_TEARDOWN_##test_fixture(void)
 
 /**
 * 测试用例
 * @param class_name	所属用例集
 * @param case_name	用例名
 */
-#define TEST_F(class_name, case_name)	\
-	static void TEST_##class_name##_##case_name(void);\
-	TEST_INITIALIZER(TEST_INIT_##class_name##_##case_name) {\
+#define TEST_F(test_fixture, test_name)	\
+	static void TEST_##test_fixture##_##test_name(void);\
+	TEST_INITIALIZER(TEST_INIT_##test_fixture##_##test_name) {\
 		static test_case_item_t cases[] = {\
-			{ #class_name, #case_name, test_case_type_setup, TEST_CLASS_SETUP_##class_name },\
-			{ #class_name, #case_name, test_case_type_normal, TEST_##class_name##_##case_name },\
-			{ #class_name, #case_name, test_case_type_teardown, TEST_CLASS_TEARDOWN_##class_name },\
+			{ #test_fixture, #test_name, test_case_type_setup, TEST_CLASS_SETUP_##test_fixture },\
+			{ #test_fixture, #test_name, test_case_type_normal, TEST_##test_fixture##_##test_name },\
+			{ #test_fixture, #test_name, test_case_type_teardown, TEST_CLASS_TEARDOWN_##test_fixture },\
 		};\
-		static test_case_t item = { { NULL, NULL }, { sizeof(cases) / sizeof(cases[0]), cases } };\
-		test_register_cases(&item);\
+		static test_case_t item = { { NULL, NULL }, 0, { sizeof(cases) / sizeof(cases[0]), cases } };\
+		test_register_case(&item);\
 	}\
-	static void TEST_##class_name##_##case_name(void)
+	static void TEST_##test_fixture##_##test_name(void)
 
 /**
 * 测试用例
 * @param case_name	用例名
 */
-#define TEST(case_name)	\
-	static void TEST_##case_name(void);\
-	TEST_INITIALIZER(TEST_INIT_##case_name) {\
+#define TEST(test_case_name, test_name)	\
+	static void TEST_##test_case_name##_##test_name(void);\
+	TEST_INITIALIZER(TEST_INIT_##test_name) {\
 		static test_case_item_t cases[] = {\
-			{ NULL, #case_name, test_case_type_normal, TEST_##case_name },\
+			{ #test_case_name, #test_name, test_case_type_normal, TEST_##test_case_name##_##test_name },\
 		};\
-		static test_case_t item = { { NULL, NULL }, { sizeof(cases) / sizeof(cases[0]), cases } };\
-		test_register_cases(&item);\
+		static test_case_t item = { { NULL, NULL }, 0, { sizeof(cases) / sizeof(cases[0]), cases } };\
+		test_register_case(&item);\
 	}\
-	static void TEST_##case_name(void)
+	static void TEST_##test_case_name##_##test_name(void)
 
 #define ASSERT(x)	\
 	((void)((x) || (test_assert_fail(#x, __FILE__, __LINE__, __func__),0)))
@@ -133,6 +134,7 @@ typedef struct test_case_item
 typedef struct test_case
 {
 	test_list_node_t		node;					/** 侵入式节点 */
+	unsigned long			mask;					/** 内部标记 */
 	struct
 	{
 		unsigned			size;					/** 用例数量 */
@@ -145,7 +147,7 @@ typedef struct test_case
 * @param cases	用例列表。全局可访问
 * @param size	列表长度
 */
-void test_register_cases(test_case_t* cases);
+void test_register_case(test_case_t* data);
 
 /**
 * 运行测试用例
@@ -171,43 +173,16 @@ void test_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, co
 void test_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
 
 /************************************************************************/
-/* Argument Parser                                                      */
-/************************************************************************/
-
-typedef enum test_optparse_argtype {
-	OPTPARSE_NONE,
-	OPTPARSE_REQUIRED,
-	OPTPARSE_OPTIONAL
-}test_optparse_argtype_t;
-
-typedef struct test_optparse_long_opt {
-	const char*				longname;
-	int						shortname;
-	test_optparse_argtype_t	argtype;
-}test_optparse_long_opt_t;
-
-typedef struct test_optparse {
-	char**					argv;
-	int						permute;
-	int						optind;
-	int						optopt;
-	char*					optarg;
-	char					errmsg[64];
-	int						subopt;
-}test_optparse_t;
-
-void test_optparse_init(test_optparse_t *options, char **argv);
-int test_optparse_long(test_optparse_t *options, const test_optparse_long_opt_t *longopts, int *longindex);
-
-/************************************************************************/
 /* LOG                                                                  */
 /************************************************************************/
 
+/**
+* 简单日志
+*/
 #define TEST_LOG(fmt, ...)	\
-	test_log(__FILE__, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+	printf("[%s:%d %s] " fmt "\n", test_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
-void test_log(const char* file, const char* func, int line, const char* fmt, ...);
-
+const char* test_pretty_file(const char* file);
 
 #ifdef __cplusplus
 }

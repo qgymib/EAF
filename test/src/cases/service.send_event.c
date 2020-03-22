@@ -20,13 +20,13 @@ static void _test_send_event_s1_on_evt(eaf_msg_t* msg, void* arg)
 
 static int _test_send_event_s1_on_init(void)
 {
-	ASSERT(eaf_service_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S2_EVT, _test_send_event_s1_on_evt, NULL) == 0);
+	ASSERT(eaf_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S2_EVT, _test_send_event_s1_on_evt, NULL) == 0);
 
 	eaf_msg_t* evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
 	ASSERT(evt != NULL);
 
 	EAF_MSG_ACCESS(int, evt) = 199;
-	ASSERT(eaf_service_send_evt(TEST_SERVICE_S1, evt) == 0);
+	ASSERT(eaf_send_evt(TEST_SERVICE_S1, evt) == 0);
 	eaf_msg_dec_ref(evt);
 
 	return 0;
@@ -45,7 +45,7 @@ static void _test_send_event_s2_on_evt(eaf_msg_t* msg, void* arg)
 
 static int _test_send_event_s2_on_init(void)
 {
-	ASSERT(eaf_service_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_send_event_s2_on_evt, NULL) == 0);
+	ASSERT(eaf_subscribe(TEST_SERVICE_S2, TEST_SERVICE_S2_EVT, _test_send_event_s2_on_evt, NULL) == 0);
 
 	return 0;
 }
@@ -79,7 +79,7 @@ TEST_CLASS_SETUP(send_event)
 		_test_send_event_s1_on_init,
 		_test_send_event_s1_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_service_info_t s2_info = {
@@ -87,7 +87,7 @@ TEST_CLASS_SETUP(send_event)
 		_test_send_event_s2_on_init,
 		_test_send_event_s2_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_service_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
 	ASSERT_NUM_EQ(eaf_load(), 0);

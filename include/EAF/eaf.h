@@ -4,11 +4,9 @@
 extern "C" {
 #endif
 
-#include "EAF/core/load.h"
 #include "EAF/core/message.h"
 #include "EAF/core/service.h"
-#include "EAF/filber/filber.h"
-#include "EAF/filber/stack.h"
+#include "EAF/plugin/plugin.h"
 #include "EAF/utils/define.h"
 #include "EAF/utils/errno.h"
 #include "EAF/utils/list.h"

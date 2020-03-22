@@ -4,6 +4,16 @@
 extern "C" {
 #endif
 
+#if defined(_MSC_VER)
+#	define EAF_NORETURN		__declspec(noreturn)
+#elif defined(__clang__)
+#	define EAF_NORETURN		_Noreturn
+#elif defined(__GNUC__)
+#	define EAF_NORETURN		__attribute__((__noreturn__))
+#else
+#	define EAF_NORETURN
+#endif
+
 /**
 * 根据结构体成员变量地址找到结构体首地址
 * @param ptr	地址

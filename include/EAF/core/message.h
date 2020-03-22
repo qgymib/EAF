@@ -17,17 +17,25 @@ extern "C" {
 
 typedef enum eaf_msg_type
 {
-	eaf_msg_type_req,		/** 请求 */
-	eaf_msg_type_rsp,		/** 响应 */
-	eaf_msg_type_evt,		/** 事件 */
+	eaf_msg_type_req,				/** 请求 */
+	eaf_msg_type_rsp,				/** 响应 */
+	eaf_msg_type_evt,				/** 事件 */
 }eaf_msg_type_t;
 
 typedef struct eaf_msg
 {
-	eaf_msg_type_t	type;	/** 消息类型 */
-	uint32_t		id;		/** 消息ID */
-	uint32_t		from;	/** 发送者服务ID */
-	uint32_t		to;		/** 接受者服务ID */
+	eaf_msg_type_t			type;	/** 消息类型 */
+	uint32_t				id;		/** 消息ID */
+	uint32_t				from;	/** 发送者服务ID */
+	uint32_t				to;		/** 接受者服务ID */
+
+	union
+	{
+		struct
+		{
+			struct eaf_msg*	orig;	/** 对应的请求报文 */
+		}rsp;
+	}info;
 }eaf_msg_t;
 
 /**

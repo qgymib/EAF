@@ -14,7 +14,6 @@ typedef enum eaf_errno
 	eaf_errno_notfound		= -0x05,	/** 资源未找到 */
 	eaf_errno_overflow		= -0x06,	/** 溢出 */
 	eaf_errno_timeout		= -0x07,	/** 超时 */
-	eaf_errno_notenough		= -0x08,	/** 给定资源不足 */
 }eaf_errno_t;
 
 /**

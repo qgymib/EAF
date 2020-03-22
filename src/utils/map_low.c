@@ -467,7 +467,7 @@ ____rb_erase_color(eaf_map_low_node_t* parent, eaf_map_low_t* root)
 	}
 }
 
-void rb_link_node(eaf_map_low_node_t* node, eaf_map_low_node_t* parent, eaf_map_low_node_t** rb_link)
+void eaf_map_low_link_node(eaf_map_low_node_t* node, eaf_map_low_node_t* parent, eaf_map_low_node_t** rb_link)
 {
 	node->__rb_parent_color = (unsigned long)parent;
 	node->rb_left = node->rb_right = NULL;
@@ -476,12 +476,12 @@ void rb_link_node(eaf_map_low_node_t* node, eaf_map_low_node_t* parent, eaf_map_
 	return;
 }
 
-void rb_insert_color(eaf_map_low_node_t* node, eaf_map_low_t* root)
+void eaf_map_low_insert_color(eaf_map_low_node_t* node, eaf_map_low_t* root)
 {
 	__rb_insert(node, root);
 }
 
-void rb_erase(eaf_map_low_node_t* node, eaf_map_low_t* root)
+void eaf_map_low_erase(eaf_map_low_t* root, eaf_map_low_node_t* node)
 {
 	eaf_map_low_node_t* rebalance;
 	rebalance = __rb_erase_augmented(node, root);
@@ -492,7 +492,7 @@ void rb_erase(eaf_map_low_node_t* node, eaf_map_low_t* root)
 /*
 * This function returns the first node (in sort order) of the tree.
 */
-eaf_map_low_node_t* rb_first(const eaf_map_low_t* root)
+eaf_map_low_node_t* eaf_map_low_first(const eaf_map_low_t* root)
 {
 	eaf_map_low_node_t* n = root->rb_root;
 
@@ -503,7 +503,7 @@ eaf_map_low_node_t* rb_first(const eaf_map_low_t* root)
 	return n;
 }
 
-eaf_map_low_node_t* rb_last(const eaf_map_low_t* root)
+eaf_map_low_node_t* eaf_map_low_last(const eaf_map_low_t* root)
 {
 	eaf_map_low_node_t* n = root->rb_root;
 
@@ -514,7 +514,7 @@ eaf_map_low_node_t* rb_last(const eaf_map_low_t* root)
 	return n;
 }
 
-eaf_map_low_node_t* rb_next(const eaf_map_low_node_t* node)
+eaf_map_low_node_t* eaf_map_low_next(const eaf_map_low_node_t* node)
 {
 	eaf_map_low_node_t* parent;
 
@@ -545,7 +545,7 @@ eaf_map_low_node_t* rb_next(const eaf_map_low_node_t* node)
 	return parent;
 }
 
-eaf_map_low_node_t* rb_prev(const eaf_map_low_node_t* node)
+eaf_map_low_node_t* eaf_map_low_prev(const eaf_map_low_node_t* node)
 {
 	eaf_map_low_node_t* parent;
 
