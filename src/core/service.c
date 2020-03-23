@@ -473,6 +473,7 @@ static void _eaf_service_handle_code_return(eaf_service_group_t* group, int jmpc
 	_eaf_service_continue_context(group, service);
 }
 
+EAF_NOINLINE
 static void _eaf_service_thread_loop(eaf_service_group_t* group, int jmpcode)
 {
 	_eaf_service_msgq_gc(group);
@@ -508,6 +509,7 @@ static eaf_service_group_t* _eaf_get_current_group(void)
 /**
 * 事件循环。此处会处理本线程中所有服务的数据。
 */
+EAF_NOINLINE
 static void _eaf_service_thread_body(void)
 {
 	/* 由于编译器优化，此函数体内的栈不可信，因此不能通过参数传递给出线程组 */

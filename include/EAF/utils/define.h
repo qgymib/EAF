@@ -5,12 +5,19 @@ extern "C" {
 #endif
 
 #if defined(_MSC_VER)
+#	define EAF_INLINE		__forceinline
+#	define EAF_NOINLINE		__declspec(noinline)
 #	define EAF_NORETURN		__declspec(noreturn)
 #elif defined(__clang__)
+#	define EAF_INLINE		__attribute__((always_inline))
+#	define EAF_NOINLINE		__attribute__((noinline))
 #	define EAF_NORETURN		_Noreturn
 #elif defined(__GNUC__)
+#	define EAF_INLINE		__attribute__((__always_inline__))
+#	define EAF_NOINLINE		__attribute__((__noinline__))
 #	define EAF_NORETURN		__attribute__((__noreturn__))
 #else
+#	define EAF_INLINE
 #	define EAF_NORETURN
 #endif
 
