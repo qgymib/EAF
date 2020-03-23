@@ -19,9 +19,11 @@ include_directories(${PROJECT_SOURCE_DIR}/src/arch/${CMAKE_SYSTEM_PROCESSOR})
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/utils SRC_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/filber SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/compat/${EAF_SYSTEM} SRC_C)
 file(GLOB SRC_S ${PROJECT_SOURCE_DIR}/src/arch/${CMAKE_SYSTEM_PROCESSOR}/*.S)
+
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/plugin SRC_C)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/plugin/msg SRC_C)
 
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SRC_C} ${SRC_S})
 
