@@ -294,7 +294,89 @@ static void test_optparse_init(test_optparse_t *options, char **argv)
 }
 
 /************************************************************************/
-/* TEST                                                                 */
+/* list                                                                 */
+/************************************************************************/
+
+typedef struct test_list
+{
+	test_list_node_t*		head;							/** 头结点 */
+	test_list_node_t*		tail;							/** 尾节点 */
+	unsigned				size;							/** 节点数量 */
+}test_list_t;
+#define TEST_LIST_INITIALIZER		{ NULL, NULL, 0 }
+
+static void _test_list_set_once(test_list_t* handler, test_list_node_t* node)
+{
+	handler->head = node;
+	handler->tail = node;
+	node->p_after = NULL;
+	node->p_before = NULL;
+	handler->size = 1;
+}
+
+static void _test_list_push_back(test_list_t* handler, test_list_node_t* node)
+{
+	if (handler->head == NULL)
+	{
+		_test_list_set_once(handler, node);
+		return;
+	}
+
+	node->p_after = NULL;
+	node->p_before = handler->tail;
+	handler->tail->p_after = node;
+	handler->tail = node;
+	handler->size++;
+}
+
+static test_list_node_t* _test_list_begin(const test_list_t* handler)
+{
+	return handler->head;
+}
+
+static test_list_node_t* _test_list_next(const test_list_t* handler, const test_list_node_t* node)
+{
+	return node->p_after;
+}
+
+static unsigned _test_list_size(const test_list_t* handler)
+{
+	return handler->size;
+}
+
+static void _test_list_erase(test_list_t* handler, test_list_node_t* node)
+{
+	handler->size--;
+
+	/* 唯一节点 */
+	if (handler->head == node && handler->tail == node)
+	{
+		handler->head = NULL;
+		handler->tail = NULL;
+		return;
+	}
+
+	if (handler->head == node)
+	{
+		node->p_after->p_before = NULL;
+		handler->head = node->p_after;
+		return;
+	}
+
+	if (handler->tail == node)
+	{
+		node->p_before->p_after = NULL;
+		handler->tail = node->p_before;
+		return;
+	}
+
+	node->p_before->p_after = node->p_after;
+	node->p_after->p_before = node->p_before;
+	return;
+}
+
+/************************************************************************/
+/* test                                                                 */
 /************************************************************************/
 
 #if defined(_MSC_VER)
@@ -354,19 +436,12 @@ static void test_optparse_init(test_optparse_t *options, char **argv)
 		if (g_test_ctx.mask.break_on_failure) {\
 			abort();\
 		}\
-		longjmp(g_jmpbuf, 1);\
+		longjmp(g_test_ctx2.jmpbuf, 1);\
 	} while (0)
 
 typedef int test_bool;
 #define test_true		1
 #define test_false		0
-
-typedef struct test_list
-{
-	test_list_node_t*		head;							/** 头结点 */
-	test_list_node_t*		tail;							/** 尾节点 */
-	unsigned				size;							/** 节点数量 */
-}test_list_t;
 
 typedef struct test_time
 {
@@ -384,6 +459,7 @@ typedef struct test_ctx
 
 	struct
 	{
+		unsigned long long	seed;							/** 随机数 */
 		test_list_node_t*	cur_it;							/** 当前游标位置 */
 		test_case_t*		cur_case;						/** 当前正在运行的用例 */
 		size_t				cur_idx;						/** 当前游标位置 */
@@ -418,65 +494,43 @@ typedef struct test_ctx
 		unsigned			break_on_failure : 1;			/** 失败时生成断点 */
 		unsigned			print_time : 1;					/** 是否输出用例执行时间 */
 		unsigned			also_run_disabled_tests : 1;	/** 允许执行被关闭的用例 */
+		unsigned			shuffle : 1;					/** 测试用例执行顺序随机 */
 	}mask;
 
 	struct
 	{
-		char**				postive_patterns;					/** 正向匹配 */
-		char**				negative_patterns;					/** 反向匹配 */
-		size_t				n_negative;							/** 正向数量 */
-		size_t				n_postive;							/** 反向数量 */
+		char**				postive_patterns;				/** 正向匹配 */
+		char**				negative_patterns;				/** 反向匹配 */
+		size_t				n_negative;						/** 正向数量 */
+		size_t				n_postive;						/** 反向数量 */
 	}filter;
 }test_ctx_t;
 
-static char					g_strbuf[128];						/** 字符缓冲区 */
-static jmp_buf				g_jmpbuf;							/** 跳转地址 */
+typedef struct test_ctx2
+{
+	char					strbuf[128];					/** 字符缓冲区 */
+	jmp_buf					jmpbuf;							/** 跳转地址 */
+}test_ctx2_t;
+
+static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
-	{ { NULL, NULL, 0 }, 0 },									// .info
-	{ NULL, NULL, 0 },											// .runtime
-	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },					// .timestamp
-	{ { 0, 0, 0 }, { 1, 0 } },									// .counter
-	{ 0, 1, 0 },												// .mask
-	{ NULL, NULL, 0, 0 },										// .filter
+	{ TEST_LIST_INITIALIZER, 0 },							// .info
+	{ 0, NULL, NULL, 0 },									// .runtime
+	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },				// .timestamp
+	{ { 0, 0, 0 }, { 1, 0 } },								// .counter
+	{ 0, 1, 0, 0 },											// .mask
+	{ NULL, NULL, 0, 0 },									// .filter
 };
 
-static void _test_list_set_once(test_list_t* handler, test_list_node_t* node)
+static void _test_srand(unsigned long long s)
 {
-	handler->head = node;
-	handler->tail = node;
-	node->p_after = NULL;
-	node->p_before = NULL;
-	handler->size = 1;
+	g_test_ctx.runtime.seed = s - 1;
 }
 
-static void _test_list_push_back(test_list_t* handler, test_list_node_t* node)
+static unsigned long _test_rand(void)
 {
-	if (handler->head == NULL)
-	{
-		_test_list_set_once(handler, node);
-		return;
-	}
-
-	node->p_after = NULL;
-	node->p_before = handler->tail;
-	handler->tail->p_after = node;
-	handler->tail = node;
-	handler->size++;
-}
-
-static test_list_node_t* _test_list_begin(const test_list_t* handler)
-{
-	return handler->head;
-}
-
-static test_list_node_t* _test_list_next(const test_list_t* handler, const test_list_node_t* node)
-{
-	return node->p_after;
-}
-
-static unsigned _test_list_size(const test_list_t* handler)
-{
-	return handler->size;
+	g_test_ctx.runtime.seed = 6364136223846793005ULL * g_test_ctx.runtime.seed + 1;
+	return g_test_ctx.runtime.seed >> 33;
 }
 
 static void _test_get_timestamp(test_time_t* tv)
@@ -586,12 +640,12 @@ static test_bool _test_check_disable(const char* name)
 
 static void _test_run_case(void)
 {
-	snprintf(g_strbuf, sizeof(g_strbuf), "%s.%s",
+	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
 		g_test_ctx.runtime.cur_case->data.cases[0].class_name,
 		g_test_ctx.runtime.cur_case->data.cases[0].case_name);
 
 	/* 判断是否需要运行 */
-	if (g_test_ctx.filter.postive_patterns != NULL && !_test_check_pattern(g_strbuf))
+	if (g_test_ctx.filter.postive_patterns != NULL && !_test_check_pattern(g_test_ctx2.strbuf))
 	{
 		return;
 	}
@@ -602,11 +656,11 @@ static void _test_run_case(void)
 		return;
 	}
 
-	printf(COLOR_GREEN("[ RUN      ]") " %s\n", g_strbuf);
+	printf(COLOR_GREEN("[ RUN      ]") " %s\n", g_test_ctx2.strbuf);
 	g_test_ctx.runtime.cur_idx = 0;
 	g_test_ctx.counter.result.total++;
 
-	if (setjmp(g_jmpbuf) != 0)
+	if (setjmp(g_test_ctx2.jmpbuf) != 0)
 	{
 		/* 标记失败 */
 		SET_MASK(g_test_ctx.runtime.cur_case->mask, MASK_FAILED);
@@ -645,7 +699,7 @@ static void _test_run_case(void)
 		g_test_ctx.counter.result.success++;
 	}
 
-	printf("%s %s", prefix_str, g_strbuf);
+	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
 	if (g_test_ctx.mask.print_time)
 	{
 		printf(" (%u ms)", g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
@@ -706,9 +760,9 @@ static void _test_show_report(void)
 			continue;
 		}
 
-		snprintf(g_strbuf, sizeof(g_strbuf), "%s.%s",
+		snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
 			case_data->data.cases->class_name, case_data->data.cases->case_name);
-		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_strbuf);
+		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_test_ctx2.strbuf);
 	}
 }
 
@@ -816,17 +870,40 @@ static void _test_setup_arg_print_time(const char* str)
 	g_test_ctx.mask.print_time = !!val;
 }
 
+static void _test_setup_arg_random_seed(const char* str)
+{
+	long long val = time(NULL);
+	sscanf(str, "%lld", &val);
+
+	_test_srand(val);
+}
+
 static int _test_setup_args(int argc, char* argv[])
 {
+	enum test_opt
+	{
+		test_list_tests = 1,
+		test_filter,
+		test_also_run_disabled_tests,
+		test_repeat,
+		test_shuffle,
+		test_random_seed,
+		test_print_time,
+		test_break_on_failure,
+		help,
+	};
+
 	test_optparse_long_opt_t longopts[] = {
-		{ "test_list_tests",				'l',	OPTPARSE_OPTIONAL },
-		{ "test_filter",					'f',	OPTPARSE_OPTIONAL },
-		{ "test_also_run_disabled_tests",	'a',	OPTPARSE_OPTIONAL },
-		{ "test_repeat",					'r',	OPTPARSE_OPTIONAL },
-		{ "test_print_time",				'p',	OPTPARSE_OPTIONAL },
-		{ "test_break_on_failure",			'b',	OPTPARSE_OPTIONAL },
-		{ "help",							'h',	OPTPARSE_OPTIONAL },
-		{ 0,								0,		OPTPARSE_NONE },
+		{ "test_list_tests",				test_list_tests,				OPTPARSE_OPTIONAL },
+		{ "test_filter",					test_filter,					OPTPARSE_OPTIONAL },
+		{ "test_also_run_disabled_tests",	test_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
+		{ "test_repeat",					test_repeat,					OPTPARSE_OPTIONAL },
+		{ "test_shuffle",					test_shuffle,					OPTPARSE_OPTIONAL },
+		{ "test_random_seed",				test_random_seed,				OPTPARSE_OPTIONAL },
+		{ "test_print_time",				test_print_time,				OPTPARSE_OPTIONAL },
+		{ "test_break_on_failure",			test_break_on_failure,			OPTPARSE_OPTIONAL },
+		{ "help",							help,							OPTPARSE_OPTIONAL },
+		{ 0,								0,								OPTPARSE_NONE },
 	};
 
 	test_optparse_t options;
@@ -835,25 +912,31 @@ static int _test_setup_args(int argc, char* argv[])
 	int option;
 	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
 		switch (option) {
-		case 'l':
+		case test_list_tests:
 			_test_list_tests();
 			return -1;
-		case 'f':
+		case test_filter:
 			_test_setup_arg_pattern(options.optarg);
 			break;
-		case 'a':
+		case test_also_run_disabled_tests:
 			g_test_ctx.mask.also_run_disabled_tests = 1;
 			break;
-		case 'r':
+		case test_repeat:
 			_test_setup_arg_repeat(options.optarg);
 			break;
-		case 'p':
+		case test_shuffle:
+			g_test_ctx.mask.shuffle = 1;
+			break;
+		case test_random_seed:
+			_test_setup_arg_random_seed(options.optarg);
+			break;
+		case test_print_time:
 			_test_setup_arg_print_time(options.optarg);
 			break;
-		case 'b':
+		case test_break_on_failure:
 			g_test_ctx.mask.break_on_failure = 1;
 			break;
-		case 'h':
+		case help:
 		case '?':
 			printf(
 				"This program contains tests written using Test. You can use the\n"
@@ -865,7 +948,7 @@ static int _test_setup_args(int argc, char* argv[])
 				"      TEST(Foo, Bar) is \"Foo.Bar\".\n"
 				"  "COLOR_GREEN("--test_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
 				"      Run only the tests whose name matches one of the positive patterns but\n"
-				"      none of the negative patterns.  '?' matches any single character; '*'\n"
+				"      none of the negative patterns. '?' matches any single character; '*'\n"
 				"      matches any substring; ':' separates two patterns.\n"
 				"  "COLOR_GREEN("--test_also_run_disabled_tests")"\n"
 				"      Run all disabled tests too.\n"
@@ -873,6 +956,11 @@ static int _test_setup_args(int argc, char* argv[])
 				"Test Execution:\n"
 				"  "COLOR_GREEN("--test_repeat=")COLOR_YELLO("[COUNT]")"\n"
 				"      Run the tests repeatedly; use a negative count to repeat forever.\n"
+				"  "COLOR_GREEN("--test_shuffle")"\n"
+				"      Randomize tests' orders on every iteration.\n"
+				"  "COLOR_GREEN("--test_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
+				"      Random number seed to use for shuffling test orders (between 0 and\n"
+				"      99999. By default a seed based on the current time is used for shuffle).\n"
 				"\n"
 				"Test Output:\n"
 				"  "COLOR_GREEN("--test_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
@@ -883,6 +971,8 @@ static int _test_setup_args(int argc, char* argv[])
 				"      Turn assertion failures into debugger break-points.\n"
 				);
 			return -1;
+		default:
+			break;
 		}
 	}
 
@@ -912,11 +1002,43 @@ static void _test_run_test_loop(void)
 	_test_show_report();
 }
 
+/**
+* 测试用例随机排序
+*/
+static void _test_shuffle_cases(void)
+{
+	test_list_t copy_case_list = TEST_LIST_INITIALIZER;
+
+	while (_test_list_size(&g_test_ctx.info.case_list) != 0)
+	{
+		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
+
+		unsigned i = 0;
+		test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
+
+		_test_list_erase(&g_test_ctx.info.case_list, it);
+		_test_list_push_back(&copy_case_list, it);
+	}
+
+	g_test_ctx.info.case_list = copy_case_list;
+}
+
 int test_run_tests(int argc, char* argv[])
 {
+	/* 初始化随机数 */
+	_test_srand(time(NULL));
+
+	/* 解析参数 */
 	if (_test_setup_args(argc, argv) < 0)
 	{
 		goto fin;
+	}
+
+	/* 必要时对测试用例重排序 */
+	if (g_test_ctx.mask.shuffle)
+	{
+		_test_shuffle_cases();
 	}
 
 	for (g_test_ctx.counter.repeat.repeated = 0;
