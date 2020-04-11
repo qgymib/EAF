@@ -6,14 +6,15 @@ extern "C" {
 
 typedef enum eaf_errno
 {
-	eaf_errno_success		=  0x00,	/** 成功 */
-	eaf_errno_unknown		= -0x01,	/** 未知错误 */
-	eaf_errno_duplicate		= -0x02,	/** 重复操作 */
-	eaf_errno_memory		= -0x03,	/** 内存异常 */
-	eaf_errno_state			= -0x04,	/** 状态错误 */
-	eaf_errno_notfound		= -0x05,	/** 资源未找到 */
-	eaf_errno_overflow		= -0x06,	/** 溢出 */
-	eaf_errno_timeout		= -0x07,	/** 超时 */
+	eaf_errno_success		=  0x00,		/** 成功 */
+	eaf_errno_unknown		= -0x01,		/** 未知错误 */
+	eaf_errno_duplicate		= -0x02,		/** 重复操作 */
+	eaf_errno_memory		= -0x03,		/** 内存异常 */
+	eaf_errno_state			= -0x04,		/** 状态错误 */
+	eaf_errno_notfound		= -0x05,		/** 资源未找到 */
+	eaf_errno_overflow		= -0x06,		/** 溢出 */
+	eaf_errno_timeout		= -0x07,		/** 操作超时 */
+	eaf_errno_invalid		= -0x08,		/** 非法参数 */
 }eaf_errno_t;
 
 /**

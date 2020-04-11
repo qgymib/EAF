@@ -5,7 +5,7 @@ extern "C" {
 #endif
 
 int eaf_plugin_msg_init(void);
-int eaf_plugin_msg_exit(void);
+void eaf_plugin_msg_exit(void);
 
 #ifdef __cplusplus
 }

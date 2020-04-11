@@ -8,6 +8,7 @@
 #include "compat/mutex.h"
 #include "compat/thread.h"
 #include "compat/semaphore.h"
+#include "plugin/plugin.h"
 #include "utils/memory.h"
 #include "message.h"
 
@@ -850,6 +851,7 @@ int eaf_cleanup(void)
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
 
+	eaf_plugin_unload();
 	return eaf_errno_success;
 }
 

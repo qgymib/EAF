@@ -28,16 +28,6 @@ typedef struct eaf_plugin_msg_ctx
 
 static eaf_plugin_msg_ctx_t* g_eaf_plugin_msg_ctx = NULL;
 
-static int _eaf_plugin_msg_on_init(void)
-{
-	return 0;
-}
-
-static void _eaf_plugin_msg_on_exit(void)
-{
-	// do nothing
-}
-
 static int _eaf_plugin_msg_save_record(eaf_plugin_msg_record_t* rec)
 {
 	int ret;
@@ -83,23 +73,15 @@ int eaf_plugin_msg_init(void)
 		return eaf_errno_unknown;
 	}
 
-	static eaf_service_info_t plugin_msg_info = {
-		0, NULL, _eaf_plugin_msg_on_init, _eaf_plugin_msg_on_exit
-	};
-	if (eaf_register(EAF_PLUGIN_SERVICE_MSG, &plugin_msg_info) < 0)
-	{
-		return eaf_errno_state;
-	}
-
 	return eaf_errno_success;
 }
 
-int eaf_plugin_msg_exit(void)
+void eaf_plugin_msg_exit(void)
 {
 	eaf_map_low_node_t* it;
 	if (g_eaf_plugin_msg_ctx == NULL)
 	{
-		return eaf_errno_state;
+		return;
 	}
 
 	it = eaf_map_low_first(&g_eaf_plugin_msg_ctx->wait_table);
@@ -117,8 +99,6 @@ int eaf_plugin_msg_exit(void)
 	eaf_mutex_exit(&g_eaf_plugin_msg_ctx->objlock);
 	EAF_FREE(g_eaf_plugin_msg_ctx);
 	g_eaf_plugin_msg_ctx = NULL;
-
-	return eaf_errno_success;
 }
 
 int eaf_plugin_msg_send_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
@@ -151,7 +131,7 @@ int eaf_plugin_msg_send_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	}
 
 	/* ·¢ËÍÊý¾Ý */
-	if ((ret = eaf_send_req(EAF_PLUGIN_SERVICE_MSG, to, msg)) < 0)
+	if ((ret = eaf_send_req(EAF_PLUGIN_SERVICE, to, msg)) < 0)
 	{
 		goto err_del;
 	}

@@ -67,7 +67,7 @@ TEST_CLASS_SETUP(plugin_msg)
 	static eaf_service_table_t service_table_1[] = {
 		{ TEST_SERVICE_S1,			8 },
 		{ TEST_SERVICE_S2,			8 },
-		{ EAF_PLUGIN_SERVICE_MSG,	8 },
+		{ EAF_PLUGIN_SERVICE,		8 },
 	};
 	static eaf_thread_table_t load_table[] = {
 		{ 0, -1, 0, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
@@ -75,7 +75,8 @@ TEST_CLASS_SETUP(plugin_msg)
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 加载所有插件 */
-	eaf_plugin_load();
+	eaf_thread_table_t plugin_cfg = { 0, 0, 0, { 0, NULL } };
+	ASSERT_NUM_EQ(eaf_plugin_load(&plugin_cfg), 0);
 
 	/* 部署服务S1 */
 	static eaf_service_msgmap_t s1_msg_table[] = {
@@ -107,9 +108,6 @@ TEST_CLASS_TEAREDOWN(plugin_msg)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
-	/* 卸载所有插件 */
-	eaf_plugin_unload();
-
 	eaf_sem_exit(&_s_ret_sem);
 }
 
