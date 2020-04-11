@@ -381,10 +381,12 @@ static void _test_list_erase(test_list_t* handler, test_list_node_t* node)
 
 #if defined(_MSC_VER)
 #include <windows.h>
+#include <time.h>
 #	define GET_TID()						((unsigned long)GetCurrentThreadId())
 #	define snprintf(str, size, fmt, ...)	_snprintf_s(str, size, _TRUNCATE, fmt, ##__VA_ARGS__)
 #	define strdup(str)						_strdup(str)
 #	define strncasecmp(s1, s2, n)			_strnicmp(s1, s2, n)
+#	define sscanf(str, fmt, ...)			sscanf_s(str, fmt, ##__VA_ARGS__)
 #	define COLOR_GREEN(str)					str
 #	define COLOR_RED(str)					str
 #	define COLOR_YELLO(str)					str
@@ -538,7 +540,7 @@ static void _test_get_timestamp(test_time_t* tv)
 #if defined(_MSC_VER)
 
 	/* Ê±ÖÓÆµÂÊ */
-	static LARGE_INTEGER _s_freq = 0;
+	static LARGE_INTEGER _s_freq = { 0 };
 	if (_s_freq.QuadPart == 0)
 	{
 		ASSERT(QueryPerformanceFrequency(&_s_freq));
@@ -547,8 +549,8 @@ static void _test_get_timestamp(test_time_t* tv)
 	LARGE_INTEGER tmp_counter;
 	ASSERT(QueryPerformanceCounter(&tmp_counter));
 
-	tv->sec = tmp_counter.QuadPart / _s_freq.QuadPart;
-	tv->usec = (tmp_counter.QuadPart - tv->sec * _s_freq.QuadPart) / (_s_freq.QuadPart / 1000.0 / 1000.0);
+	tv->sec = (unsigned int)(tmp_counter.QuadPart / _s_freq.QuadPart);
+	tv->usec = (unsigned int)((tmp_counter.QuadPart - tv->sec * _s_freq.QuadPart) / (_s_freq.QuadPart / 1000.0 / 1000.0));
 
 #else
 	struct timeval tmp_tv;

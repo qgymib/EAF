@@ -13,17 +13,21 @@ static eaf_sem_t	_s_ret_sem;
 
 static int _test_plugin_msg_s1_on_init(void)
 {
-	int req = 10;
+	eaf_reenter
+	{
+		int req = 10;
 
-	eaf_msg_t* rsp;
-	EAF_PLUGIN_MSG_SEND_REQ_FILBER(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, TEST_SERVICE_S2_MSG, req);
-	ASSERT(rsp != NULL);
+		eaf_msg_t* rsp;
+		EAF_PLUGIN_MSG_SEND_REQ(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, TEST_SERVICE_S2_MSG, req);
+		ASSERT(rsp != NULL);
 
-	_s_ret_val = EAF_MSG_ACCESS(int, rsp);
-	eaf_sem_post(&_s_ret_sem);
+		_s_ret_val = EAF_PLUGIN_MSG_ACCESS(int, rsp);
+		eaf_sem_post(&_s_ret_sem);
 
-	eaf_msg_dec_ref(rsp);
-	eaf_return 0;
+		eaf_msg_dec_ref(rsp);
+	};
+
+	return 0;
 }
 
 static void _test_plugin_msg_s1_on_exit(void)
@@ -48,7 +52,7 @@ static void _test_plugin_msg_s1_on_req(eaf_msg_t* msg)
 
 static void _test_plugin_msg_s2_on_req(eaf_msg_t* req)
 {
-	int rsp = EAF_MSG_ACCESS(int, req) * 2;
+	int rsp = EAF_PLUGIN_MSG_ACCESS(int, req) * 2;
 	int ret;
 	EAF_PLUGIN_MSG_SEND_RSP(ret, TEST_SERVICE_S2, req, rsp);
 	ASSERT(ret == 0);

@@ -21,6 +21,7 @@ extern "C" {
 		int flag_success = 0;\
 		eaf_map_low_t* __table = p_table;\
 		eaf_map_low_node_t* node = __table->rb_root;\
+		ret = NULL;\
 		while (node) {\
 			USER_TYPE* orig = EAF_CONTAINER_OF(node, USER_TYPE, node);\
 			int cmp_ret = user_vs_orig;\
@@ -37,7 +38,6 @@ extern "C" {
 		if (flag_success) {\
 			break;\
 		}\
-		ret = NULL;\
 	} while (0)
 
 /**

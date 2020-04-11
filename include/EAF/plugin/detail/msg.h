@@ -14,7 +14,7 @@ extern "C" {
 * @param id		消息ID
 * @param dat	消息内容
 */
-#define EAF_PLUGIN_MSG_SEND_REQ_FILBER(ret, from, to, id, dat)	\
+#define EAF_PLUGIN_MSG_SEND_REQ(ret, from, to, id, dat)	\
 	do {\
 		eaf_msg_t* msg = eaf_msg_create_req(id, sizeof(dat), eaf_plugin_msg_proxy_handle);\
 		if (msg == NULL) {\
@@ -48,6 +48,14 @@ extern "C" {
 		ret = eaf_send_rsp(from, msg);\
 		eaf_msg_dec_ref(msg);\
 	} while (0)
+
+/**
+* 作为类型访问
+* @param TYPE	原始类型
+* @param msg	数据地址
+* @return		TYPE*
+*/
+#define EAF_PLUGIN_MSG_ACCESS(TYPE, msg)	(*(TYPE*)eaf_msg_get_data(msg, NULL))
 
 /**
 * 代理执行函数

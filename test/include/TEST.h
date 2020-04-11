@@ -91,7 +91,7 @@ extern "C" {
 	static void TEST_##test_case_name##_##test_name(void)
 
 #define ASSERT(x)	\
-	((void)((x) || (test_assert_fail(#x, __FILE__, __LINE__, __func__),0)))
+	((void)((x) || (test_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
 
 #define ASSERT_PTR_EQ(a, b)		test_assert_ptr_eq(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_PTR_NE(a, b)		test_assert_ptr_ne(a, b, #a, #b, __FILE__, __LINE__)

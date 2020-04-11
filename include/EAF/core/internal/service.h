@@ -8,56 +8,54 @@ extern "C" {
 #include <setjmp.h>
 #include "EAF/utils/define.h"
 
-typedef struct eaf_jmp_buf
+#if defined(_MSC_VER)
+#	define EAF_FILBER_YIELD_TOKEN	__COUNTER__ + 1
+#else
+#	define EAF_FILBER_YIELD_TOKEN	__LINE__
+#endif
+
+#define EAF_FILBER_REENTER()	\
+	eaf_filber_local_t* _eaf_local = eaf_filber_get_local();\
+	switch(_eaf_local->branch)\
+		case (unsigned)-1: if (_eaf_local->branch)\
+		{\
+			goto terminate_coroutine;\
+		terminate_coroutine:\
+			_eaf_local->branch = (unsigned)-1;\
+			goto bail_out_of_coroutine;\
+		bail_out_of_coroutine:\
+			break;\
+		}\
+		else /* fall-through */ case 0:
+
+#define EAF_FILBER_YIELD(n)	\
+	for (_eaf_local->branch = (n), _eaf_local->cc[0] = EAF_COROUTINE_CC0_YIELD;;)\
+		if (_eaf_local->branch == 0) {\
+			case (n): ;\
+			break;\
+		} else\
+		switch (_eaf_local->branch ? 0 : 1)\
+			for(;;)\
+				/* fall-through */ case -1: if (_eaf_local->branch)\
+					goto terminate_coroutine;\
+				else for (;;)\
+					/* fall-through */ case 1: if (_eaf_local->branch)\
+					goto bail_out_of_coroutine;\
+				else /* fall-through */ case 0: { }
+
+#define EAF_COROUTINE_CC0_YIELD		(0x01 << 0x00)	/** yield */
+
+typedef struct eaf_filber_local
 {
-	jmp_buf		env;	/** 跳转上下文 */
-}eaf_jmp_buf_t;
+	unsigned	branch;		/** yield branch */
+	unsigned	cc[1];		/** coroutine control */
+}eaf_filber_local_t;
 
 /**
-* 计算jmp_buf在给定区域的位置
-* @param addr	内存区域
-* @param size	内存大小
-* @return		跳转位置
+* 获取本地数据
+* @return		eaf_filber_local_t*
 */
-eaf_jmp_buf_t* eaf_stack_calculate_jmpbuf(void* addr, size_t size);
-
-/**
-* 获取跳转上下文
-* @return		上下文
-*/
-eaf_jmp_buf_t* eaf_service_get_jmpbuf(void);
-
-/**
-* 上下文切换
-*/
-EAF_NORETURN
-void eaf_filber_context_switch(void);
-
-/**
-* 协程栈返回
-*/
-EAF_NORETURN
-void eaf_filber_context_return(void);
-
-/**
-* 在指定栈中调用函数
-*
-* 栈空间由如下构成：
-* | =========== BOTTOM =========== |
-* |            jmp_buf             |
-* |  ++++++++++++++++++++++++++++  |
-* |  +                          +  |
-* |  +       user_content       +  |
-* |  +                          +  |
-* |  ++++++++++++++++++++++++++++  |
-* | ============ TOP ============= |
-*
-* @param jmp	基准地址
-* @param fn		用户函数。类型：void (*fn)(void* arg)
-* @param arg	用户参数
-*/
-EAF_NORETURN
-void eaf_asm_stackcall(eaf_jmp_buf_t* jmp, void(*fn)(void*), void* arg);
+eaf_filber_local_t* eaf_filber_get_local(void);
 
 #ifdef __cplusplus
 }

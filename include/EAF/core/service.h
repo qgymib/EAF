@@ -9,39 +9,8 @@ extern "C" {
 #include "EAF/core/internal/service.h"
 #include "EAF/core/message.h"
 
-/**
-* 在指定栈中调用函数
-* @param addr	内存地址
-* @param size	内存大小，必须为sizeof(void*)的整数倍
-* @param proc	用户函数
-* @param priv	用户参数
-*/
-#define eaf_stack_call(addr, size, fn, arg)	\
-	do {\
-		eaf_jmp_buf_t* p_buf = eaf_stack_calculate_jmpbuf(addr, size);\
-		if (setjmp(p_buf->env) != 0) {\
-			break;\
-		}\
-		eaf_asm_stackcall(p_buf, fn, arg);\
-	} while (0)
-
-/**
-* 让度执行权，直到显式resume
-* @note	无栈协程，只能在顶层调用
-*/
-#define eaf_yield	\
-	do {\
-		if (setjmp(eaf_service_get_jmpbuf()->env) != 0) {\
-			break;\
-		}\
-		eaf_filber_context_switch();\
-	} while (0)
-
-/**
-* 从协程中返回
-*/
-#define eaf_return	\
-		eaf_filber_context_return(); return
+#define eaf_reenter		EAF_FILBER_REENTER()
+#define eaf_yield		EAF_FILBER_YIELD(EAF_FILBER_YIELD_TOKEN)
 
 typedef struct eaf_service_msgmap
 {

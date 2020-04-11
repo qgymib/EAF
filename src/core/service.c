@@ -11,10 +11,6 @@
 #include "utils/memory.h"
 #include "message.h"
 
-#define JMP_STATE_DIRECT			0			/** 自然流程 */
-#define JMP_STATE_SWITCH			1			/** 上下文切换 */
-#define JMP_STATE_RETURN			2			/** 用户调用返回 */
-
 /**
 * 对比模板
 * @param a		值a
@@ -29,16 +25,70 @@
 		}\
 	} while (0)
 
-#define CUR_GROUP								(_eaf_get_current_group())
+/**
+* 清除控制位
+*/
+#define CLEAR_CC0(service)	\
+	do {\
+		(service)->filber.local.cc[0] = 0;\
+	} while (0)
+
+/**
+* 检查控制位
+*/
+#define CHECK_CC0(service, bmask)	\
+	(!!((service)->filber.local.cc[0] & (bmask)))
+
+/**
+* 获取当前正在运行的任务
+*/
+#define CUR_RUN(group)	\
+	((group)->filber.cur_run)
+
+/**
+* 清除控制位
+*/
+#define CUR_RUN_CLEAR_CC0(group)	\
+	CLEAR_CC0(CUR_RUN(group))
+
+/**
+* 检查控制位
+*/
+#define CUR_RUN_CHECK_CC0(group, bmask)	\
+	CHECK_CC0(CUR_RUN(group), bmask)
+
+/**
+* 设置当前正在运行的任务
+*/
+#define CUR_RUN_SET_BY_IDX(group, idx)	\
+	do {\
+		eaf_service_group_t* _group = group;\
+		CUR_RUN(_group) = &_group->service.table[idx];\
+	} while (0)
+
+/**
+* 重置分支
+*/
+#define RESET_BRANCH(service)	\
+	do {\
+		(service)->filber.local.branch = 0;\
+	} while (0)
+
+/**
+* 重置分支
+*/
+#define CUR_RUN_RESET_BRANCH(group)	\
+	RESET_BRANCH(CUR_RUN(group))
 
 /**
 * 服务状态
-*                      |--------|
-*                     \|/       |
-* INIT0 --> INIT1 --> IDLE --> BUSY --> PEND
-*             |        |       /|\       |
-*             |       \|/       |--------|
-*             |-----> EXIT
+*
+* INIT1
+*  /|\       |--------|
+*  \|/      \|/       |
+* INIT0 --> IDLE --> BUSY --> PEND
+*   |       \|/      /|\       |
+*   | ----> EXIT      |--------|
 */
 typedef enum eaf_service_state
 {
@@ -97,7 +147,7 @@ typedef struct eaf_service
 	struct
 	{
 		eaf_list_node_t				node;		/** 侵入式节点。在ready_list或wait_list中 */
-		eaf_jmp_buf_t				jmpbuf;		/** 跳转上下文 */
+		eaf_filber_local_t			local;		/** 本地存储 */
 	}filber;
 
 	struct
@@ -123,20 +173,11 @@ typedef struct eaf_service_group
 	eaf_mutex_t						objlock;	/** 线程锁 */
 	eaf_thread_t					working;	/** 承载线程 */
 
-	struct
-	{
-		size_t						init;		/** 初始化游标 */
-		size_t						init_cnt;	/** 初始化计数器 */
-	}idx;
-
 	struct 
 	{
 		eaf_service_t*				cur_run;	/** 当前正在处理的服务 */
-
-		eaf_list_t					busy_list;	/** 执行列表 */
-		eaf_list_t					wait_list;	/** 等待列表 */
-
-		eaf_jmp_buf_t				jmpbuf;		/** 跳转上下文 */
+		eaf_list_t					busy_list;	/** INIT0/BUSY */
+		eaf_list_t					wait_list;	/** INIT1/IDLE/PEND */
 	}filber;
 
 	struct
@@ -291,7 +332,7 @@ static void _eaf_service_set_state_lock(eaf_service_group_t* group, eaf_service_
 	eaf_mutex_leave(&group->objlock);
 }
 
-static void _eaf_handle_new_message_event(eaf_service_group_t* group, eaf_service_t* service)
+static void _eaf_service_resume_message_event(eaf_service_group_t* group, eaf_service_t* service)
 {
 	eaf_evt_handle_fn proc;
 	void* priv;
@@ -303,29 +344,84 @@ static void _eaf_handle_new_message_event(eaf_service_group_t* group, eaf_servic
 	tmp_record.data.priv = NULL;
 
 	eaf_mutex_enter(&group->objlock);
-	for (service->subscribe.cbiter = eaf_map_find_upper(&group->subscribe.table, &tmp_record.node);
-		service->subscribe.cbiter != NULL;
-		service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter))
+	do
 	{
-		eaf_subscribe_record_t* orig = EAF_CONTAINER_OF(service->subscribe.cbiter, eaf_subscribe_record_t, node);
-		if (orig->data.evt_id != service->msgq.cur_msg->data.msg->msg.id || orig->data.service != service->msgq.cur_msg->data.service)
+		if (service->subscribe.cbiter == NULL)
 		{
-			break;
+			service->subscribe.cbiter = eaf_map_find_upper(&group->subscribe.table, &tmp_record.node);
 		}
-		proc = orig->data.proc;
-		priv = orig->data.priv;
 
-		eaf_mutex_leave(&group->objlock);
-		proc(EAF_MSG_C2I(service->msgq.cur_msg->data.msg), priv);
-		eaf_mutex_enter(&group->objlock);
-	}
+		while (service->subscribe.cbiter != NULL)
+		{
+			/* 确保处于当前服务范围 */
+			eaf_subscribe_record_t* orig = EAF_CONTAINER_OF(service->subscribe.cbiter, eaf_subscribe_record_t, node);
+			if (orig->data.evt_id != service->msgq.cur_msg->data.msg->msg.id || orig->data.service != service->msgq.cur_msg->data.service)
+			{
+				break;
+			}
+			proc = orig->data.proc;
+			priv = orig->data.priv;
+
+			/* 执行回调 */
+			eaf_mutex_leave(&group->objlock);
+			{
+				proc(EAF_MSG_C2I(service->msgq.cur_msg->data.msg), priv);
+			}
+			eaf_mutex_enter(&group->objlock);
+
+			/* 若发生yield则终止 */
+			if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+			{
+				break;
+			}
+			service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter);
+		}
+	} while (0);
 	eaf_mutex_leave(&group->objlock);
 }
 
-static void _eaf_handle_new_message(eaf_service_group_t* group, eaf_service_t* service, int jmpcode)
+static void _eaf_service_resume_message(eaf_service_group_t* group, eaf_service_t* service)
+{
+	switch (service->msgq.cur_msg->data.msg->msg.type)
+	{
+	case eaf_msg_type_req:
+		service->msgq.cur_msg->info.req.req_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		goto fin;
+
+	case eaf_msg_type_rsp:
+		service->msgq.cur_msg->data.msg->info.rsp.rsp_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		goto fin;
+
+	case eaf_msg_type_evt:
+		_eaf_service_resume_message_event(group, service);
+		goto fin;
+	}
+
+fin:
+	/* 发生yield */
+	if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+	{
+		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
+		return;
+	}
+
+	/* 正常结束，重置分支 */
+	RESET_BRANCH(service);
+	_eaf_service_destroy_msg_record(service->msgq.cur_msg);
+	service->msgq.cur_msg = NULL;
+}
+
+static void _eaf_handle_new_message(eaf_service_group_t* group, eaf_service_t* service)
 {
 	/* 现在service的状态只可能是BUSY */
 	assert(service->state == eaf_service_state_busy);
+
+	/* 当前消息不为NULL时，说明需要恢复上下文 */
+	if (service->msgq.cur_msg != NULL)
+	{
+		_eaf_service_resume_message(group, service);
+		return;
+	}
 
 	/* 取出消息。若消息队列为空，则将服务置于IDLE状态 */
 	eaf_mutex_enter(&group->objlock);
@@ -346,103 +442,7 @@ static void _eaf_handle_new_message(eaf_service_group_t* group, eaf_service_t* s
 		return;
 	}
 
-	switch (service->msgq.cur_msg->data.msg->msg.type)
-	{
-	case eaf_msg_type_req:
-		service->msgq.cur_msg->info.req.req_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
-		goto fin;
-
-	case eaf_msg_type_rsp:
-		service->msgq.cur_msg->data.msg->info.rsp.rsp_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
-		goto fin;
-
-	case eaf_msg_type_evt:
-		goto handle_evt;
-	}
-
-handle_evt:
-	_eaf_handle_new_message_event(group, service);
-
-fin:
-	_eaf_service_destroy_msg_record(service->msgq.cur_msg);
-	service->msgq.cur_msg = NULL;
-}
-
-static void _eaf_service_handle_code_switch(eaf_service_group_t* group, int jmpcode)
-{
-	if (group->filber.cur_run->state == eaf_service_state_init0)
-	{
-		_eaf_service_set_state_lock(group, group->filber.cur_run, eaf_service_state_init1);
-	}
-	else
-	{
-		_eaf_service_set_state_lock(group, group->filber.cur_run, eaf_service_state_pend);
-	}
-	return;
-}
-
-static void _eaf_service_handle_code_direct(eaf_service_group_t* group, int jmpcode)
-{
-	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
-	if (service == NULL)
-	{
-		eaf_sem_pend(&group->msgq.sem, -1);
-		return;
-	}
-	eaf_sem_pend(&group->msgq.sem, 0);
-	group->filber.cur_run = service;
-
-	/* 必要时恢复上下文 */
-	if (service->state == eaf_service_state_init0 || service->msgq.cur_msg != NULL)
-	{
-		longjmp(service->filber.jmpbuf.env, JMP_STATE_SWITCH);
-		return;
-	}
-
-	_eaf_handle_new_message(group, service, jmpcode);
-}
-
-/**
-* 继续执行上下文
-* @param group		组
-* @param service	服务
-*/
-static void _eaf_service_continue_context(eaf_service_group_t* group, eaf_service_t* service)
-{
-	/* 若消息类型非事件，则可以销毁 */
-	if (service->msgq.cur_msg->data.msg->msg.type != eaf_msg_type_evt)
-	{
-		goto cleanup;
-	}
-
-	eaf_evt_handle_fn proc;
-	void* priv;
-
-	/* 继续处理下一个事件 */
-	eaf_mutex_enter(&group->objlock);
-	for (service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter);
-		service->subscribe.cbiter != NULL;
-		service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter))
-	{
-		eaf_subscribe_record_t* orig = EAF_CONTAINER_OF(service->subscribe.cbiter, eaf_subscribe_record_t, node);
-		if (orig->data.evt_id != service->msgq.cur_msg->data.msg->msg.id || orig->data.service != service->msgq.cur_msg->data.service)
-		{
-			break;
-		}
-		proc = orig->data.proc;
-		priv = orig->data.priv;
-
-		eaf_mutex_leave(&group->objlock);
-		proc(EAF_MSG_C2I(service->msgq.cur_msg->data.msg), priv);
-		eaf_mutex_enter(&group->objlock);
-	}
-	eaf_mutex_leave(&group->objlock);
-
-cleanup:
-	_eaf_service_destroy_msg_record(service->msgq.cur_msg);
-	service->msgq.cur_msg = NULL;
-
-	return;
+	_eaf_service_resume_message(group, service);
 }
 
 static void _eaf_group_finish_service_init_lock(eaf_service_group_t* group, eaf_service_t* service)
@@ -461,40 +461,54 @@ static void _eaf_group_finish_service_init_lock(eaf_service_group_t* group, eaf_
 	eaf_mutex_leave(&group->objlock);
 }
 
-static void _eaf_service_handle_code_return(eaf_service_group_t* group, int jmpcode)
+/**
+* 继续进行初始化
+*/
+static int _eaf_service_resume_init(eaf_service_group_t* group, eaf_service_t* service)
 {
-	eaf_service_t* service = group->filber.cur_run;
-	if (service->state == eaf_service_state_init0)
+	int ret = service->load->on_init();
+
+	/* 检查是否执行yield */
+	if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+	{/* 若init阶段进行了yield */
+		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
+		return 0;
+	}
+	RESET_BRANCH(service);
+
+	/* 初始化失败时返回错误 */
+	if (ret < 0)
 	{
-		_eaf_group_finish_service_init_lock(group, service);
-		return;
+		return -1;
 	}
 
-	_eaf_service_continue_context(group, service);
+	/* 标记完成初始化 */
+	_eaf_group_finish_service_init_lock(group, service);
+	return 0;
 }
 
-EAF_NOINLINE
-static void _eaf_service_thread_loop(eaf_service_group_t* group, int jmpcode)
+static int _eaf_service_thread_loop(eaf_service_group_t* group)
 {
 	_eaf_service_msgq_gc(group);
 
-	switch (jmpcode)
+	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
+	if (service == NULL)
 	{
-	case JMP_STATE_DIRECT:
-		_eaf_service_handle_code_direct(group, jmpcode);
-		break;
-
-	case JMP_STATE_SWITCH:
-		_eaf_service_handle_code_switch(group, jmpcode);
-		break;
-
-	case JMP_STATE_RETURN:
-		_eaf_service_handle_code_return(group, jmpcode);
-		break;
+		eaf_sem_pend(&group->msgq.sem, -1);
+		return 0;
 	}
-	
-	group->filber.cur_run = NULL;
-	return;
+	eaf_sem_pend(&group->msgq.sem, 0);
+
+	group->filber.cur_run = service;
+	CLEAR_CC0(service);
+
+	if (service->state == eaf_service_state_init0)
+	{
+		return _eaf_service_resume_init(group, service);
+	}
+
+	_eaf_handle_new_message(group, service);
+	return 0;
 }
 
 /**
@@ -506,21 +520,40 @@ static eaf_service_group_t* _eaf_get_current_group(void)
 	return eaf_thread_storage_get(&g_eaf_ctx->tls);
 }
 
-/**
-* 事件循环。此处会处理本线程中所有服务的数据。
-*/
-EAF_NOINLINE
-static void _eaf_service_thread_body(void)
+static int _eaf_group_init(eaf_service_group_t* group, size_t* idx)
 {
-	/* 由于编译器优化，此函数体内的栈不可信，因此不能通过参数传递给出线程组 */
-	int jmp_code = setjmp(CUR_GROUP->filber.jmpbuf.env);
-
-	/* 事件循环 */
-	while (g_eaf_ctx->state == eaf_ctx_state_busy)
+	int counter = 0;
+	for (*idx = 0; *idx < group->service.size; *idx += 1)
 	{
-		_eaf_service_thread_loop(CUR_GROUP, jmp_code);
-		jmp_code = JMP_STATE_DIRECT;
+		CUR_RUN_SET_BY_IDX(group, *idx);
+
+		if (CUR_RUN(group)->load == NULL || CUR_RUN(group)->load->on_init == NULL)
+		{
+			continue;
+		}
+
+		CUR_RUN_CLEAR_CC0(group);
+		int ret = group->filber.cur_run->load->on_init();
+
+		/* 检查是否执行yield */
+		if (CUR_RUN_CHECK_CC0(group, EAF_COROUTINE_CC0_YIELD))
+		{/* 若init阶段进行了yield */
+			_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_init1);
+			continue;
+		}
+		CUR_RUN_RESET_BRANCH(group);
+
+		/* 若初始化失败则返回错误 */
+		if (ret < 0)
+		{
+			return -1;
+		}
+
+		_eaf_group_finish_service_init_lock(group, CUR_RUN(group));
+		counter++;
 	}
+
+	return counter;
 }
 
 /**
@@ -530,6 +563,9 @@ static void _eaf_service_thread_body(void)
 static void _eaf_service_thread(void* arg)
 {
 	size_t i;
+	size_t init_idx = 0;
+	eaf_service_group_t* group = arg;
+
 	/* 设置线程私有变量 */
 	if (eaf_thread_storage_set(&g_eaf_ctx->tls, arg) < 0)
 	{
@@ -539,81 +575,41 @@ static void _eaf_service_thread(void* arg)
 	/* 等待就绪 */
 	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
 	{
-		eaf_sem_pend(&CUR_GROUP->msgq.sem, -1);
+		eaf_sem_pend(&group->msgq.sem, -1);
 	}
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
 		return;
 	}
 
-	/*
-	* 若在此处返回，则模块初始化处发生协程切换
-	* 当在初始化阶段发生协程切换时，需要继续继续其他服务的初始化
-	*/
-	CUR_GROUP->idx.init = 0;
-	CUR_GROUP->idx.init_cnt = 0;
-	switch (setjmp(CUR_GROUP->filber.jmpbuf.env))
-	{
-	case JMP_STATE_DIRECT:
-		break;
-
-		/* init阶段没有进行yield，直接使用了eaf_return */
-	case JMP_STATE_RETURN:
-		_eaf_group_finish_service_init_lock(CUR_GROUP, CUR_GROUP->filber.cur_run);
-		CUR_GROUP->idx.init++;
-		CUR_GROUP->idx.init_cnt++;
-		break;
-
-		/* init阶段进行了yield */
-	case JMP_STATE_SWITCH:
-		_eaf_service_set_state_nolock(CUR_GROUP, CUR_GROUP->filber.cur_run, eaf_service_state_init1);
-		CUR_GROUP->idx.init++;
-		CUR_GROUP->idx.init_cnt++;
-		break;
-	}
-
-	/* 初始化当前线程包含的服务 */
-	for (; CUR_GROUP->idx.init < CUR_GROUP->service.size; CUR_GROUP->idx.init++)
-	{
-		if (CUR_GROUP->service.table[CUR_GROUP->idx.init].load == NULL
-			|| CUR_GROUP->service.table[CUR_GROUP->idx.init].load->on_init == NULL)
-		{
-			continue;
-		}
-
-		/* 标记当前正在运行的服务 */
-		CUR_GROUP->filber.cur_run = &CUR_GROUP->service.table[CUR_GROUP->idx.init];
-		if (CUR_GROUP->filber.cur_run->load->on_init() < 0)
-		{
-			goto cleanup;
-		}
-		_eaf_group_finish_service_init_lock(CUR_GROUP, CUR_GROUP->filber.cur_run);
-
-		CUR_GROUP->idx.init_cnt++;
-	}
+	/* 进行初始化 */
+	int init_count = _eaf_group_init(group, &init_idx);
 
 	/* 通告初始化完毕 */
 	eaf_sem_post(&g_eaf_ctx->ready);
 
-	/* 若本线程未部署任何服务，则退出 */
-	if (CUR_GROUP->idx.init_cnt == 0)
+	/* 失败时清理 */
+	if (init_count <= 0)
 	{
-		return;
+		goto cleanup;
 	}
 
-	/* 处理消息 */
-	_eaf_service_thread_body();
+	/* 事件循环 */
+	while (g_eaf_ctx->state == eaf_ctx_state_busy
+		&& _eaf_service_thread_loop(group) == 0)
+	{
+	}
 
 cleanup:
-	for (i = 0; i < CUR_GROUP->idx.init; i++)
+	for (i = 0; i < init_idx; i++)
 	{
-		if (CUR_GROUP->service.table[i].load != NULL
-			&& CUR_GROUP->service.table[i].load->on_exit != NULL)
-		{
-			CUR_GROUP->filber.cur_run = &CUR_GROUP->service.table[i];
+		CUR_RUN_SET_BY_IDX(group, i);
+		_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_exit);
 
-			_eaf_service_set_state_lock(CUR_GROUP, CUR_GROUP->filber.cur_run, eaf_service_state_exit);
-			CUR_GROUP->filber.cur_run->load->on_exit();
+		if (group->service.table[i].load != NULL
+			&& group->service.table[i].load->on_exit != NULL)
+		{
+			group->filber.cur_run->load->on_exit();
 		}
 	}
 }
@@ -1064,25 +1060,6 @@ int eaf_send_evt(uint32_t from, eaf_msg_t* evt)
 	return eaf_errno_success;
 }
 
-eaf_jmp_buf_t* eaf_service_get_jmpbuf(void)
-{
-	return &_eaf_get_current_service(NULL)->filber.jmpbuf;
-}
-
-void eaf_filber_context_switch(void)
-{
-	eaf_service_group_t* group = _eaf_get_current_group();
-
-	longjmp(group->filber.jmpbuf.env, JMP_STATE_SWITCH);
-}
-
-void eaf_filber_context_return(void)
-{
-	eaf_service_group_t* group = _eaf_get_current_group();
-
-	longjmp(group->filber.jmpbuf.env, JMP_STATE_RETURN);
-}
-
 int eaf_resume(uint32_t srv_id)
 {
 	eaf_service_group_t* group;
@@ -1118,7 +1095,7 @@ int eaf_resume(uint32_t srv_id)
 	return ret;
 }
 
-eaf_jmp_buf_t* eaf_stack_calculate_jmpbuf(void* addr, size_t size)
+eaf_filber_local_t* eaf_filber_get_local(void)
 {
-	return (eaf_jmp_buf_t*)((char*)addr + size - sizeof(jmp_buf));
+	return &(_eaf_get_current_service(NULL)->filber.local);
 }

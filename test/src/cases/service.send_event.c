@@ -14,7 +14,7 @@ static eaf_sem_t	_s2_ret_sem;
 
 static void _test_send_event_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
-	_s2_ret_val = EAF_MSG_ACCESS(int, msg);
+	_s2_ret_val = EAF_PLUGIN_MSG_ACCESS(int, msg);
 	eaf_sem_post(&_s2_ret_sem);
 }
 
@@ -25,7 +25,7 @@ static int _test_send_event_s1_on_init(void)
 	eaf_msg_t* evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
 	ASSERT(evt != NULL);
 
-	EAF_MSG_ACCESS(int, evt) = 199;
+	EAF_PLUGIN_MSG_ACCESS(int, evt) = 199;
 	ASSERT(eaf_send_evt(TEST_SERVICE_S1, evt) == 0);
 	eaf_msg_dec_ref(evt);
 
@@ -39,7 +39,7 @@ static void _test_send_event_s1_on_exit(void)
 
 static void _test_send_event_s2_on_evt(eaf_msg_t* msg, void* arg)
 {
-	_s1_ret_val = EAF_MSG_ACCESS(int, msg);
+	_s1_ret_val = EAF_PLUGIN_MSG_ACCESS(int, msg);
 	eaf_sem_post(&_s1_ret_sem);
 }
 

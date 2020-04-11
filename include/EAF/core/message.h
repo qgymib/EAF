@@ -7,14 +7,6 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-/**
-* 作为类型访问
-* @param TYPE	原始类型
-* @param msg	数据地址
-* @return		TYPE*
-*/
-#define EAF_MSG_ACCESS(TYPE, msg)	(*(TYPE*)eaf_msg_get_data(msg, NULL))
-
 typedef enum eaf_msg_type
 {
 	eaf_msg_type_req,				/** 请求 */

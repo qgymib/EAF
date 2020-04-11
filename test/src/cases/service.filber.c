@@ -21,21 +21,23 @@ static eaf_list_t			_s_ret_list;
 
 static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
-	_s_nodes[0].ret = EAF_MSG_ACCESS(int, msg);
-	eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
+	eaf_reenter
+	{
+		_s_nodes[0].ret = EAF_PLUGIN_MSG_ACCESS(int, msg);
+		eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
 
-	eaf_yield;
+		eaf_yield;
 
-	_s_nodes[1].ret = -1;
-	eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
+		_s_nodes[1].ret = -1;
+		eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
 
-	ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
-	eaf_return;
+		ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
+	};
 }
 
 static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
 {
-	_s_nodes[2].ret = EAF_MSG_ACCESS(int, msg);
+	_s_nodes[2].ret = EAF_PLUGIN_MSG_ACCESS(int, msg);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[2].node);
 
 	_s_nodes[3].ret = -2;
@@ -46,7 +48,10 @@ static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
 
 static int _test_filber_s1_on_init(void)
 {
-	ASSERT(eaf_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_filber_s1_on_evt, NULL) == 0);
+	eaf_reenter
+	{
+		ASSERT(eaf_subscribe(TEST_SERVICE_S1, TEST_SERVICE_S1_EVT, _test_filber_s1_on_evt, NULL) == 0);
+	};
 	return 0;
 }
 
@@ -114,7 +119,7 @@ TEST_F(filber, yield_in_event)
 	{
 		eaf_msg_t* s1_evt = eaf_msg_create_evt(TEST_SERVICE_S1_EVT, sizeof(int));
 		ASSERT_PTR_NE(s1_evt, NULL);
-		EAF_MSG_ACCESS(int, s1_evt) = 99;
+		EAF_PLUGIN_MSG_ACCESS(int, s1_evt) = 99;
 		ASSERT_NUM_EQ(eaf_send_evt(-1, s1_evt), 0);
 		eaf_msg_dec_ref(s1_evt);
 	}
@@ -122,7 +127,7 @@ TEST_F(filber, yield_in_event)
 	{
 		eaf_msg_t* s2_evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
 		ASSERT_PTR_NE(s2_evt, NULL);
-		EAF_MSG_ACCESS(int, s2_evt) = 88;
+		EAF_PLUGIN_MSG_ACCESS(int, s2_evt) = 88;
 		ASSERT_NUM_EQ(eaf_send_evt(-1, s2_evt), 0);
 		eaf_msg_dec_ref(s2_evt);
 	}
