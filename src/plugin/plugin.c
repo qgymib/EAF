@@ -70,7 +70,7 @@ int eaf_plugin_load(const eaf_thread_table_t* cfg)
 	}
 
 	/* Æô¶¯Ïß³Ì */
-	eaf_thread_attr_t thread_attr = { cfg->proprity, cfg->stacksize << 4, cfg->cpuno };
+	eaf_thread_attr_t thread_attr = { cfg->proprity, cfg->stacksize, cfg->cpuno };
 	if (eaf_thread_init(&g_eaf_plugin_ctx->driver, &thread_attr, _eaf_plugin_thread, NULL) < 0)
 	{
 		close(g_eaf_plugin_ctx->epfd);

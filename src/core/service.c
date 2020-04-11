@@ -768,7 +768,7 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
 			goto err;
 		}
-		eaf_thread_attr_t thread_attr = { info[init_idx].proprity, info[init_idx].stacksize << 4, info[init_idx].cpuno };
+		eaf_thread_attr_t thread_attr = { info[init_idx].proprity, info[init_idx].stacksize, info[init_idx].cpuno };
 		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &thread_attr, _eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
 		{
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);

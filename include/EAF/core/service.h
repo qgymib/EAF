@@ -47,7 +47,7 @@ typedef struct eaf_thread_table
 {
 	uint16_t						proprity;		/** 线程优先级 */
 	uint16_t						cpuno;			/** CPU核心亲和性 */
-	uint32_t						stacksize;		/** 线程栈大小。真实栈大小 = stacksize << 4 */
+	uint32_t						stacksize;		/** 线程栈大小 */
 
 	struct
 	{
