@@ -45,9 +45,9 @@ typedef struct eaf_service_table
 
 typedef struct eaf_thread_table
 {
-	uint8_t							proprity;		/** 线程优先级 */
-	uint8_t							cpuno;			/** CPU核心亲和性 */
-	uint16_t						stacksize;		/** 线程栈大小。真实栈大小 = stacksize << 4 */
+	uint16_t						proprity;		/** 线程优先级 */
+	uint16_t						cpuno;			/** CPU核心亲和性 */
+	uint32_t						stacksize;		/** 线程栈大小。真实栈大小 = stacksize << 4 */
 
 	struct
 	{

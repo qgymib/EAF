@@ -14,9 +14,9 @@ typedef struct eaf_thread_storage eaf_thread_storage_t;
 
 typedef struct eaf_thread_attr
 {
-	unsigned	priority;
-	unsigned	stack_size;
-	unsigned	cpuno;
+	unsigned long	priority;
+	unsigned long	stack_size;
+	unsigned long	cpuno;
 }eaf_thread_attr_t;
 
 /**
