@@ -51,7 +51,7 @@ static void _eaf_plugin_thread(void* arg)
 	(void)arg;
 	while (g_eaf_plugin_ctx->mask.looping)
 	{
-
+		eaf_thread_sleep(1);
 	}
 }
 
