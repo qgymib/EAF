@@ -35,7 +35,7 @@ typedef struct test_optparse {
 	int						optopt;
 	char*					optarg;
 	char					errmsg[64];
-	int						subopt;
+	size_t					subopt;
 }test_optparse_t;
 
 static int _test_optparse_is_dashdash(const char *arg)
@@ -157,7 +157,7 @@ static int _test_optparse(test_optparse_t *options, const char *optstring)
 			return -1;
 		}
 	}
-	option += options->subopt + 1;
+	option += (options->subopt + 1);
 	options->optopt = option[0];
 	type = _test_optparse_argtype(optstring, option[0]);
 	next = options->argv[options->optind + 1];
@@ -380,19 +380,21 @@ static void _test_list_erase(test_list_t* handler, test_list_node_t* node)
 /************************************************************************/
 
 #if defined(_MSC_VER)
-#include <windows.h>
-#include <time.h>
+#	include <windows.h>
+#	include <time.h>
 #	define GET_TID()						((unsigned long)GetCurrentThreadId())
 #	define snprintf(str, size, fmt, ...)	_snprintf_s(str, size, _TRUNCATE, fmt, ##__VA_ARGS__)
-#	define strdup(str)						_strdup(str)
+#	ifndef strdup
+#		define strdup(str)					_strdup(str)
+#	endif
 #	define strncasecmp(s1, s2, n)			_strnicmp(s1, s2, n)
 #	define sscanf(str, fmt, ...)			sscanf_s(str, fmt, ##__VA_ARGS__)
 #	define COLOR_GREEN(str)					str
 #	define COLOR_RED(str)					str
 #	define COLOR_YELLO(str)					str
 #elif defined(__linux__)
-#include <sys/time.h>
-#include <pthread.h>
+#	include <sys/time.h>
+#	include <pthread.h>
 #	define GET_TID()						((unsigned long)pthread_self())
 #	define COLOR_GREEN(str)					"\033[32m" str "\033[0m"
 #	define COLOR_RED(str)					"\033[31m" str "\033[0m"

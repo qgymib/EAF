@@ -144,10 +144,12 @@ eaf_map_node_t* eaf_map_end(const eaf_map_t* handler)
 
 eaf_map_node_t* eaf_map_next(const eaf_map_t* handler, const eaf_map_node_t* node)
 {
+	(void)handler;
 	return eaf_map_low_next(node);
 }
 
 eaf_map_node_t* eaf_map_prev(const eaf_map_t* handler, const eaf_map_node_t* node)
 {
+	(void)handler;
 	return eaf_map_low_prev(node);
 }

@@ -24,6 +24,10 @@ typedef struct eaf_ringbuffer_counter
 	size_t				reading;						/** 处于reading状态节点数 */
 }eaf_ringbuffer_counter_t;
 
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
 typedef struct eaf_ringbuffer_token
 {
 	union
@@ -34,6 +38,9 @@ typedef struct eaf_ringbuffer_token
 
 	uint8_t				data[];							/** 数据体 */
 }eaf_ringbuffer_token_t;
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
 
 /**
 * 在给定的内存区块上初始化RingBuffer

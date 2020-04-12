@@ -3,13 +3,14 @@
 
 int eaf_mutex_init(eaf_mutex_t* handler, eaf_mutex_attr_t attr)
 {
+	(void)attr;
 	InitializeCriticalSection(&handler->obj);
 	return eaf_errno_success;
 }
 
 void eaf_mutex_exit(eaf_mutex_t* handler)
 {
-	// do nothing
+	(void)handler;
 }
 
 int eaf_mutex_enter(eaf_mutex_t* handler)

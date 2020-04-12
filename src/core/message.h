@@ -18,6 +18,10 @@ extern "C" {
 */
 #define EAF_MSG_C2I(_msg)	(&((_msg)->msg))
 
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
 typedef struct eaf_msg_full
 {
 	eaf_msg_t					msg;		/** 原始对象 */
@@ -38,7 +42,7 @@ typedef struct eaf_msg_full
 
 	struct
 	{
-		unsigned				refcnt;		/** 引用计数 */
+		size_t					refcnt;		/** 引用计数 */
 	}cnt;
 
 	struct
@@ -47,6 +51,9 @@ typedef struct eaf_msg_full
 		char					data[];		/** 数据体 */
 	}data;
 }eaf_msg_full_t;
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
 
 #ifdef __cplusplus
 }

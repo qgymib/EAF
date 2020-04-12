@@ -53,6 +53,7 @@ extern "C" {
 		int flag_failed = 0;\
 		eaf_map_low_t* __table = p_table;\
 		eaf_map_low_node_t **new_node = &(__table->rb_root), *parent = NULL;\
+		ret = eaf_errno_success;\
 		while (*new_node) {\
 			USER_TYPE* orig = EAF_CONTAINER_OF(*new_node, USER_TYPE, node);\
 			int cmp_ret = user_vs_orig;\
@@ -72,7 +73,6 @@ extern "C" {
 		}\
 		eaf_map_low_link_node(&(user)->node, parent, new_node);\
 		eaf_map_low_insert_color(&(user)->node, __table);\
-		ret = eaf_errno_success;\
 	} while (0)
 
 typedef struct eaf_map_low_node

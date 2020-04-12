@@ -80,6 +80,7 @@ eaf_list_node_t* eaf_list_begin(const eaf_list_t* handler)
 
 eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t* node)
 {
+	(void)handler;
 	return node->p_after;
 }
 

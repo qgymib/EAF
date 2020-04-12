@@ -48,6 +48,7 @@ static void _eaf_plugin_on_exit(void)
 
 static void _eaf_plugin_thread(void* arg)
 {
+	(void)arg;
 	while (g_eaf_plugin_ctx->mask.looping)
 	{
 
@@ -77,7 +78,10 @@ int eaf_plugin_load(const eaf_thread_table_t* cfg)
 #endif
 
 	/* Æô¶¯Ïß³Ì */
-	eaf_thread_attr_t thread_attr = { cfg->proprity, cfg->stacksize, cfg->cpuno };
+	eaf_thread_attr_t thread_attr;
+	thread_attr.priority = cfg->proprity;
+	thread_attr.stack_size = cfg->stacksize;
+	thread_attr.cpuno = cfg->cpuno;
 	if (eaf_thread_init(&g_eaf_plugin_ctx->driver, &thread_attr, _eaf_plugin_thread, NULL) < 0)
 	{
 #if defined(_MSC_VER)

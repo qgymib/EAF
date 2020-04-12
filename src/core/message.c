@@ -19,8 +19,8 @@ static eaf_msg_full_t* _eaf_msg_create(eaf_msg_type_t type, uint32_t id, size_t 
 
 	msg->msg.type = type;
 	msg->msg.id = id;
-	msg->msg.from = -1;
-	msg->msg.to = -1;
+	msg->msg.from = (uint32_t)-1;
+	msg->msg.to = (uint32_t)-1;
 	msg->cnt.refcnt = 1;
 	msg->data.size = size;
 

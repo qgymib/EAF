@@ -33,7 +33,7 @@ typedef struct ring_buffer_node
 	}chain_time;
 
 	ring_buffer_node_state_t		state;				/** 节点状态 */
-	eaf_ringbuffer_token_t				token;				/** 用户数据 */
+	eaf_ringbuffer_token_t			token;				/** 用户数据 */
 }ring_buffer_node_t;
 
 struct eaf_ringbuffer

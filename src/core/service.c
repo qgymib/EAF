@@ -142,8 +142,8 @@ typedef struct eaf_subscribe_record
 typedef struct eaf_service
 {
 	uint32_t						service_id;	/** 服务ID */
-	const eaf_service_info_t*		load;		/** 加载信息 */
 	eaf_service_state_t				state;		/** 状态 */
+	const eaf_service_info_t*		load;		/** 加载信息 */
 
 	struct
 	{
@@ -169,6 +169,10 @@ typedef struct eaf_service
 	}msgq;
 }eaf_service_t;
 
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
 typedef struct eaf_service_group
 {
 	eaf_mutex_t						objlock;	/** 线程锁 */
@@ -199,6 +203,9 @@ typedef struct eaf_service_group
 		eaf_service_t				table[];	/** 服务表 */
 	}service;
 }eaf_service_group_t;
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
 
 typedef struct eaf_ctx
 {
@@ -495,7 +502,7 @@ static int _eaf_service_thread_loop(eaf_service_group_t* group)
 	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
 	if (service == NULL)
 	{
-		eaf_sem_pend(&group->msgq.sem, -1);
+		eaf_sem_pend(&group->msgq.sem, (unsigned)-1);
 		return 0;
 	}
 	eaf_sem_pend(&group->msgq.sem, 0);
@@ -576,7 +583,7 @@ static void _eaf_service_thread(void* arg)
 	/* 等待就绪 */
 	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
 	{
-		eaf_sem_pend(&group->msgq.sem, -1);
+		eaf_sem_pend(&group->msgq.sem, (unsigned)-1);
 	}
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -685,6 +692,7 @@ static void _eaf_service_on_req_record_create(eaf_msgq_record_t* record, void* a
 
 static int _eaf_service_on_cmp_subscribe_record(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
 {
+	(void)arg;
 	eaf_subscribe_record_t* record1 = EAF_CONTAINER_OF(key1, eaf_subscribe_record_t, node);
 	eaf_subscribe_record_t* record2 = EAF_CONTAINER_OF(key2, eaf_subscribe_record_t, node);
 
@@ -770,7 +778,11 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
 			goto err;
 		}
-		eaf_thread_attr_t thread_attr = { info[init_idx].proprity, info[init_idx].stacksize, info[init_idx].cpuno };
+
+		eaf_thread_attr_t thread_attr;
+		thread_attr.priority = info[init_idx].proprity;
+		thread_attr.stack_size = info[init_idx].stacksize;
+		thread_attr.cpuno = info[init_idx].cpuno;
 		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &thread_attr, _eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
 		{
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
@@ -830,7 +842,7 @@ int eaf_load(void)
 	/* 等待所有服务就绪 */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_sem_pend(&g_eaf_ctx->ready, -1);
+		eaf_sem_pend(&g_eaf_ctx->ready, (unsigned)-1);
 	}
 
 	return eaf_errno_success;
@@ -1011,7 +1023,7 @@ int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, 1, _eaf_service_on_req_record_create, msg_proc);
+	return _eaf_service_push_msg(group, service, real_msg, 1, _eaf_service_on_req_record_create, (void*)msg_proc);
 }
 
 int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp)

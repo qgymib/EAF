@@ -18,6 +18,8 @@ static const char* _log_getfilename(const char* file)
 
 void eaf_log(eaf_log_level_t level, const char* file, const char* func, int line, const char* fmt, ...)
 {
+	(void)level;
+
 	va_list ap;
 	va_start(ap, fmt);
 

@@ -2,5 +2,12 @@
 
 int main(int argc, char* argv[])
 {
-	return test_run_tests(argc, argv);
+	malloc(1);
+	int ret = test_run_tests(argc, argv);
+
+#if defined(_MSC_VER)
+	_CrtDumpMemoryLeaks();
+#endif
+
+	return ret;
 }

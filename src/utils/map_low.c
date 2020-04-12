@@ -542,7 +542,7 @@ eaf_map_low_node_t* eaf_map_low_next(const eaf_map_low_node_t* node)
 	* parent, keep going up. First time it's a left-hand child of its
 	* parent, said parent is our 'next' node.
 	*/
-	while ((parent = rb_parent(node)) && node == parent->rb_right)
+	while ((parent = rb_parent(node)) != NULL && node == parent->rb_right)
 		node = parent;
 
 	return parent;
@@ -570,7 +570,7 @@ eaf_map_low_node_t* eaf_map_low_prev(const eaf_map_low_node_t* node)
 	* No left-hand children. Go up till we find an ancestor which
 	* is a right-hand child of its parent.
 	*/
-	while ((parent = rb_parent(node)) && node == parent->rb_left)
+	while ((parent = rb_parent(node)) != NULL && node == parent->rb_left)
 		node = parent;
 
 	return parent;
