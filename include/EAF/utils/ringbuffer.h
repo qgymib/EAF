@@ -32,8 +32,8 @@ typedef struct eaf_ringbuffer_token
 {
 	union
 	{
-		const size_t	size;							/** 数据长度 */
-		const void*		_pad;							/** 占位符，保证data起始地址与sizeof(void*)对齐 */
+		size_t			size;							/** 数据长度 */
+		void*			_pad;							/** 占位符，保证data起始地址与sizeof(void*)对齐 */
 	}size;
 
 	uint8_t				data[];							/** 数据体 */
