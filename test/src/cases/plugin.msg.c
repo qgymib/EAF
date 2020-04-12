@@ -1,6 +1,6 @@
 #include "EAF/eaf.h"
 #include "compat/semaphore.h"
-#include "TEST.h"
+#include "etest/etest.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_MSG		(TEST_SERVICE_S1 + 0x0001)

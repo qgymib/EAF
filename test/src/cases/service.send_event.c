@@ -1,5 +1,5 @@
 #include "EAF/eaf.h"
-#include "TEST.h"
+#include "etest/etest.h"
 #include "compat/semaphore.h"
 
 #define TEST_SERVICE_S1			0x00010000
