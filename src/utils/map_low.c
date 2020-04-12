@@ -23,22 +23,22 @@
 #define	RB_RED		0
 #define	RB_BLACK	1
 
-#define __rb_color(pc)     ((pc) & 1)
+#define __rb_color(pc)     ((uintptr_t)(pc) & 1)
 #define __rb_is_black(pc)  __rb_color(pc)
 #define __rb_is_red(pc)    (!__rb_color(pc))
 #define __rb_parent(pc)    ((eaf_map_low_node_t*)(pc & ~3))
 #define rb_color(rb)       __rb_color((rb)->__rb_parent_color)
 #define rb_is_red(rb)      __rb_is_red((rb)->__rb_parent_color)
 #define rb_is_black(rb)    __rb_is_black((rb)->__rb_parent_color)
-#define rb_parent(r)   ((eaf_map_low_node_t*)((r)->__rb_parent_color & ~3))
+#define rb_parent(r)   ((eaf_map_low_node_t*)((uintptr_t)((r)->__rb_parent_color) & ~3))
 
 /* 'empty' nodes are nodes that are known not to be inserted in an rbtree */
 #define RB_EMPTY_NODE(node)  \
-	((node)->__rb_parent_color == (unsigned long)(node))
+	((node)->__rb_parent_color == (struct eaf_map_low_node*)(node))
 
 static void rb_set_black(eaf_map_low_node_t *rb)
 {
-	rb->__rb_parent_color |= RB_BLACK;
+	(uintptr_t)rb->__rb_parent_color |= RB_BLACK;
 }
 
 static eaf_map_low_node_t *rb_red_parent(eaf_map_low_node_t *red)
@@ -48,7 +48,7 @@ static eaf_map_low_node_t *rb_red_parent(eaf_map_low_node_t *red)
 
 static void rb_set_parent_color(eaf_map_low_node_t *rb, eaf_map_low_node_t *p, int color)
 {
-	rb->__rb_parent_color = (unsigned long)p | color;
+	rb->__rb_parent_color = (struct eaf_map_low_node*)((uintptr_t)p | color);
 }
 
 static void __rb_change_child(eaf_map_low_node_t* old_node, eaf_map_low_node_t* new_node,
@@ -208,14 +208,14 @@ static void __rb_insert(eaf_map_low_node_t* node, eaf_map_low_t* root)
 
 static void rb_set_parent(eaf_map_low_node_t* rb, eaf_map_low_node_t*p)
 {
-	rb->__rb_parent_color = rb_color(rb) | (unsigned long)p;
+	rb->__rb_parent_color = (struct eaf_map_low_node*)(rb_color(rb) | (uintptr_t)p);
 }
 
 static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_map_low_t* root)
 {
 	eaf_map_low_node_t *child = node->rb_right, *tmp = node->rb_left;
 	eaf_map_low_node_t *parent, *rebalance;
-	unsigned long pc;
+	uintptr_t pc;
 
 	if (!tmp) {
 		/*
@@ -225,11 +225,11 @@ static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_ma
 		* and node must be black due to 4). We adjust colors locally
 		* so as to bypass __rb_erase_color() later on.
 		*/
-		pc = node->__rb_parent_color;
+		pc = (uintptr_t)(node->__rb_parent_color);
 		parent = __rb_parent(pc);
 		__rb_change_child(node, child, parent, root);
 		if (child) {
-			child->__rb_parent_color = pc;
+			child->__rb_parent_color = (struct eaf_map_low_node*)pc;
 			rebalance = NULL;
 		}
 		else
@@ -238,7 +238,7 @@ static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_ma
 	}
 	else if (!child) {
 		/* Still case 1, but this time the child is node->rb_left */
-		tmp->__rb_parent_color = pc = node->__rb_parent_color;
+		tmp->__rb_parent_color = (struct eaf_map_low_node*)pc = node->__rb_parent_color;
 		parent = __rb_parent(pc);
 		__rb_change_child(node, tmp, parent, root);
 		rebalance = NULL;
@@ -288,17 +288,17 @@ static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_ma
 		successor->rb_left = tmp = node->rb_left;
 		rb_set_parent(tmp, successor);
 
-		pc = node->__rb_parent_color;
+		pc = (uintptr_t)(node->__rb_parent_color);
 		tmp = __rb_parent(pc);
 		__rb_change_child(node, successor, tmp, root);
 		if (child2) {
-			successor->__rb_parent_color = pc;
+			successor->__rb_parent_color = (struct eaf_map_low_node*)pc;
 			rb_set_parent_color(child2, parent, RB_BLACK);
 			rebalance = NULL;
 		}
 		else {
-			unsigned long pc2 = successor->__rb_parent_color;
-			successor->__rb_parent_color = pc;
+			uintptr_t pc2 = (uintptr_t)(successor->__rb_parent_color);
+			successor->__rb_parent_color = (struct eaf_map_low_node*)pc;
 			rebalance = __rb_is_black(pc2) ? parent : NULL;
 		}
 		tmp = successor;
@@ -469,7 +469,7 @@ ____rb_erase_color(eaf_map_low_node_t* parent, eaf_map_low_t* root)
 
 void eaf_map_low_link_node(eaf_map_low_node_t* node, eaf_map_low_node_t* parent, eaf_map_low_node_t** rb_link)
 {
-	node->__rb_parent_color = (unsigned long)parent;
+	node->__rb_parent_color = parent;
 	node->rb_left = node->rb_right = NULL;
 
 	*rb_link = node;

@@ -64,7 +64,7 @@ dkms.conf
 *.sln
 *.suo
 *.vcxproj
-*.vcxproj.filters
+*.vcxproj.*
 
 # vscode files
 *.code-workspace

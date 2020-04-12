@@ -77,7 +77,7 @@ extern "C" {
 
 typedef struct eaf_map_low_node
 {
-	unsigned long				__rb_parent_color;	/** 父节点|颜色 */
+	struct eaf_map_low_node*	__rb_parent_color;	/** 父节点|颜色 */
 	struct eaf_map_low_node*	rb_right;			/** 右子节点 */
 	struct eaf_map_low_node*	rb_left;			/** 左子节点 */
 }eaf_map_low_node_t;

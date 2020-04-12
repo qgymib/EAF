@@ -18,7 +18,11 @@ typedef struct eaf_plugin_loader
 typedef struct eaf_plugin_ctx
 {
 	eaf_thread_t	driver;			/** 工作线程 */
+
+#if defined(_MSC_VER)
+#else
 	int				epfd;			/** epoll套接字 */
+#endif
 
 	struct
 	{
@@ -64,16 +68,22 @@ int eaf_plugin_load(const eaf_thread_table_t* cfg)
 	}
 	g_eaf_plugin_ctx->mask.looping = 1;
 
+#if defined(_MSC_VER)
+#else
 	if ((g_eaf_plugin_ctx->epfd = epoll_create(128)) < 0)
 	{
 		goto err_free;
 	}
+#endif
 
 	/* 启动线程 */
 	eaf_thread_attr_t thread_attr = { cfg->proprity, cfg->stacksize, cfg->cpuno };
 	if (eaf_thread_init(&g_eaf_plugin_ctx->driver, &thread_attr, _eaf_plugin_thread, NULL) < 0)
 	{
+#if defined(_MSC_VER)
+#else
 		close(g_eaf_plugin_ctx->epfd);
+#endif
 		goto err_free;
 	}
 
@@ -122,7 +132,11 @@ void eaf_plugin_unload(void)
 		_g_plugin_loader[i - 1].exit();
 	}
 
+#if defined(_MSC_VER)
+#else
 	close(g_eaf_plugin_ctx->epfd);
+#endif
+
 	eaf_thread_exit(&g_eaf_plugin_ctx->driver);
 	EAF_FREE(g_eaf_plugin_ctx);
 	g_eaf_plugin_ctx = NULL;
