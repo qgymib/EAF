@@ -620,6 +620,9 @@ static void _eaf_service_cleanup_group(eaf_service_group_t* group)
 	/* 向队列推送以保证线程感知到状态改变 */
 	eaf_sem_post(&group->msgq.sem);
 
+	/* 等待线程退出 */
+	eaf_thread_exit(&group->working);
+
 	eaf_map_node_t* it = eaf_map_begin(&group->subscribe.table);
 	while (it != NULL)
 	{
@@ -632,7 +635,6 @@ static void _eaf_service_cleanup_group(eaf_service_group_t* group)
 	}
 
 	/* 清理资源 */
-	eaf_thread_exit(&group->working);
 	eaf_mutex_exit(&group->objlock);
 	eaf_sem_exit(&group->msgq.sem);
 }
