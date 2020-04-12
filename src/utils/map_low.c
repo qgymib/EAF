@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "EAF/utils/map_low.h"
 
 /*
@@ -38,7 +39,8 @@
 
 static void rb_set_black(eaf_map_low_node_t *rb)
 {
-	(uintptr_t)rb->__rb_parent_color |= RB_BLACK;
+	rb->__rb_parent_color =
+		(eaf_map_low_node_t*)((uintptr_t)(rb->__rb_parent_color) | RB_BLACK);
 }
 
 static eaf_map_low_node_t *rb_red_parent(eaf_map_low_node_t *red)
@@ -238,7 +240,8 @@ static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_ma
 	}
 	else if (!child) {
 		/* Still case 1, but this time the child is node->rb_left */
-		tmp->__rb_parent_color = (struct eaf_map_low_node*)pc = node->__rb_parent_color;
+		pc = (uintptr_t)(node->__rb_parent_color);
+		tmp->__rb_parent_color = (eaf_map_low_node_t*)pc;
 		parent = __rb_parent(pc);
 		__rb_change_child(node, tmp, parent, root);
 		rebalance = NULL;
