@@ -69,7 +69,7 @@ int eaf_resume(uint32_t srv_id);
 * @param size	列表长度
 * @return		eaf_errno
 */
-int eaf_setup(const eaf_thread_table_t* info, size_t size);
+int eaf_setup(const eaf_thread_table_t* info /*static*/, size_t size);
 
 /**
 * 开启EAF平台
@@ -90,7 +90,7 @@ int eaf_cleanup(void);
 * @param info	服务信息。必须为全局变量
 * @return		eaf_errno
 */
-int eaf_register(uint32_t srv_id, const eaf_service_info_t* info);
+int eaf_register(uint32_t srv_id, const eaf_service_info_t* info /*static*/);
 
 /**
 * 事件订阅
