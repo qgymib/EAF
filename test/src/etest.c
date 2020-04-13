@@ -406,18 +406,14 @@ static void _test_list_erase(test_list_t* handler, test_list_node_t* node)
 #	define COLOR_YELLO(str)					str
 #endif
 
-#define SET_MASK(val, mask)		do { (val) |= (mask); } while (0)
-#define HAS_MASK(val, mask)		(!!((val) & (mask)))
-
-/**
-* 失败
-*/
-#define MASK_FAILED				(0x01 << 0x00)
+#define MASK_FAILED							(0x01 << 0x00)
+#define SET_MASK(val, mask)					do { (val) |= (mask); } while (0)
+#define HAS_MASK(val, mask)					((val) & (mask))
 
 /**
 * 一秒内的毫秒数
 */
-#define USEC_IN_SEC				(1 * 1000 * 1000)
+#define USEC_IN_SEC							(1 * 1000 * 1000)
 
 #define CONTAINER_OF(ptr, TYPE, member)	\
 	((TYPE*)((char*)(ptr) - (size_t)&((TYPE*)0)->member))
@@ -482,8 +478,9 @@ typedef struct test_ctx
 		struct
 		{
 			unsigned		disabled;						/** 关闭数量 */
-			unsigned		success;						/** 成功用例数 */
 			unsigned		total;							/** 总运行用例数 */
+			unsigned		success;						/** 成功用例数 */
+			unsigned		failed;							/** 失败用例数 */
 		}result;
 
 		struct
@@ -521,7 +518,7 @@ static test_ctx_t			g_test_ctx = {
 	{ TEST_LIST_INITIALIZER, 0 },							// .info
 	{ 0, NULL, NULL, 0 },									// .runtime
 	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },				// .timestamp
-	{ { 0, 0, 0 }, { 1, 0 } },								// .counter
+	{ { 0, 0, 0, 0 }, { 1, 0 } },							// .counter
 	{ 0, 1, 0, 0 },											// .mask
 	{ NULL, NULL, 0, 0 },									// .filter
 };
@@ -668,6 +665,8 @@ static void _test_run_case(void)
 	{
 		/* 标记失败 */
 		SET_MASK(g_test_ctx.runtime.cur_case->mask, MASK_FAILED);
+		g_test_ctx.counter.result.failed++;
+
 		/* 进入清理阶段 */
 		if (g_test_ctx.runtime.cur_case->data.size == 1)
 		{/* 不存在class时，直接跳出 */
@@ -728,7 +727,6 @@ static void _test_reset_all_test(void)
 
 static void _test_show_report(void)
 {
-	unsigned c_failed = g_test_ctx.counter.result.total - g_test_ctx.counter.result.success;
 	printf(COLOR_GREEN("[==========]") " %u/%u test case%s ran.",
 		g_test_ctx.counter.result.total,
 		_test_list_size(&g_test_ctx.info.case_list),
@@ -749,12 +747,12 @@ static void _test_show_report(void)
 	printf(COLOR_GREEN("[  PASSED  ]") " %u test%s.\n",
 		g_test_ctx.counter.result.success,
 		g_test_ctx.counter.result.success > 1 ? "s" : "");
-	if (c_failed == 0)
+	if (g_test_ctx.counter.result.failed == 0)
 	{
 		return;
 	}
 
-	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", c_failed, c_failed > 1 ? "s" : "");
+	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
 	test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
@@ -1079,7 +1077,7 @@ fin:
 		g_test_ctx.filter.n_negative = 0;
 	}
 
-	return 0;
+	return (int)g_test_ctx.counter.result.failed;
 }
 
 void test_assert_fail(const char *expr, const char *file, int line, const char *func)
