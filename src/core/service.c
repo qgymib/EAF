@@ -163,11 +163,6 @@ typedef struct eaf_service
 
 	struct
 	{
-		unsigned					continue_evt : 1;	/** 处理事件返回 */
-	}flag;
-
-	struct
-	{
 		eaf_msgq_record_t*			cur_msg;	/** 正在处理的消息 */
 		eaf_list_t					queue;		/** 缓存的消息 */
 		size_t						capacity;	/** 消息队列容量 */
