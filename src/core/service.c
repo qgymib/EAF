@@ -192,7 +192,6 @@ typedef struct eaf_group
 	struct
 	{
 		eaf_sem_t					sem;		/** 信号量 */
-		unsigned					wait_time;	/** 等待时间 */
 	}msgq;
 
 	struct
