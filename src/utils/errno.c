@@ -15,12 +15,12 @@ static eaf_errno_table_t err_table[] = {
 #undef __EAF_HEADER_MULTI_READ__
 };
 
-const char* eaf_strerror(eaf_errno_t err)
+const char* eaf_strerror(int err)
 {
 	size_t i;
 	for (i = 0; i < (sizeof(err_table) / sizeof(err_table[0])); i++)
 	{
-		if (err == err_table[i].err)
+		if (err == (int)err_table[i].err)
 		{
 			return err_table[i].str;
 		}

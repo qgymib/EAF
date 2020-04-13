@@ -15,6 +15,7 @@ typedef enum eaf_errno
 	eaf_errno_overflow		= -0x06,		/** 溢出 */
 	eaf_errno_timeout		= -0x07,		/** 操作超时 */
 	eaf_errno_invalid		= -0x08,		/** 非法参数 */
+	eaf_errno_rpc_failure	= -0x09,		/** RPC failure */
 }eaf_errno_t;
 
 /**
@@ -22,7 +23,7 @@ typedef enum eaf_errno
 * @param err	错误码
 * @return		描述
 */
-const char* eaf_strerror(eaf_errno_t err);
+const char* eaf_strerror(int err);
 
 #ifdef __cplusplus
 }

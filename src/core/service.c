@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "EAF/core/service.h"
+#include "EAF/core/rpc.h"
 #include "EAF/utils/list.h"
 #include "EAF/utils/errno.h"
 #include "EAF/utils/define.h"
@@ -218,6 +219,8 @@ typedef struct eaf_ctx
 		size_t						size;		/** 服务组长度 */
 		eaf_service_group_t**		table;		/** 服务组 */
 	}group;
+
+	const eaf_rpc_cfg_t*			rpc;		/** RPC */
 }eaf_ctx_t;
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/** 全局运行环境 */
@@ -715,6 +718,152 @@ static eaf_service_t* _eaf_get_current_service(eaf_service_group_t** group)
 	return ret != NULL ? ret->filber.cur_run : NULL;
 }
 
+/**
+* check if the service subscribe the same event
+* @return	bool
+*/
+static int _eaf_is_subscribe_near_nolock(eaf_service_group_t* group, eaf_subscribe_record_t* record)
+{
+	eaf_map_node_t* it;
+	eaf_subscribe_record_t* orig;
+
+	it = eaf_map_prev(&group->subscribe.table, &record->node);
+	if (it != NULL)
+	{
+		orig = EAF_CONTAINER_OF(it, eaf_subscribe_record_t, node);
+		if (orig->data.evt_id == record->data.evt_id && orig->data.service == record->data.service)
+		{
+			return 1;
+		}
+	}
+
+	it = eaf_map_next(&group->subscribe.table, &record->node);
+	if (it != NULL)
+	{
+		orig = EAF_CONTAINER_OF(it, eaf_subscribe_record_t, node);
+		if (orig->data.evt_id == record->data.evt_id && orig->data.service == record->data.service)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
+{
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	{
+		return eaf_errno_state;
+	}
+
+	eaf_msg_full_t* real_msg = EAF_MSG_I2C(req);
+	req->from = from;
+	req->to = to;
+
+	/* 查询接收服务 */
+	eaf_service_group_t* group;
+	eaf_service_t* service = _eaf_service_find_service(to, &group);
+
+	/* if service not found, send to rpc */
+	if (service == NULL)
+	{
+		return rpc && g_eaf_ctx->rpc != NULL ?
+			g_eaf_ctx->rpc->send_msg(req) : eaf_errno_notfound;
+	}
+
+	/* 查找消息处理函数 */
+	size_t i;
+	eaf_req_handle_fn msg_proc = NULL;
+	for (i = 0; i < service->load->msg_table_size; i++)
+	{
+		if (service->load->msg_table[i].msg_id == req->id)
+		{
+			msg_proc = service->load->msg_table[i].fn;
+			break;
+		}
+	}
+
+	if (msg_proc == NULL)
+	{
+		return eaf_errno_notfound;
+	}
+
+	/* 推送消息 */
+	return _eaf_service_push_msg(group, service, real_msg, 1, _eaf_service_on_req_record_create, (void*)msg_proc);
+}
+
+static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
+{
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	{
+		return eaf_errno_state;
+	}
+
+	eaf_msg_full_t* real_msg = EAF_MSG_I2C(rsp);
+	rsp->from = from;
+
+	/* 查询接收服务 */
+	eaf_service_group_t* group;
+	eaf_service_t* service = _eaf_service_find_service(rsp->to, &group);
+
+	/* if service not found, send to rpc */
+	if (service == NULL)
+	{
+		return rpc && g_eaf_ctx->rpc != NULL ?
+			g_eaf_ctx->rpc->send_msg(rsp) : eaf_errno_notfound;
+	}
+
+	/* 推送消息 */
+	return _eaf_service_push_msg(group, service, real_msg, 1, NULL, NULL);
+}
+
+static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
+{
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	{
+		return eaf_errno_state;
+	}
+
+	eaf_msg_full_t* real_msg = EAF_MSG_I2C(evt);
+	evt->from = from;
+
+	eaf_subscribe_record_t tmp_key;
+	tmp_key.data.evt_id = evt->id;
+	tmp_key.data.service = NULL;
+	tmp_key.data.proc = NULL;
+	tmp_key.data.priv = NULL;
+
+	/* TODO: optimization this lock */
+	size_t i;
+	for (i = 0; i < g_eaf_ctx->group.size; i++)
+	{
+		eaf_mutex_enter(&g_eaf_ctx->group.table[i]->objlock);
+		do
+		{
+			eaf_map_node_t* it = eaf_map_find_upper(&g_eaf_ctx->group.table[i]->subscribe.table, &tmp_key.node);
+			for (; it != NULL; it = eaf_map_next(&g_eaf_ctx->group.table[i]->subscribe.table, it))
+			{
+				eaf_subscribe_record_t* record = EAF_CONTAINER_OF(it, eaf_subscribe_record_t, node);
+				if (record->data.evt_id != evt->id)
+				{
+					break;
+				}
+				_eaf_service_push_msg(g_eaf_ctx->group.table[i], record->data.service, real_msg, 0, NULL, NULL);
+			}
+		} while (0);
+		eaf_mutex_leave(&g_eaf_ctx->group.table[i]->objlock);
+	}
+
+	/* send to rpc */
+	if (rpc && g_eaf_ctx->rpc != NULL)
+	{
+		g_eaf_ctx->rpc->send_msg(evt);
+	}
+
+	return eaf_errno_success;
+}
+
 int eaf_setup(const eaf_thread_table_t* info, size_t size)
 {
 	size_t i;
@@ -827,9 +976,15 @@ err:
 int eaf_load(void)
 {
 	size_t i;
-	if (g_eaf_ctx == NULL)
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_init)
 	{
 		return eaf_errno_state;
+	}
+
+	/* initialize rpc */
+	if (g_eaf_ctx->rpc != NULL && g_eaf_ctx->rpc->on_init_done() != 0)
+	{
+		return eaf_errno_rpc_failure;
 	}
 
 	/* 启动所有线程 */
@@ -856,12 +1011,22 @@ int eaf_cleanup(void)
 		return eaf_errno_state;
 	}
 
+	/* change state */
 	g_eaf_ctx->state = eaf_ctx_state_exit;
+
+	/* exit rpc */
+	if (g_eaf_ctx->rpc != NULL)
+	{
+		g_eaf_ctx->rpc->on_exit();
+	}
+
+	/* exit thread */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
 		_eaf_service_cleanup_group(g_eaf_ctx->group.table[i]);
 	}
 
+	/* resource cleanup */
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
 
@@ -871,7 +1036,7 @@ int eaf_cleanup(void)
 
 int eaf_register(uint32_t id, const eaf_service_info_t* info)
 {
-	if (g_eaf_ctx == NULL)
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_init)
 	{
 		return eaf_errno_state;
 	}
@@ -899,6 +1064,15 @@ int eaf_register(uint32_t id, const eaf_service_info_t* info)
 	if (service->load != NULL)
 	{
 		return eaf_errno_duplicate;
+	}
+
+	/* report to rpc */
+	if (g_eaf_ctx->rpc != NULL)
+	{
+		eaf_rpc_service_info_t info;
+		info.service_id = id;
+		info.capacity = service->msgq.capacity;
+		g_eaf_ctx->rpc->on_service_register(&info);
 	}
 
 	service->load = info;
@@ -931,17 +1105,30 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 	record->data.priv = arg;
 
 	int ret;
+	int need_notify_rpc = 0;
 	eaf_mutex_enter(&group->objlock);
 	do 
 	{
 		ret = eaf_map_insert(&group->subscribe.table, &record->node);
+		if (ret < 0)
+		{
+			break;
+		}
+		need_notify_rpc = g_eaf_ctx->rpc != NULL && _eaf_is_subscribe_near_nolock(group, record);
 	} while (0);
 	eaf_mutex_leave(&group->objlock);
 
+	/* insert failed. duplicate subscribe */
 	if (ret < 0)
 	{
 		EAF_FREE(record);
 		return eaf_errno_duplicate;
+	}
+
+	/* notify RPC */
+	if (need_notify_rpc)
+	{
+		g_eaf_ctx->rpc->on_event_subscribe(srv_id, evt_id);
 	}
 
 	return eaf_errno_success;
@@ -962,6 +1149,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 	tmp_key.data.proc = fn;
 	tmp_key.data.priv = arg;
 
+	int need_notify_rpc = 0;
 	eaf_subscribe_record_t* record = NULL;
 	eaf_mutex_enter(&group->objlock);
 	do 
@@ -972,6 +1160,8 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 			break;
 		}
 		record = EAF_CONTAINER_OF(it, eaf_subscribe_record_t, node);
+		need_notify_rpc = g_eaf_ctx->rpc != NULL && _eaf_is_subscribe_near_nolock(group, record);
+
 		eaf_map_erase(&group->subscribe.table, it);
 
 		/* 若删除记录与服务迭代器相符，则将服务迭代器前移 */
@@ -987,94 +1177,29 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 		return eaf_errno_notfound;
 	}
 
+	/* notify RPC */
+	if (need_notify_rpc)
+	{
+		g_eaf_ctx->rpc->on_event_unsubscribe(srv_id, evt_id);
+	}
+
 	EAF_FREE(record);
 	return eaf_errno_success;
 }
 
 int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 {
-	eaf_msg_full_t* real_msg = EAF_MSG_I2C(req);
-	req->from = from;
-	req->to = to;
-
-	/* 查询接收服务 */
-	eaf_service_group_t* group;
-	eaf_service_t* service = _eaf_service_find_service(to, &group);
-	if (service == NULL)
-	{
-		return eaf_errno_notfound;
-	}
-
-	/* 查找消息处理函数 */
-	size_t i;
-	eaf_req_handle_fn msg_proc = NULL;
-	for (i = 0; i < service->load->msg_table_size; i++)
-	{
-		if (service->load->msg_table[i].msg_id == req->id)
-		{
-			msg_proc = service->load->msg_table[i].fn;
-			break;
-		}
-	}
-
-	if (msg_proc == NULL)
-	{
-		return eaf_errno_notfound;
-	}
-
-	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, 1, _eaf_service_on_req_record_create, (void*)msg_proc);
+	return _eaf_send_req(from, to, req, 1);
 }
 
 int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp)
 {
-	eaf_msg_full_t* real_msg = EAF_MSG_I2C(rsp);
-	rsp->from = from;
-
-	/* 查询接收服务 */
-	eaf_service_group_t* group;
-	eaf_service_t* service = _eaf_service_find_service(rsp->to, &group);
-	if (service == NULL)
-	{
-		return eaf_errno_notfound;
-	}
-
-	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, 1, NULL, NULL);
+	return _eaf_send_rsp(from, rsp, 1);
 }
 
 int eaf_send_evt(uint32_t from, eaf_msg_t* evt)
 {
-	eaf_msg_full_t* real_msg = EAF_MSG_I2C(evt);
-	evt->from = from;
-
-	eaf_subscribe_record_t tmp_key;
-	tmp_key.data.evt_id = evt->id;
-	tmp_key.data.service = NULL;
-	tmp_key.data.proc = NULL;
-	tmp_key.data.priv = NULL;
-
-	size_t i;
-	for (i = 0; i < g_eaf_ctx->group.size; i++)
-	{
-		eaf_mutex_enter(&g_eaf_ctx->group.table[i]->objlock);
-		do 
-		{
-			eaf_map_node_t* it = eaf_map_find_upper(&g_eaf_ctx->group.table[i]->subscribe.table, &tmp_key.node);
-			for (; it != NULL; it = eaf_map_next(&g_eaf_ctx->group.table[i]->subscribe.table, it))
-			{
-				eaf_subscribe_record_t* record = EAF_CONTAINER_OF(it, eaf_subscribe_record_t, node);
-				if (record->data.evt_id != evt->id)
-				{
-					break;
-				}
-				_eaf_service_push_msg(g_eaf_ctx->group.table[i], record->data.service, real_msg, 0, NULL, NULL);
-			}
-		} while (0);
-		eaf_mutex_leave(&g_eaf_ctx->group.table[i]->objlock);
-	}
-
-	return eaf_errno_success;
+	return _eaf_send_evt(from, evt, 1);
 }
 
 int eaf_resume(uint32_t srv_id)
@@ -1114,5 +1239,40 @@ int eaf_resume(uint32_t srv_id)
 
 eaf_filber_local_t* eaf_filber_get_local(void)
 {
-	return &(_eaf_get_current_service(NULL)->filber.local);
+	eaf_service_t* service = _eaf_get_current_service(NULL);
+	return service != NULL ? &service->filber.local : NULL;
+}
+
+int eaf_rpc_init(const eaf_rpc_cfg_t* cfg)
+{
+	if (g_eaf_ctx->rpc != NULL)
+	{
+		return eaf_errno_duplicate;
+	}
+
+	/* init */
+	cfg->on_init();
+
+	g_eaf_ctx->rpc = cfg;
+	return eaf_errno_success;
+}
+
+int eaf_rpc_income(eaf_msg_t* msg)
+{
+	switch (msg->type)
+	{
+	case eaf_msg_type_req:
+		return _eaf_send_req(msg->from, msg->to, msg, 0);
+
+	case eaf_msg_type_rsp:
+		return _eaf_send_rsp(msg->from, msg, 0);
+
+	case eaf_msg_type_evt:
+		return _eaf_send_evt(msg->from, msg, 0);
+
+	default:
+		break;
+	}
+
+	return eaf_errno_invalid;
 }
