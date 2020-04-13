@@ -48,7 +48,8 @@ typedef struct eaf_msg
 		{
 			eaf_rsp_handle_fn	rfn;	/** response handle function, automatically filled by EAF. user should not modify this field. */
 			uintptr_t			orig;	/** original request address, automatically filled by EAF. user should not modify this field. */
-		}rr;							/** information for req/rsp */
+			uintptr_t			uid;	/** resource id, not initialized by default. use at your wish. */
+		}rr;							/** information for request/response. */
 	}info;
 }eaf_msg_t;
 
