@@ -397,7 +397,7 @@ static void _eaf_service_resume_message(eaf_service_group_t* group, eaf_service_
 		goto fin;
 
 	case eaf_msg_type_rsp:
-		service->msgq.cur_msg->data.msg->info.rsp.rsp_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		service->msgq.cur_msg->data.msg->msg.info.rr.rfn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
 		goto fin;
 
 	case eaf_msg_type_evt:

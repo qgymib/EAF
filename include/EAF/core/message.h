@@ -7,47 +7,50 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
+struct eaf_msg;
+
 typedef enum eaf_msg_type
 {
-	eaf_msg_type_req,				/** 请求 */
-	eaf_msg_type_rsp,				/** 响应 */
-	eaf_msg_type_evt,				/** 事件 */
+	eaf_msg_type_req,					/** 请求 */
+	eaf_msg_type_rsp,					/** 响应 */
+	eaf_msg_type_evt,					/** 事件 */
 }eaf_msg_type_t;
-
-typedef struct eaf_msg
-{
-	eaf_msg_type_t			type;	/** 消息类型 */
-	uint32_t				id;		/** 消息ID */
-	uint32_t				from;	/** 发送者服务ID */
-	uint32_t				to;		/** 接受者服务ID */
-
-	union
-	{
-		struct
-		{
-			struct eaf_msg*	orig;	/** 对应的请求报文 */
-		}rsp;
-	}info;
-}eaf_msg_t;
 
 /**
 * 请求消息处理函数
 * @param msg		消息
 */
-typedef void(*eaf_req_handle_fn)(eaf_msg_t* msg);
+typedef void(*eaf_req_handle_fn)(struct eaf_msg* msg);
 
 /**
 * 响应消息处理函数
 * @param msg		消息
 */
-typedef void(*eaf_rsp_handle_fn)(eaf_msg_t* msg);
+typedef void(*eaf_rsp_handle_fn)(struct eaf_msg* msg);
 
 /**
 * 事件处理函数
 * @param msg		事件
 * @param arg		自定义参数
 */
-typedef void(*eaf_evt_handle_fn)(eaf_msg_t* msg, void* arg);
+typedef void(*eaf_evt_handle_fn)(struct eaf_msg* msg, void* arg);
+
+typedef struct eaf_msg
+{
+	eaf_msg_type_t				type;	/** 消息类型 */
+	uint32_t					id;		/** 消息ID */
+	uint32_t					from;	/** 发送者服务ID */
+	uint32_t					to;		/** 接受者服务ID */
+
+	struct
+	{
+		struct
+		{
+			eaf_rsp_handle_fn	rfn;	/** response handle function, automatically filled by EAF. user should not modify this field. */
+			uintptr_t			orig;	/** original request address, automatically filled by EAF. user should not modify this field. */
+		}rr;							/** information for req/rsp */
+	}info;
+}eaf_msg_t;
 
 /**
  * 创建请求

@@ -14,7 +14,7 @@ typedef struct eaf_plugin_msg_record
 
 	struct
 	{
-		eaf_msg_t*		orig;	/** 原始请求地址 */
+		uintptr_t		orig;	/** 原始请求地址 */
 		eaf_msg_t*		rsp;	/** 响应数据 */
 		uint32_t		from;	/** 发送方服务ID */
 	}data;
@@ -36,7 +36,7 @@ static int _eaf_plugin_msg_save_record(eaf_plugin_msg_record_t* rec)
 	return ret;
 }
 
-static eaf_plugin_msg_record_t* _eaf_plugin_msg_find_by_req(eaf_msg_t* req)
+static eaf_plugin_msg_record_t* _eaf_plugin_msg_find_by_req(uintptr_t req)
 {
 	eaf_plugin_msg_record_t* ret;
 	EAF_MAP_LOW_FIND_HELPER(ret, &g_eaf_plugin_msg_ctx->wait_table, eaf_plugin_msg_record_t, req,
@@ -111,7 +111,7 @@ int eaf_plugin_msg_send_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
 		goto fin;
 	}
 
-	rec->data.orig = msg;
+	rec->data.orig = (uintptr_t)msg;
 	rec->data.from = from;
 	rec->data.rsp = NULL;
 
@@ -157,7 +157,7 @@ void eaf_plugin_msg_proxy_handle(eaf_msg_t* msg)
 	eaf_mutex_enter(&g_eaf_plugin_msg_ctx->objlock);
 	do 
 	{
-		rec = _eaf_plugin_msg_find_by_req(msg->info.rsp.orig);
+		rec = _eaf_plugin_msg_find_by_req(msg->info.rr.orig);
 	} while (0);
 	eaf_mutex_leave(&g_eaf_plugin_msg_ctx->objlock);
 

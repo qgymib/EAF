@@ -29,13 +29,6 @@ static eaf_msg_full_t* _eaf_msg_create(eaf_msg_type_t type, uint32_t id, size_t 
 
 static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 {
-	if (msg->msg.type == eaf_msg_type_rsp
-		&& msg->msg.info.rsp.orig != NULL)
-	{
-		eaf_msg_dec_ref(msg->msg.info.rsp.orig);
-		msg->msg.info.rsp.orig = NULL;
-	}
-
 	eaf_mutex_exit(&msg->objlock);
 	EAF_FREE(msg);
 }
@@ -48,7 +41,8 @@ eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rs
 		return NULL;
 	}
 
-	msg->info.req.rsp_fn = rsp_fn;
+	msg->msg.info.rr.rfn = rsp_fn;
+	msg->msg.info.rr.orig = (uintptr_t)EAF_MSG_C2I(msg);
 
 	return EAF_MSG_C2I(msg);
 }
@@ -63,12 +57,9 @@ eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size)
 	}
 
 	msg->msg.to = real_req->msg.from;
-	msg->info.rsp.rsp_fn = real_req->info.req.rsp_fn;
+	msg->msg.info.rr = req->info.rr;
 
-	msg->msg.info.rsp.orig = req;
-	eaf_msg_add_ref(req);
-
-	return &msg->msg;
+	return EAF_MSG_C2I(msg);
 }
 
 eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size)
@@ -79,7 +70,10 @@ eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size)
 		return NULL;
 	}
 
-	return &msg->msg;
+	msg->msg.info.rr.rfn = NULL;
+	msg->msg.info.rr.orig = (uintptr_t)EAF_MSG_C2I(msg);
+
+	return EAF_MSG_C2I(msg);
 }
 
 void eaf_msg_add_ref(eaf_msg_t* msg)

@@ -27,19 +27,6 @@ typedef struct eaf_msg_full
 	eaf_msg_t					msg;		/** 原始对象 */
 	eaf_mutex_t					objlock;	/** 对象锁 */
 
-	union
-	{
-		struct
-		{
-			eaf_rsp_handle_fn	rsp_fn;		/** 响应处理函数 */
-		}req;
-
-		struct
-		{
-			eaf_rsp_handle_fn	rsp_fn;		/** 响应处理函数 */
-		}rsp;
-	}info;
-
 	struct
 	{
 		size_t					refcnt;		/** 引用计数 */
