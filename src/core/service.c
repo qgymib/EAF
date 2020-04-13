@@ -13,9 +13,9 @@
 #include "utils/memory.h"
 #include "message.h"
 
-#define PUSH_FLAG_LOCK		(0x01 << 0x00)
-#define PUSH_FLAG_FORCE		(0x01 << 0x01)
-#define HAS_FLAG(flag, bit)	((flag) & (bit))
+#define PUSH_FLAG_LOCK			(0x01 << 0x00)
+#define PUSH_FLAG_FORCE			(0x01 << 0x01)
+#define HAS_FLAG(flag, bit)		((flag) & (bit))
 
 /**
 * 对比模板
@@ -36,20 +36,20 @@
 */
 #define CLEAR_CC0(service)	\
 	do {\
-		(service)->filber.local.cc[0] = 0;\
+		(service)->local.cc[0] = 0;\
 	} while (0)
 
 /**
 * 检查控制位
 */
 #define CHECK_CC0(service, bmask)	\
-	(!!((service)->filber.local.cc[0] & (bmask)))
+	(!!((service)->local.cc[0] & (bmask)))
 
 /**
 * 获取当前正在运行的任务
 */
 #define CUR_RUN(group)	\
-	((group)->filber.cur_run)
+	((group)->coroutine.cur_run)
 
 /**
 * 清除控制位
@@ -68,7 +68,7 @@
 */
 #define CUR_RUN_SET_BY_IDX(group, idx)	\
 	do {\
-		eaf_service_group_t* _group = group;\
+		eaf_group_t* _group = group;\
 		CUR_RUN(_group) = &_group->service.table[idx];\
 	} while (0)
 
@@ -77,7 +77,7 @@
 */
 #define RESET_BRANCH(service)	\
 	do {\
-		(service)->filber.local.branch = 0;\
+		(service)->local.branch = 0;\
 	} while (0)
 
 /**
@@ -146,15 +146,14 @@ typedef struct eaf_subscribe_record
 
 typedef struct eaf_service
 {
-	uint32_t						service_id;	/** 服务ID */
+	eaf_service_local_t				local;		/** 本地存储 */
 	eaf_service_state_t				state;		/** 状态 */
 	const eaf_service_info_t*		load;		/** 加载信息 */
 
 	struct
 	{
 		eaf_list_node_t				node;		/** 侵入式节点。在ready_list或wait_list中 */
-		eaf_filber_local_t			local;		/** 本地存储 */
-	}filber;
+	}coroutine;
 
 	struct
 	{
@@ -173,7 +172,7 @@ typedef struct eaf_service
 #	pragma warning(push)
 #	pragma warning(disable : 4200)
 #endif
-typedef struct eaf_service_group
+typedef struct eaf_group
 {
 	eaf_mutex_t						objlock;	/** 线程锁 */
 	eaf_thread_t					working;	/** 承载线程 */
@@ -183,7 +182,7 @@ typedef struct eaf_service_group
 		eaf_service_t*				cur_run;	/** 当前正在处理的服务 */
 		eaf_list_t					busy_list;	/** INIT0/BUSY */
 		eaf_list_t					wait_list;	/** INIT1/IDLE/PEND */
-	}filber;
+	}coroutine;
 
 	struct
 	{
@@ -193,7 +192,6 @@ typedef struct eaf_service_group
 	struct
 	{
 		eaf_sem_t					sem;		/** 信号量 */
-		eaf_list_t					msg_gc;		/** GC队列 */
 		unsigned					wait_time;	/** 等待时间 */
 	}msgq;
 
@@ -202,7 +200,7 @@ typedef struct eaf_service_group
 		size_t						size;		/** 服务表长度 */
 		eaf_service_t				table[];	/** 服务表 */
 	}service;
-}eaf_service_group_t;
+}eaf_group_t;
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
@@ -216,7 +214,7 @@ typedef struct eaf_ctx
 	struct
 	{
 		size_t						size;		/** 服务组长度 */
-		eaf_service_group_t**		table;		/** 服务组 */
+		eaf_group_t**				table;		/** 服务组 */
 	}group;
 
 	const eaf_rpc_cfg_t*			rpc;		/** RPC */
@@ -224,7 +222,7 @@ typedef struct eaf_ctx
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/** 全局运行环境 */
 
-static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_service_group_t** group)
+static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
 {
 	size_t i;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
@@ -233,7 +231,7 @@ static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_service
 		for (j = 0; j < g_eaf_ctx->group.table[i]->service.size; j++)
 		{
 			eaf_service_t* service = &g_eaf_ctx->group.table[i]->service.table[j];
-			if (service->service_id != service_id)
+			if (service->local.id != service_id)
 			{
 				continue;
 			}
@@ -255,32 +253,14 @@ static void _eaf_service_destroy_msg_record(eaf_msgq_record_t* record)
 	EAF_FREE(record);
 }
 
-static void _eaf_service_msgq_gc(eaf_service_group_t* group)
-{
-	eaf_list_node_t* it;
-	while (1)
-	{
-		eaf_mutex_enter(&group->objlock);
-		it = eaf_list_pop_front(&group->msgq.msg_gc);
-		eaf_mutex_leave(&group->objlock);
-		if (it == NULL)
-		{
-			break;
-		}
-
-		eaf_msgq_record_t* record = EAF_CONTAINER_OF(it, eaf_msgq_record_t, node);
-		_eaf_service_destroy_msg_record(record);
-	}
-}
-
-static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_service_group_t* group)
+static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 {
 	eaf_service_t* service;
 	eaf_mutex_enter(&group->objlock);
 	do 
 	{
-		eaf_list_node_t* it = eaf_list_begin(&group->filber.busy_list);
-		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, filber.node) : NULL;
+		eaf_list_node_t* it = eaf_list_begin(&group->coroutine.busy_list);
+		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, coroutine.node) : NULL;
 	} while (0);
 	eaf_mutex_leave(&group->objlock);
 
@@ -293,7 +273,8 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_service_group_t* grou
 * @param service	服务
 * @param state		状态
 */
-static void _eaf_service_set_state_nolock(eaf_service_group_t* group, eaf_service_t* service, eaf_service_state_t state)
+static void _eaf_service_set_state_nolock(eaf_group_t* group, eaf_service_t* service,
+	eaf_service_state_t state)
 {
 	if (service->state == state)
 	{
@@ -306,12 +287,12 @@ static void _eaf_service_set_state_nolock(eaf_service_group_t* group, eaf_servic
 	case eaf_service_state_idle:
 	case eaf_service_state_pend:
 	case eaf_service_state_exit:
-		eaf_list_erase(&group->filber.wait_list, &service->filber.node);
+		eaf_list_erase(&group->coroutine.wait_list, &service->coroutine.node);
 		break;
 
 	case eaf_service_state_init0:
 	case eaf_service_state_busy:
-		eaf_list_erase(&group->filber.busy_list, &service->filber.node);
+		eaf_list_erase(&group->coroutine.busy_list, &service->coroutine.node);
 		break;
 	}
 
@@ -321,18 +302,18 @@ static void _eaf_service_set_state_nolock(eaf_service_group_t* group, eaf_servic
 	case eaf_service_state_idle:
 	case eaf_service_state_pend:
 	case eaf_service_state_exit:
-		eaf_list_push_back(&group->filber.wait_list, &service->filber.node);
+		eaf_list_push_back(&group->coroutine.wait_list, &service->coroutine.node);
 		break;
 
 	case eaf_service_state_init0:
 	case eaf_service_state_busy:
-		eaf_list_push_back(&group->filber.busy_list, &service->filber.node);
+		eaf_list_push_back(&group->coroutine.busy_list, &service->coroutine.node);
 		break;
 	}
 	service->state = state;
 }
 
-static void _eaf_service_set_state_lock(eaf_service_group_t* group, eaf_service_t* service, eaf_service_state_t state)
+static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* service, eaf_service_state_t state)
 {
 	eaf_mutex_enter(&group->objlock);
 	do 
@@ -342,7 +323,7 @@ static void _eaf_service_set_state_lock(eaf_service_group_t* group, eaf_service_
 	eaf_mutex_leave(&group->objlock);
 }
 
-static void _eaf_service_resume_message_event(eaf_service_group_t* group, eaf_service_t* service)
+static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t* service)
 {
 	eaf_evt_handle_fn proc;
 	void* priv;
@@ -380,7 +361,7 @@ static void _eaf_service_resume_message_event(eaf_service_group_t* group, eaf_se
 			eaf_mutex_enter(&group->objlock);
 
 			/* 若发生yield则终止 */
-			if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+			if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
 			{
 				break;
 			}
@@ -390,7 +371,7 @@ static void _eaf_service_resume_message_event(eaf_service_group_t* group, eaf_se
 	eaf_mutex_leave(&group->objlock);
 }
 
-static void _eaf_service_resume_message(eaf_service_group_t* group, eaf_service_t* service)
+static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
 {
 	switch (service->msgq.cur_msg->data.msg->msg.type)
 	{
@@ -409,7 +390,7 @@ static void _eaf_service_resume_message(eaf_service_group_t* group, eaf_service_
 
 fin:
 	/* 发生yield */
-	if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
 	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
 		return;
@@ -421,7 +402,7 @@ fin:
 	service->msgq.cur_msg = NULL;
 }
 
-static void _eaf_handle_new_message(eaf_service_group_t* group, eaf_service_t* service)
+static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 {
 	/* 现在service的状态只可能是BUSY */
 	assert(service->state == eaf_service_state_busy);
@@ -455,7 +436,7 @@ static void _eaf_handle_new_message(eaf_service_group_t* group, eaf_service_t* s
 	_eaf_service_resume_message(group, service);
 }
 
-static void _eaf_group_finish_service_init_lock(eaf_service_group_t* group, eaf_service_t* service)
+static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_t* service)
 {
 	eaf_mutex_enter(&group->objlock);
 	do
@@ -474,12 +455,12 @@ static void _eaf_group_finish_service_init_lock(eaf_service_group_t* group, eaf_
 /**
 * 继续进行初始化
 */
-static int _eaf_service_resume_init(eaf_service_group_t* group, eaf_service_t* service)
+static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 {
 	int ret = service->load->on_init();
 
 	/* 检查是否执行yield */
-	if (CHECK_CC0(service, EAF_COROUTINE_CC0_YIELD))
+	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
 	{/* 若init阶段进行了yield */
 		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
 		return 0;
@@ -497,10 +478,8 @@ static int _eaf_service_resume_init(eaf_service_group_t* group, eaf_service_t* s
 	return 0;
 }
 
-static int _eaf_service_thread_loop(eaf_service_group_t* group)
+static int _eaf_service_thread_loop(eaf_group_t* group)
 {
-	_eaf_service_msgq_gc(group);
-
 	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
 	if (service == NULL)
 	{
@@ -509,7 +488,7 @@ static int _eaf_service_thread_loop(eaf_service_group_t* group)
 	}
 	eaf_sem_pend(&group->msgq.sem, 0);
 
-	group->filber.cur_run = service;
+	CUR_RUN(group) = service;
 	CLEAR_CC0(service);
 
 	if (service->state == eaf_service_state_init0)
@@ -525,12 +504,12 @@ static int _eaf_service_thread_loop(eaf_service_group_t* group)
 * 获取当前线程对应的服务组
 * @return		服务组
 */
-static eaf_service_group_t* _eaf_get_current_group(void)
+static eaf_group_t* _eaf_get_current_group(void)
 {
 	return eaf_thread_storage_get(&g_eaf_ctx->tls);
 }
 
-static int _eaf_group_init(eaf_service_group_t* group, size_t* idx)
+static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 {
 	int counter = 0;
 	for (*idx = 0; *idx < group->service.size; *idx += 1)
@@ -543,10 +522,10 @@ static int _eaf_group_init(eaf_service_group_t* group, size_t* idx)
 		}
 
 		CUR_RUN_CLEAR_CC0(group);
-		int ret = group->filber.cur_run->load->on_init();
+		int ret = CUR_RUN(group)->load->on_init();
 
 		/* 检查是否执行yield */
-		if (CUR_RUN_CHECK_CC0(group, EAF_COROUTINE_CC0_YIELD))
+		if (CUR_RUN_CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 		{/* 若init阶段进行了yield */
 			_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_init1);
 			continue;
@@ -574,7 +553,7 @@ static void _eaf_service_thread(void* arg)
 {
 	size_t i;
 	size_t init_idx = 0;
-	eaf_service_group_t* group = arg;
+	eaf_group_t* group = arg;
 
 	/* 设置线程私有变量 */
 	if (eaf_thread_storage_set(&g_eaf_ctx->tls, arg) < 0)
@@ -619,12 +598,12 @@ cleanup:
 		if (group->service.table[i].load != NULL
 			&& group->service.table[i].load->on_exit != NULL)
 		{
-			group->filber.cur_run->load->on_exit();
+			CUR_RUN(group)->load->on_exit();
 		}
 	}
 }
 
-static void _eaf_service_cleanup_group(eaf_service_group_t* group)
+static void _eaf_service_cleanup_group(eaf_group_t* group)
 {
 	/* 向队列推送以保证线程感知到状态改变 */
 	eaf_sem_post(&group->msgq.sem);
@@ -648,7 +627,7 @@ static void _eaf_service_cleanup_group(eaf_service_group_t* group)
 	eaf_sem_exit(&group->msgq.sem);
 }
 
-static int _eaf_service_push_msg(eaf_service_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg,
+static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg,
 	void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg, int flag)
 {
 	/* 检查消息队列容量 */
@@ -707,22 +686,22 @@ static int _eaf_service_on_cmp_subscribe_record(const eaf_map_node_t* key1, cons
 	return 0;
 }
 
-static eaf_service_t* _eaf_get_current_service(eaf_service_group_t** group)
+static eaf_service_t* _eaf_get_current_service(eaf_group_t** group)
 {
-	eaf_service_group_t* ret = _eaf_get_current_group();
+	eaf_group_t* ret = _eaf_get_current_group();
 
 	if (group != NULL)
 	{
 		*group = ret;
 	}
-	return ret != NULL ? ret->filber.cur_run : NULL;
+	return ret != NULL ? CUR_RUN(ret) : NULL;
 }
 
 /**
 * check if the service subscribe the same event
 * @return	bool
 */
-static int _eaf_is_subscribe_near_nolock(eaf_service_group_t* group, eaf_subscribe_record_t* record)
+static int _eaf_is_subscribe_near_nolock(eaf_group_t* group, eaf_subscribe_record_t* record)
 {
 	eaf_map_node_t* it;
 	eaf_subscribe_record_t* orig;
@@ -762,7 +741,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	req->to = to;
 
 	/* 查询接收服务 */
-	eaf_service_group_t* group;
+	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(to, &group);
 
 	/* if service not found, send to rpc */
@@ -790,7 +769,8 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, _eaf_service_on_req_record_create, (void*)msg_proc, PUSH_FLAG_LOCK);
+	return _eaf_service_push_msg(group, service, real_msg,
+		_eaf_service_on_req_record_create, (void*)msg_proc, PUSH_FLAG_LOCK);
 }
 
 static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
@@ -804,7 +784,7 @@ static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
 	rsp->from = from;
 
 	/* 查询接收服务 */
-	eaf_service_group_t* group;
+	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(rsp->to, &group);
 
 	/* if service not found, send to rpc */
@@ -873,10 +853,10 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 	}
 
 	/* 计算所需内存 */
-	size_t malloc_size = sizeof(eaf_ctx_t) + sizeof(eaf_service_group_t*) * size;
+	size_t malloc_size = sizeof(eaf_ctx_t) + sizeof(eaf_group_t*) * size;
 	for (i = 0; i < size; i++)
 	{
-		malloc_size += sizeof(eaf_service_group_t) + sizeof(eaf_service_t) * info[i].service.size;
+		malloc_size += sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i].service.size;
 	}
 
 	g_eaf_ctx = EAF_CALLOC(1, malloc_size);
@@ -901,12 +881,12 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 
 	/* 修复数组地址 */
 	g_eaf_ctx->group.size = size;
-	g_eaf_ctx->group.table = (eaf_service_group_t**)(g_eaf_ctx + 1);
-	g_eaf_ctx->group.table[0] = (eaf_service_group_t*)((char*)g_eaf_ctx->group.table + sizeof(eaf_service_group_t*) * size);
+	g_eaf_ctx->group.table = (eaf_group_t**)(g_eaf_ctx + 1);
+	g_eaf_ctx->group.table[0] = (eaf_group_t*)((char*)g_eaf_ctx->group.table + sizeof(eaf_group_t*) * size);
 	for (i = 1; i < size; i++)
 	{
-		g_eaf_ctx->group.table[i] = (eaf_service_group_t*)
-			((char*)g_eaf_ctx->group.table[i - 1] + sizeof(eaf_service_group_t) + sizeof(eaf_service_t) * info[i - 1].service.size);
+		g_eaf_ctx->group.table[i] = (eaf_group_t*)
+			((char*)g_eaf_ctx->group.table[i - 1] + sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i - 1].service.size);
 	}
 
 	/* 资源初始化 */
@@ -914,10 +894,10 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 	for (init_idx = 0; init_idx < size; init_idx++)
 	{
 		g_eaf_ctx->group.table[init_idx]->service.size = info[init_idx].service.size;
-		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->msgq.msg_gc);
-		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->filber.busy_list);
-		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->filber.wait_list);
-		eaf_map_init(&g_eaf_ctx->group.table[init_idx]->subscribe.table, _eaf_service_on_cmp_subscribe_record, NULL);
+		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list);
+		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.wait_list);
+		eaf_map_init(&g_eaf_ctx->group.table[init_idx]->subscribe.table,
+			_eaf_service_on_cmp_subscribe_record, NULL);
 		if (eaf_mutex_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_mutex_attr_normal) < 0)
 		{
 			goto err;
@@ -932,7 +912,8 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 		thread_attr.priority = info[init_idx].proprity;
 		thread_attr.stack_size = info[init_idx].stacksize;
 		thread_attr.cpuno = info[init_idx].cpuno;
-		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &thread_attr, _eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
+		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &thread_attr,
+			_eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
 		{
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
 			eaf_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
@@ -942,13 +923,16 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 		size_t idx;
 		for (idx = 0; idx < info[init_idx].service.size; idx++)
 		{
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].service_id = info[init_idx].service.table[idx].srv_id;
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity = info[init_idx].service.table[idx].msgq_size;
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].local.id =
+				info[init_idx].service.table[idx].srv_id;
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity =
+				info[init_idx].service.table[idx].msgq_size;
 			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.queue);
 
 			/* 默认情况下加入wait表 */
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].state = eaf_service_state_init0;
-			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->filber.busy_list, &g_eaf_ctx->group.table[init_idx]->service.table[idx].filber.node);
+			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list,
+				&g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.node);
 		}
 	}
 
@@ -1048,7 +1032,7 @@ int eaf_register(uint32_t id, const eaf_service_info_t* info)
 		size_t idx;
 		for (idx = 0; idx < g_eaf_ctx->group.table[i]->service.size; idx++)
 		{
-			if (g_eaf_ctx->group.table[i]->service.table[idx].service_id == id)
+			if (g_eaf_ctx->group.table[i]->service.table[idx].local.id == id)
 			{
 				service = &g_eaf_ctx->group.table[i]->service.table[idx];
 				break;
@@ -1069,10 +1053,10 @@ int eaf_register(uint32_t id, const eaf_service_info_t* info)
 	/* report to rpc */
 	if (g_eaf_ctx->rpc != NULL)
 	{
-		eaf_rpc_service_info_t info;
-		info.service_id = id;
-		info.capacity = service->msgq.capacity;
-		g_eaf_ctx->rpc->on_service_register(&info);
+		eaf_rpc_service_info_t service_info;
+		service_info.service_id = id;
+		service_info.capacity = (uint32_t)service->msgq.capacity;
+		g_eaf_ctx->rpc->on_service_register(&service_info);
 	}
 
 	service->load = info;
@@ -1087,7 +1071,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 		return eaf_errno_state;
 	}
 
-	eaf_service_group_t* group;
+	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
 	if (service == NULL)
 	{
@@ -1136,7 +1120,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 
 int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg)
 {
-	eaf_service_group_t* group;
+	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
 	if (service == NULL)
 	{
@@ -1204,7 +1188,7 @@ int eaf_send_evt(uint32_t from, eaf_msg_t* evt)
 
 int eaf_resume(uint32_t srv_id)
 {
-	eaf_service_group_t* group;
+	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
 	if (service == NULL)
 	{
@@ -1237,10 +1221,10 @@ int eaf_resume(uint32_t srv_id)
 	return ret;
 }
 
-eaf_filber_local_t* eaf_filber_get_local(void)
+eaf_service_local_t* eaf_service_get_local(void)
 {
-	eaf_service_t* service = _eaf_get_current_service(NULL);
-	return service != NULL ? &service->filber.local : NULL;
+	eaf_service_t* service = g_eaf_ctx != NULL ? _eaf_get_current_service(NULL) : NULL;
+	return service != NULL ? &service->local : NULL;
 }
 
 int eaf_rpc_init(const eaf_rpc_cfg_t* cfg)
@@ -1275,4 +1259,10 @@ int eaf_rpc_income(eaf_msg_t* msg)
 	}
 
 	return eaf_errno_invalid;
+}
+
+uint32_t eaf_service_self(void)
+{
+	eaf_service_local_t* local = eaf_service_get_local();
+	return local != NULL ? local->id : (uint32_t)-1;
 }

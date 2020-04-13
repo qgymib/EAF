@@ -9,8 +9,8 @@ extern "C" {
 #include "EAF/core/internal/service.h"
 #include "EAF/core/message.h"
 
-#define eaf_reenter		EAF_FILBER_REENTER()
-#define eaf_yield		EAF_FILBER_YIELD(EAF_FILBER_YIELD_TOKEN)
+#define eaf_reenter		EAF_COROUTINE_REENTER()
+#define eaf_yield		EAF_COROUTINE_YIELD(EAF_COROUTINE_YIELD_TOKEN)
 
 typedef struct eaf_service_msgmap
 {
@@ -136,6 +136,12 @@ int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp);
 * @return		eaf_errno
 */
 int eaf_send_evt(uint32_t from, eaf_msg_t* evt);
+
+/**
+* Get self's ID
+* @return		service id
+*/
+uint32_t eaf_service_self(void);
 
 #ifdef __cplusplus
 }
