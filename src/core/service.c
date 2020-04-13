@@ -13,6 +13,10 @@
 #include "utils/memory.h"
 #include "message.h"
 
+#define PUSH_FLAG_LOCK		(0x01 << 0x00)
+#define PUSH_FLAG_FORCE		(0x01 << 0x01)
+#define HAS_FLAG(flag, bit)	((flag) & (bit))
+
 /**
 * 对比模板
 * @param a		值a
@@ -650,10 +654,11 @@ static void _eaf_service_cleanup_group(eaf_service_group_t* group)
 }
 
 static int _eaf_service_push_msg(eaf_service_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg,
-	int lock, void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg)
+	void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg, int flag)
 {
 	/* 检查消息队列容量 */
-	if (eaf_list_size(&service->msgq.queue) >= service->msgq.capacity)
+	if (!HAS_FLAG(flag, PUSH_FLAG_FORCE) &&
+		eaf_list_size(&service->msgq.queue) >= service->msgq.capacity)
 	{
 		return eaf_errno_overflow;
 	}
@@ -673,7 +678,7 @@ static int _eaf_service_push_msg(eaf_service_group_t* group, eaf_service_t* serv
 		on_create(record, arg);
 	}
 
-	if (lock) { eaf_mutex_enter(&group->objlock); }
+	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_mutex_enter(&group->objlock); }
 	do
 	{
 		if (service->state == eaf_service_state_idle)
@@ -682,7 +687,7 @@ static int _eaf_service_push_msg(eaf_service_group_t* group, eaf_service_t* serv
 		}
 		eaf_list_push_back(&service->msgq.queue, &record->node);
 	} while (0);
-	if (lock) { eaf_mutex_leave(&group->objlock); }
+	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_mutex_leave(&group->objlock); }
 
 	eaf_sem_post(&group->msgq.sem);
 	return eaf_errno_success;
@@ -790,7 +795,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, 1, _eaf_service_on_req_record_create, (void*)msg_proc);
+	return _eaf_service_push_msg(group, service, real_msg, _eaf_service_on_req_record_create, (void*)msg_proc, PUSH_FLAG_LOCK);
 }
 
 static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
@@ -815,7 +820,7 @@ static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, 1, NULL, NULL);
+	return _eaf_service_push_msg(group, service, real_msg, NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
 
 static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
@@ -849,7 +854,7 @@ static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
 				{
 					break;
 				}
-				_eaf_service_push_msg(g_eaf_ctx->group.table[i], record->data.service, real_msg, 0, NULL, NULL);
+				_eaf_service_push_msg(g_eaf_ctx->group.table[i], record->data.service, real_msg, NULL, NULL, 0);
 			}
 		} while (0);
 		eaf_mutex_leave(&g_eaf_ctx->group.table[i]->objlock);
