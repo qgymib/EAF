@@ -87,6 +87,17 @@
 	RESET_BRANCH(CUR_RUN(group))
 
 /**
+* call user defined yield hook
+*/
+#define CALL_YIELD_HOOK(service)	\
+	do {\
+		eaf_service_t* _service = service;\
+		if (_service->local.yield.hook != NULL) {\
+			_service->local.yield.hook(_service->local.id, _service->local.yield.arg);\
+		}\
+	} while (0)
+
+/**
 * 服务状态
 *
 * INIT1
@@ -392,6 +403,7 @@ fin:
 	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
 	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
+		CALL_YIELD_HOOK(service);
 		return;
 	}
 
@@ -462,6 +474,7 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
 	{/* 若init阶段进行了yield */
 		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
+		CALL_YIELD_HOOK(service);
 		return 0;
 	}
 	RESET_BRANCH(service);
@@ -527,6 +540,10 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		if (CUR_RUN_CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 		{/* 若init阶段进行了yield */
 			_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_init1);
+
+			/* call user hook */
+			CALL_YIELD_HOOK(CUR_RUN(group));
+
 			continue;
 		}
 		CUR_RUN_RESET_BRANCH(group);

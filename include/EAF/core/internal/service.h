@@ -28,8 +28,9 @@ extern "C" {
 		}\
 		else /* fall-through */ case 0:
 
-#define EAF_COROUTINE_YIELD(n)	\
-	for (_eaf_local->branch = (n), _eaf_local->cc[0] = EAF_SERVICE_CC0_YIELD;;)\
+#define EAF_COROUTINE_YIELD(_fn, _arg, n)	\
+	for (_eaf_local->branch = (n), _eaf_local->cc[0] = EAF_SERVICE_CC0_YIELD,\
+		_eaf_local->yield.hook = _fn, _eaf_local->yield.arg = _arg;;)\
 		if (_eaf_local->branch == 0) {\
 			case (n): ;\
 			break;\
@@ -45,11 +46,24 @@ extern "C" {
 
 #define EAF_SERVICE_CC0_YIELD		(0x01 << 0x00)	/** yield */
 
+/**
+* yield hook
+* @param id		service id
+* @param arg	user defined arg
+*/
+typedef void(*eaf_yield_hook_fn)(uint32_t id, void* arg);
+
 typedef struct eaf_service_local
 {
-	uint32_t	id;			/** current service id */
-	uint32_t	branch;		/** yield branch */
-	uint32_t	cc[1];		/** coroutine control */
+	uint32_t				id;			/** current service id */
+	uint32_t				branch;		/** yield branch */
+	uint32_t				cc[1];		/** coroutine control */
+
+	struct
+	{
+		eaf_yield_hook_fn	hook;		/** hook */
+		void*				arg;		/** user arg */
+	}yield;
 }eaf_service_local_t;
 
 /**

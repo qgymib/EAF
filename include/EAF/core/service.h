@@ -9,8 +9,22 @@ extern "C" {
 #include "EAF/core/internal/service.h"
 #include "EAF/core/message.h"
 
-#define eaf_reenter		EAF_COROUTINE_REENTER()
-#define eaf_yield		EAF_COROUTINE_YIELD(EAF_COROUTINE_YIELD_TOKEN)
+/**
+* coroutine body
+*/
+#define eaf_reenter					EAF_COROUTINE_REENTER()
+
+/**
+* Suspend service until `eaf_resume` is called
+*/
+#define eaf_yield					eaf_yield_ext(NULL, NULL)
+
+/**
+* Like `eaf_yield`, service will suspend until `eaf_resume` is called,
+* and when service was suspended, `fn` will be called immediately.
+* `fn` is a function with proto `void(*)(uint32_t service_id, void* arg)`.
+*/
+#define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
 
 typedef struct eaf_service_msgmap
 {
