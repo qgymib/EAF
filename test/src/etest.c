@@ -636,9 +636,13 @@ static test_bool _test_check_pattern(const char* str)
 
 static test_bool _test_check_disable(const char* name)
 {
-	return strncmp("DISABLED_", name, 9) == 0;
+	return !g_test_ctx.mask.also_run_disabled_tests && (strncmp("DISABLED_", name, 9) == 0);
 }
 
+/**
+* run test case.
+* the target case was set to `g_test_ctx.runtime.cur_case`
+*/
 static void _test_run_case(void)
 {
 	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
@@ -650,8 +654,7 @@ static void _test_run_case(void)
 	{
 		return;
 	}
-	if (!g_test_ctx.mask.also_run_disabled_tests
-		&& _test_check_disable(g_test_ctx.runtime.cur_case->data.cases[0].case_name))
+	if (_test_check_disable(g_test_ctx.runtime.cur_case->data.cases[0].case_name))
 	{
 		g_test_ctx.counter.result.disabled++;
 		return;

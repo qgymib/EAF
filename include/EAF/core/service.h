@@ -26,16 +26,16 @@ extern "C" {
 */
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
 
-typedef struct eaf_service_msgmap
+typedef struct eaf_message_table
 {
 	uint32_t						msg_id;			/** 请求消息ID */
 	eaf_req_handle_fn				fn;				/** 消息处理函数 */
-}eaf_service_msgmap_t;
+}eaf_message_table_t;
 
 typedef struct eaf_service_info
 {
 	size_t							msg_table_size;	/** 处理映射表大小 */
-	const eaf_service_msgmap_t*		msg_table;		/** 处理映射表 */
+	const eaf_message_table_t*		msg_table;		/** 处理映射表 */
 
 	/**
 	* 初始化回调

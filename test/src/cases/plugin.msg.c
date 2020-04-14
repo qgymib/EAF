@@ -8,8 +8,8 @@
 #define TEST_SERVICE_S2			0x00020000
 #define TEST_SERVICE_S2_MSG		(TEST_SERVICE_S2 + 0x0001)
 
-static int			_s_ret_val;
-static eaf_sem_t	_s_ret_sem;
+static int			s_plugin_msg_retval;
+static eaf_sem_t	s_plugin_msg_sem;
 
 static int _test_plugin_msg_s1_on_init(void)
 {
@@ -21,8 +21,8 @@ static int _test_plugin_msg_s1_on_init(void)
 		EAF_PLUGIN_MSG_SEND_REQ(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, TEST_SERVICE_S2_MSG, req);
 		ASSERT(rsp != NULL);
 
-		_s_ret_val = EAF_PLUGIN_MSG_ACCESS(int, rsp);
-		eaf_sem_post(&_s_ret_sem);
+		s_plugin_msg_retval = EAF_PLUGIN_MSG_ACCESS(int, rsp);
+		eaf_sem_post(&s_plugin_msg_sem);
 
 		eaf_msg_dec_ref(rsp);
 	};
@@ -60,8 +60,8 @@ static void _test_plugin_msg_s2_on_req(eaf_msg_t* req)
 
 TEST_CLASS_SETUP(plugin_msg)
 {
-	_s_ret_val = 0;
-	eaf_sem_init(&_s_ret_sem, 0);
+	s_plugin_msg_retval = 0;
+	eaf_sem_init(&s_plugin_msg_sem, 0);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -79,7 +79,7 @@ TEST_CLASS_SETUP(plugin_msg)
 	ASSERT_NUM_EQ(eaf_plugin_load(&plugin_cfg), 0);
 
 	/* 部署服务S1 */
-	static eaf_service_msgmap_t s1_msg_table[] = {
+	static eaf_message_table_t s1_msg_table[] = {
 		{ TEST_SERVICE_S1_MSG, _test_plugin_msg_s1_on_req },
 	};
 	static eaf_service_info_t s1_info = {
@@ -90,7 +90,7 @@ TEST_CLASS_SETUP(plugin_msg)
 	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
-	static eaf_service_msgmap_t s2_msg_table[] = {
+	static eaf_message_table_t s2_msg_table[] = {
 		{ TEST_SERVICE_S2_MSG, _test_plugin_msg_s2_on_req },
 	};
 	static eaf_service_info_t s2_info = {
@@ -108,11 +108,11 @@ TEST_CLASS_TEAREDOWN(plugin_msg)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
-	eaf_sem_exit(&_s_ret_sem);
+	eaf_sem_exit(&s_plugin_msg_sem);
 }
 
 TEST_F(plugin_msg, check)
 {
-	ASSERT_NUM_EQ(eaf_sem_pend(&_s_ret_sem, 8 * 1000), 0);
-	ASSERT_NUM_EQ(_s_ret_val, 20);
+	ASSERT_NUM_EQ(eaf_sem_pend(&s_plugin_msg_sem, 8 * 1000), 0);
+	ASSERT_NUM_EQ(s_plugin_msg_retval, 20);
 }

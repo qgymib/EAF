@@ -9,12 +9,12 @@
 #define TEST_SERVICE_S2_MSG		(TEST_SERVICE_S2 + 0x0001)
 
 static int			_s_ret_val;
-static eaf_sem_t	_s_ret_sem;
+static eaf_sem_t	s_service_send_request_sem;
 
 static void _test_send_request_s1_on_rsp(eaf_msg_t* msg)
 {
 	_s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
-	eaf_sem_post(&_s_ret_sem);
+	eaf_sem_post(&s_service_send_request_sem);
 }
 
 static int _test_send_request_s1_on_init(void)
@@ -63,7 +63,7 @@ static void _test_send_request_s2_on_req(eaf_msg_t* req)
 TEST_CLASS_SETUP(send_request)
 {
 	_s_ret_val = 0;
-	eaf_sem_init(&_s_ret_sem, 0);
+	eaf_sem_init(&s_service_send_request_sem, 0);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -76,7 +76,7 @@ TEST_CLASS_SETUP(send_request)
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
-	static eaf_service_msgmap_t s1_msg_table[] = {
+	static eaf_message_table_t s1_msg_table[] = {
 		{ TEST_SERVICE_S1_MSG, _test_send_request_s1_on_req },
 	};
 	static eaf_service_info_t s1_info = {
@@ -87,7 +87,7 @@ TEST_CLASS_SETUP(send_request)
 	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
-	static eaf_service_msgmap_t s2_msg_table[] = {
+	static eaf_message_table_t s2_msg_table[] = {
 		{ TEST_SERVICE_S2_MSG, _test_send_request_s2_on_req },
 	};
 	static eaf_service_info_t s2_info = {
@@ -106,13 +106,13 @@ TEST_CLASS_TEAREDOWN(send_request)
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
 
-	eaf_sem_exit(&_s_ret_sem);
+	eaf_sem_exit(&s_service_send_request_sem);
 }
 
 TEST_F(send_request, check)
 {
 	/* 等待结果 */
-	ASSERT_NUM_EQ(eaf_sem_pend(&_s_ret_sem, 8 * 1000), 0);
+	ASSERT_NUM_EQ(eaf_sem_pend(&s_service_send_request_sem, 8 * 1000), 0);
 
 	/* 检查结果 */
 	ASSERT_NUM_EQ(_s_ret_val, 99 * 2);
