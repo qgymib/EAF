@@ -10,8 +10,6 @@ else ()
 	set(EAF_SYSTEM linux)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/src/compat/${EAF_SYSTEM})
@@ -19,9 +17,6 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/utils SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/compat/${EAF_SYSTEM} SRC_C)
-
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/plugin SRC_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/plugin/msg SRC_C)
 
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SRC_C} ${SRC_S})
 

@@ -23,7 +23,7 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
 	eaf_reenter
 	{
-		_s_nodes[0].ret = EAF_PLUGIN_MSG_ACCESS(int, msg);
+		_s_nodes[0].ret = *(int*)eaf_msg_get_data(msg, NULL);
 		eaf_list_push_back(&_s_ret_list, &_s_nodes[0].node);
 
 		eaf_yield;
@@ -37,7 +37,7 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 
 static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
 {
-	_s_nodes[2].ret = EAF_PLUGIN_MSG_ACCESS(int, msg);
+	_s_nodes[2].ret = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[2].node);
 
 	_s_nodes[3].ret = -2;
@@ -119,7 +119,8 @@ TEST_F(filber, yield_in_event)
 	{
 		eaf_msg_t* s1_evt = eaf_msg_create_evt(TEST_SERVICE_S1_EVT, sizeof(int));
 		ASSERT_PTR_NE(s1_evt, NULL);
-		EAF_PLUGIN_MSG_ACCESS(int, s1_evt) = 99;
+		*(int*)eaf_msg_get_data(s1_evt, NULL) = 99;
+
 		ASSERT_NUM_EQ(eaf_send_evt(-1, s1_evt), 0);
 		eaf_msg_dec_ref(s1_evt);
 	}
@@ -127,7 +128,7 @@ TEST_F(filber, yield_in_event)
 	{
 		eaf_msg_t* s2_evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
 		ASSERT_PTR_NE(s2_evt, NULL);
-		EAF_PLUGIN_MSG_ACCESS(int, s2_evt) = 88;
+		*(int*)eaf_msg_get_data(s2_evt, NULL) = 88;
 		ASSERT_NUM_EQ(eaf_send_evt(-1, s2_evt), 0);
 		eaf_msg_dec_ref(s2_evt);
 	}

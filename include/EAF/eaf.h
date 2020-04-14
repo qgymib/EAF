@@ -7,7 +7,6 @@ extern "C" {
 #include "EAF/core/message.h"
 #include "EAF/core/rpc.h"
 #include "EAF/core/service.h"
-#include "EAF/plugin/plugin.h"
 #include "EAF/utils/define.h"
 #include "EAF/utils/errno.h"
 #include "EAF/utils/list.h"
