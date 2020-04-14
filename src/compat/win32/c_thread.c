@@ -9,19 +9,19 @@ static DWORD WINAPI _eaf_thread_win32_proxy(LPVOID lpParam)
 	return 0;
 }
 
-int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* attr, eaf_thread_fn fn, void* arg)
+int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	handler->proc = fn;
 	handler->priv = arg;
-	handler->thr = CreateThread(NULL, attr != NULL ? attr->stack_size : 0, _eaf_thread_win32_proxy, handler, 0, NULL);
+	handler->thr = CreateThread(NULL, cfg != NULL ? cfg->stacksize : 0, _eaf_thread_win32_proxy, handler, 0, NULL);
 	if (handler->thr == NULL)
 	{
 		return eaf_errno_unknown;
 	}
 
-	if (attr != NULL)
+	if (cfg != NULL)
 	{
-		SetPriorityClass(handler->thr, attr->priority);
+		SetPriorityClass(handler->thr, cfg->priority);
 	}
 	return eaf_errno_success;
 }

@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#include "EAF/core/service.h"
 #include "c_thread.h"
 
 struct eaf_thread;
@@ -11,13 +12,6 @@ typedef struct eaf_thread eaf_thread_t;
 
 struct eaf_thread_storage;
 typedef struct eaf_thread_storage eaf_thread_storage_t;
-
-typedef struct eaf_thread_attr
-{
-	unsigned long	priority;
-	unsigned long	stack_size;
-	unsigned long	cpuno;
-}eaf_thread_attr_t;
 
 /**
 * 线程回调
@@ -28,12 +22,12 @@ typedef void(*eaf_thread_fn)(void* arg);
 /**
 * 创建线程
 * @param handler	句柄
-* @param attr		属性
+* @param cfg		属性
 * @param fn			线程回调
 * @param arg		自定义参数
 * @return			eaf_errno
 */
-int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* attr, eaf_thread_fn fn, void* arg);
+int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg);
 
 /**
 * 销毁线程

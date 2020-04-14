@@ -53,22 +53,27 @@ typedef struct eaf_service_info
 
 typedef struct eaf_service_table
 {
-	uint32_t						srv_id;			/** 服务ID */
-	uint32_t						msgq_size;		/** 消息队列大小 */
+	uint32_t						srv_id;			/** service id */
+	uint32_t						msgq_size;		/** message queue capacity */
 }eaf_service_table_t;
 
-typedef struct eaf_thread_table
+typedef struct eaf_thread_attr
 {
-	uint16_t						proprity;		/** 线程优先级 */
-	uint16_t						cpuno;			/** CPU核心亲和性 */
-	uint32_t						stacksize;		/** 线程栈大小 */
+	unsigned long					priority;		/** priority, platform related. */
+	unsigned long					cpuno;			/** cpuno attached. if let system select, set to `-1` */
+	size_t							stacksize;		/** stack size */
+}eaf_thread_attr_t;
+
+typedef struct eaf_group_table
+{
+	eaf_thread_attr_t				attr;			/** thread attribute */
 
 	struct
 	{
-		size_t						size;			/** 配置表大小 */
-		eaf_service_table_t*		table;			/** 配置表 */
+		size_t						size;			/** configure table size */
+		eaf_service_table_t*		table;			/** configure table */
 	}service;
-}eaf_thread_table_t;
+}eaf_group_table_t;
 
 /**
 * 允许指定服务继续执行
@@ -83,7 +88,7 @@ int eaf_resume(uint32_t srv_id);
 * @param size	列表长度
 * @return		eaf_errno
 */
-int eaf_setup(const eaf_thread_table_t* info /*static*/, size_t size);
+int eaf_setup(const eaf_group_table_t* info /*static*/, size_t size);
 
 /**
 * 开启EAF平台
@@ -129,7 +134,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 /**
 * 发送请求数据
 * @param from	发送方服务ID
-* @param to	接收方服务ID
+* @param to		接收方服务ID
 * @param req	请求数据
 * @return		eaf_errno
 */

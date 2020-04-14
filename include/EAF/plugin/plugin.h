@@ -13,9 +13,10 @@ extern "C" {
 
 /**
 * 加载插件系统。需要在setup之后、load之前调用此函数
-* @param cfg	插件线程配置。仅需要其中的proprity/cpuno/stacksize字段
+* @param cfg	插件线程配置
+* @return		eaf_errno
 */
-int eaf_plugin_load(const eaf_thread_table_t* cfg);
+int eaf_plugin_load(const eaf_thread_attr_t* cfg);
 
 #ifdef __cplusplus
 }

@@ -850,7 +850,7 @@ static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
 	return eaf_errno_success;
 }
 
-int eaf_setup(const eaf_thread_table_t* info, size_t size)
+int eaf_setup(const eaf_group_table_t* info, size_t size)
 {
 	size_t i;
 	if (g_eaf_ctx != NULL)
@@ -914,11 +914,7 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 			goto err;
 		}
 
-		eaf_thread_attr_t thread_attr;
-		thread_attr.priority = info[init_idx].proprity;
-		thread_attr.stack_size = info[init_idx].stacksize;
-		thread_attr.cpuno = info[init_idx].cpuno;
-		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &thread_attr,
+		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &info[init_idx].attr,
 			_eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
 		{
 			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);

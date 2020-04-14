@@ -11,7 +11,7 @@ static void* _eaf_thread_linux_proxy(void* params)
 	return NULL;
 }
 
-int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* attr, eaf_thread_fn fn, void* arg)
+int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	int ret = eaf_errno_success;
 
@@ -21,9 +21,9 @@ int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* attr, eaf_th
 		return eaf_errno_unknown;
 	}
 
-	if (attr != NULL && attr->stack_size != 0)
+	if (cfg != NULL && cfg->stacksize != 0)
 	{
-		pthread_attr_setstacksize(&thr_attr, attr->stack_size);
+		pthread_attr_setstacksize(&thr_attr, cfg->stacksize);
 	}
 
 	handler->proc = fn;

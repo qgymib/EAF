@@ -43,7 +43,7 @@ extern "C" {
 				else for (;;)\
 					/* fall-through */ case 1: if (_eaf_service_local->branch)\
 					goto bail_out_of_coroutine;\
-				else /* fall-through */ case 0: { }
+				else /* fall-through */ case 0: { };
 
 #define EAF_SERVICE_CC0_YIELD		(0x01 << 0x00)	/** yield */
 

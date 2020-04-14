@@ -68,8 +68,8 @@ TEST_CLASS_SETUP(send_event)
 		{ TEST_SERVICE_S2, 8 },	/* S2先于S1部署，保证S2先初始化 */
 		{ TEST_SERVICE_S1, 8 },
 	};
-	static eaf_thread_table_t load_table[] = {
-		{ 0, -1, 0, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+	static eaf_group_table_t load_table[] = {
+		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 

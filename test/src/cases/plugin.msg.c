@@ -69,13 +69,13 @@ TEST_CLASS_SETUP(plugin_msg)
 		{ TEST_SERVICE_S2,			8 },
 		{ EAF_PLUGIN_SERVICE,		8 },
 	};
-	static eaf_thread_table_t load_table[] = {
-		{ 0, -1, 0, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+	static eaf_group_table_t load_table[] = {
+		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 加载所有插件 */
-	eaf_thread_table_t plugin_cfg = { 0, 0, 0, { 0, NULL } };
+	eaf_thread_attr_t plugin_cfg = { 0, 0, 0 };
 	ASSERT_NUM_EQ(eaf_plugin_load(&plugin_cfg), 0);
 
 	/* 部署服务S1 */
