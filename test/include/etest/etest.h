@@ -72,12 +72,16 @@ extern "C" {
 #define TEST_F(test_fixture, test_name)	\
 	static void TEST_##test_fixture##_##test_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##test_fixture##_##test_name) {\
-		static etest_case_item_t cases[] = {\
-			{ #test_fixture, #test_name, etest_case_type_setup, TEST_CLASS_SETUP_##test_fixture },\
-			{ #test_fixture, #test_name, etest_case_type_normal, TEST_##test_fixture##_##test_name },\
-			{ #test_fixture, #test_name, etest_case_type_teardown, TEST_CLASS_TEARDOWN_##test_fixture },\
+		static etest_case_t item = {\
+			{ { NULL, NULL }, { NULL, NULL, NULL } },\
+			{ 0, #test_fixture, #test_name,\
+				{\
+					TEST_CLASS_SETUP_##test_fixture,\
+					TEST_##test_fixture##_##test_name,\
+					TEST_CLASS_TEARDOWN_##test_fixture\
+				}\
+			},\
 		};\
-		static etest_case_t item = { { NULL, NULL }, 0, { sizeof(cases) / sizeof(cases[0]), cases } };\
 		etest_register_case(&item);\
 	}\
 	static void TEST_##test_fixture##_##test_name(void)
@@ -89,10 +93,14 @@ extern "C" {
 #define TEST(test_case_name, test_name)	\
 	static void TEST_##test_case_name##_##test_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##test_name) {\
-		static etest_case_item_t cases[] = {\
-			{ #test_case_name, #test_name, etest_case_type_normal, TEST_##test_case_name##_##test_name },\
+		static etest_case_t item = {\
+			{ { NULL, NULL }, { NULL, NULL, NULL } },\
+			{ 0, #test_case_name, #test_name,\
+				{\
+					NULL, TEST_##test_case_name##_##test_name, NULL\
+				}\
+			},\
 		};\
-		static etest_case_t item = { { NULL, NULL }, 0, { sizeof(cases) / sizeof(cases[0]), cases } };\
 		etest_register_case(&item);\
 	}\
 	static void TEST_##test_case_name##_##test_name(void)
@@ -117,35 +125,35 @@ extern "C" {
 #define ASSERT_FLT_GT(a, b)		etest_assert_flt_gt(a, b, #a, #b, __FILE__, __LINE__)
 #define ASSERT_FLT_GE(a, b)		etest_assert_flt_ge(a, b, #a, #b, __FILE__, __LINE__)
 
-typedef enum etest_case_type
-{
-	etest_case_type_setup,							/** 初始化 */
-	etest_case_type_normal,							/** 用例 */
-	etest_case_type_teardown,						/** 去初始化 */
-}etest_case_type_t;
-
 typedef struct etest_list_node
 {
 	struct etest_list_node*	p_after;				/** 下一节点 */
 	struct etest_list_node*	p_before;				/** 上一节点 */
 }etest_list_node_t;
 
-typedef struct etest_case_item
+typedef struct etest_map_node
 {
-	const char*				class_name;				/** 用例集名称 */
-	const char*				case_name;				/** 用例名称 */
-	etest_case_type_t		type;					/** 函数类型 */
-	void					(*test_fn)(void);		/** 函数地址 */
-}etest_case_item_t;
+	struct etest_map_node*	__rb_parent_color;	/** 父节点|颜色 */
+	struct etest_map_node*	rb_right;			/** 右子节点 */
+	struct etest_map_node*	rb_left;			/** 左子节点 */
+}etest_map_node_t;
 
-typedef struct test_case
+typedef void(*etest_procedure_fn)(void);
+
+typedef struct etest_case
 {
-	etest_list_node_t		node;					/** 侵入式节点 */
-	unsigned long			mask;					/** 内部标记 */
 	struct
 	{
-		unsigned			size;					/** 用例数量 */
-		etest_case_item_t*	cases;					/** 用例列表 */
+		etest_list_node_t		queue;					/** 侵入式节点 */
+		etest_map_node_t		table;					/** 侵入式节点 */
+	}node;
+
+	struct
+	{
+		unsigned long			mask;					/** 内部标记 */
+		const char*				class_name;				/** 用例集名称 */
+		const char*				case_name;				/** 用例名称 */
+		etest_procedure_fn		proc[3];				/** 用例体 */
 	}data;
 }etest_case_t;
 

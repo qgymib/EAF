@@ -6,10 +6,298 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include "etest/etest.h"
 
 /************************************************************************/
-/* Argument Parser                                                      */
+/* map                                                                  */
+/************************************************************************/
+
+#define	RB_RED		0
+#define	RB_BLACK	1
+#define __rb_color(pc)     ((uintptr_t)(pc) & 1)
+#define __rb_is_black(pc)  __rb_color(pc)
+#define __rb_is_red(pc)    (!__rb_color(pc))
+#define __rb_parent(pc)    ((etest_map_node_t*)(pc & ~3))
+#define rb_color(rb)       __rb_color((rb)->__rb_parent_color)
+#define rb_is_red(rb)      __rb_is_red((rb)->__rb_parent_color)
+#define rb_is_black(rb)    __rb_is_black((rb)->__rb_parent_color)
+#define rb_parent(r)   ((etest_map_node_t*)((uintptr_t)((r)->__rb_parent_color) & ~3))
+
+/* 'empty' nodes are nodes that are known not to be inserted in an rbtree */
+#define RB_EMPTY_NODE(node)  \
+	((node)->__rb_parent_color == (etest_map_node_t*)(node))
+
+typedef int(*etest_map_cmp_fn)(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg);
+
+typedef struct etest_map
+{
+	etest_map_node_t*		rb_root;	/** 根元素节点 */
+
+	struct
+	{
+		etest_map_cmp_fn	cmp;		/** 对比函数 */
+		void*				arg;		/** 自定义参数 */
+	}cmp;
+
+	size_t					size;		/** 当前元素容量 */
+}etest_map_t;
+#define ETEST_MAP_INITIALIZER(fn, arg)		{ NULL, { fn, arg }, 0 }
+
+static void _etest_map_link_node(etest_map_node_t* node, etest_map_node_t* parent, etest_map_node_t** rb_link)
+{
+	node->__rb_parent_color = parent;
+	node->rb_left = node->rb_right = NULL;
+
+	*rb_link = node;
+	return;
+}
+
+static etest_map_node_t* rb_red_parent(etest_map_node_t *red)
+{
+	return red->__rb_parent_color;
+}
+
+static void rb_set_parent_color(etest_map_node_t *rb, etest_map_node_t *p, int color)
+{
+	rb->__rb_parent_color = (etest_map_node_t*)((uintptr_t)p | color);
+}
+
+static void __rb_change_child(etest_map_node_t* old_node, etest_map_node_t* new_node,
+	etest_map_node_t* parent, etest_map_t* root)
+{
+	if (parent)
+	{
+		if (parent->rb_left == old_node)
+		{
+			parent->rb_left = new_node;
+		}
+		else
+		{
+			parent->rb_right = new_node;
+		}
+	}
+	else
+	{
+		root->rb_root = new_node;
+	}
+}
+
+/*
+* Helper function for rotations:
+* - old's parent and color get assigned to new
+* - old gets assigned new as a parent and 'color' as a color.
+*/
+static void __rb_rotate_set_parents(etest_map_node_t* old, etest_map_node_t* new_node,
+	etest_map_t* root, int color)
+{
+	etest_map_node_t* parent = rb_parent(old);
+	new_node->__rb_parent_color = old->__rb_parent_color;
+	rb_set_parent_color(old, new_node, color);
+	__rb_change_child(old, new_node, parent, root);
+}
+
+static void _etest_map_insert(etest_map_node_t* node, etest_map_t* root)
+{
+	etest_map_node_t* parent = rb_red_parent(node), *gparent, *tmp;
+
+	while (1) {
+		/*
+		* Loop invariant: node is red
+		*
+		* If there is a black parent, we are done.
+		* Otherwise, take some corrective action as we don't
+		* want a red root or two consecutive red nodes.
+		*/
+		if (!parent) {
+			rb_set_parent_color(node, NULL, RB_BLACK);
+			break;
+		}
+		else if (rb_is_black(parent))
+			break;
+
+		gparent = rb_red_parent(parent);
+
+		tmp = gparent->rb_right;
+		if (parent != tmp) {	/* parent == gparent->rb_left */
+			if (tmp && rb_is_red(tmp)) {
+				/*
+				* Case 1 - color flips
+				*
+				*       G            g
+				*      / \          / \
+				*     p   u  -->   P   U
+				*    /            /
+				*   n            n
+				*
+				* However, since g's parent might be red, and
+				* 4) does not allow this, we need to recurse
+				* at g.
+				*/
+				rb_set_parent_color(tmp, gparent, RB_BLACK);
+				rb_set_parent_color(parent, gparent, RB_BLACK);
+				node = gparent;
+				parent = rb_parent(node);
+				rb_set_parent_color(node, parent, RB_RED);
+				continue;
+			}
+
+			tmp = parent->rb_right;
+			if (node == tmp) {
+				/*
+				* Case 2 - left rotate at parent
+				*
+				*      G             G
+				*     / \           / \
+				*    p   U  -->    n   U
+				*     \           /
+				*      n         p
+				*
+				* This still leaves us in violation of 4), the
+				* continuation into Case 3 will fix that.
+				*/
+				parent->rb_right = tmp = node->rb_left;
+				node->rb_left = parent;
+				if (tmp)
+					rb_set_parent_color(tmp, parent,
+					RB_BLACK);
+				rb_set_parent_color(parent, node, RB_RED);
+				parent = node;
+				tmp = node->rb_right;
+			}
+
+			/*
+			* Case 3 - right rotate at gparent
+			*
+			*        G           P
+			*       / \         / \
+			*      p   U  -->  n   g
+			*     /                 \
+			*    n                   U
+			*/
+			gparent->rb_left = tmp;  /* == parent->rb_right */
+			parent->rb_right = gparent;
+			if (tmp)
+				rb_set_parent_color(tmp, gparent, RB_BLACK);
+			__rb_rotate_set_parents(gparent, parent, root, RB_RED);
+			break;
+		}
+		else {
+			tmp = gparent->rb_left;
+			if (tmp && rb_is_red(tmp)) {
+				/* Case 1 - color flips */
+				rb_set_parent_color(tmp, gparent, RB_BLACK);
+				rb_set_parent_color(parent, gparent, RB_BLACK);
+				node = gparent;
+				parent = rb_parent(node);
+				rb_set_parent_color(node, parent, RB_RED);
+				continue;
+			}
+
+			tmp = parent->rb_left;
+			if (node == tmp) {
+				/* Case 2 - right rotate at parent */
+				parent->rb_left = tmp = node->rb_right;
+				node->rb_right = parent;
+				if (tmp)
+					rb_set_parent_color(tmp, parent,
+					RB_BLACK);
+				rb_set_parent_color(parent, node, RB_RED);
+				parent = node;
+				tmp = node->rb_left;
+			}
+
+			/* Case 3 - left rotate at gparent */
+			gparent->rb_right = tmp;  /* == parent->rb_left */
+			parent->rb_left = gparent;
+			if (tmp)
+				rb_set_parent_color(tmp, gparent, RB_BLACK);
+			__rb_rotate_set_parents(gparent, parent, root, RB_RED);
+			break;
+		}
+	}
+}
+
+static void _etest_map_insert_color(etest_map_node_t* node, etest_map_t* root)
+{
+	_etest_map_insert(node, root);
+}
+
+static int etest_map_insert(etest_map_t* handler, etest_map_node_t* node)
+{
+	etest_map_node_t **new_node = &(handler->rb_root), *parent = NULL;
+
+	/* Figure out where to put new node */
+	while (*new_node)
+	{
+		int result = handler->cmp.cmp(node, *new_node, handler->cmp.arg);
+
+		parent = *new_node;
+		if (result < 0)
+		{
+			new_node = &((*new_node)->rb_left);
+		}
+		else if (result > 0)
+		{
+			new_node = &((*new_node)->rb_right);
+		}
+		else
+		{
+			return -1;
+		}
+	}
+
+	handler->size++;
+	_etest_map_link_node(node, parent, new_node);
+	_etest_map_insert_color(node, handler);
+
+	return 0;
+}
+
+static etest_map_node_t* etest_map_begin(const etest_map_t* handler)
+{
+	etest_map_node_t* n = handler->rb_root;
+
+	if (!n)
+		return NULL;
+	while (n->rb_left)
+		n = n->rb_left;
+	return n;
+}
+
+static etest_map_node_t* etest_map_next(const etest_map_t* handler, const etest_map_node_t* node)
+{
+	etest_map_node_t* parent;
+
+	if (RB_EMPTY_NODE(node))
+		return NULL;
+
+	/*
+	* If we have a right-hand child, go down and then left as far
+	* as we can.
+	*/
+	if (node->rb_right) {
+		node = node->rb_right;
+		while (node->rb_left)
+			node = node->rb_left;
+		return (etest_map_node_t *)node;
+	}
+
+	/*
+	* No right-hand children. Everything down and left is smaller than us,
+	* so any 'next' node must be in the general direction of our parent.
+	* Go up the tree; any time the ancestor is a right-hand child of its
+	* parent, keep going up. First time it's a left-hand child of its
+	* parent, said parent is our 'next' node.
+	*/
+	while ((parent = rb_parent(node)) != NULL && node == parent->rb_right)
+		node = parent;
+
+	return parent;
+}
+
+/************************************************************************/
+/* argument parser                                                      */
 /************************************************************************/
 
 #define OPTPARSE_MSG_INVALID "invalid option"
@@ -410,6 +698,8 @@ static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
 #define SET_MASK(val, mask)					do { (val) |= (mask); } while (0)
 #define HAS_MASK(val, mask)					((val) & (mask))
 
+#define ARRAY_SIZE(arr)						(sizeof(arr) / sizeof(arr[0]))
+
 /**
 * 一秒内的毫秒数
 */
@@ -453,7 +743,8 @@ typedef struct test_ctx
 {
 	struct
 	{
-		test_list_t			case_list;						/** 用例列表 */
+		test_list_t			case_list;						/** 用例表 */
+		etest_map_t			case_table;						/** 用例表 */
 		unsigned long		tid;							/** 线程ID */
 	}info;
 
@@ -513,15 +804,29 @@ typedef struct test_ctx2
 	jmp_buf					jmpbuf;							/** 跳转地址 */
 }test_ctx2_t;
 
+static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg);
 static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
-	{ TEST_LIST_INITIALIZER, 0 },							// .info
+	{ TEST_LIST_INITIALIZER, ETEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
 	{ 0, NULL, NULL, 0 },									// .runtime
 	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },				// .timestamp
 	{ { 0, 0, 0, 0 }, { 1, 0 } },							// .counter
 	{ 0, 1, 0, 0 },											// .mask
 	{ NULL, NULL, 0, 0 },									// .filter
 };
+
+static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg)
+{
+	const etest_case_t* t_case_1 = CONTAINER_OF(key1, etest_case_t, node.table);
+	const etest_case_t* t_case_2 = CONTAINER_OF(key2, etest_case_t, node.table);
+
+	int ret;
+	if ((ret = strcmp(t_case_1->data.class_name, t_case_2->data.class_name)) != 0)
+	{
+		return ret;
+	}
+	return strcmp(t_case_1->data.case_name, t_case_2->data.case_name);
+}
 
 static void _test_srand(unsigned long long s)
 {
@@ -646,15 +951,15 @@ static test_bool _test_check_disable(const char* name)
 static void _test_run_case(void)
 {
 	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
-		g_test_ctx.runtime.cur_case->data.cases[0].class_name,
-		g_test_ctx.runtime.cur_case->data.cases[0].case_name);
+		g_test_ctx.runtime.cur_case->data.class_name,
+		g_test_ctx.runtime.cur_case->data.case_name);
 
 	/* 判断是否需要运行 */
 	if (g_test_ctx.filter.postive_patterns != NULL && !_test_check_pattern(g_test_ctx2.strbuf))
 	{
 		return;
 	}
-	if (_test_check_disable(g_test_ctx.runtime.cur_case->data.cases[0].case_name))
+	if (_test_check_disable(g_test_ctx.runtime.cur_case->data.case_name))
 	{
 		g_test_ctx.counter.result.disabled++;
 		return;
@@ -667,42 +972,43 @@ static void _test_run_case(void)
 	if (setjmp(g_test_ctx2.jmpbuf) != 0)
 	{
 		/* 标记失败 */
-		SET_MASK(g_test_ctx.runtime.cur_case->mask, MASK_FAILED);
-		g_test_ctx.counter.result.failed++;
+		SET_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILED);
 
 		/* 进入清理阶段 */
-		if (g_test_ctx.runtime.cur_case->data.size == 1)
-		{/* 不存在class时，直接跳出 */
-			g_test_ctx.runtime.cur_idx = 1;
-		}
-		else if (g_test_ctx.runtime.cur_case->data.size == 3)
-		{/* 存在class时，进行teardown阶段 */
-			g_test_ctx.runtime.cur_idx = 2;
-		}
+		goto procedure_teardown;
 	}
 
-	/* 记录开始时间 */
-	if (g_test_ctx.runtime.cur_idx == 0)
+	_test_get_timestamp(&g_test_ctx.timestamp.tv_start);
+	if (g_test_ctx.runtime.cur_case->data.proc[0] != NULL)
 	{
-		_test_get_timestamp(&g_test_ctx.timestamp.tv_start);
+		g_test_ctx.runtime.cur_case->data.proc[0]();
 	}
 
-	/* 执行用例 */
-	for (;g_test_ctx.runtime.cur_idx < g_test_ctx.runtime.cur_case->data.size;
-		g_test_ctx.runtime.cur_idx++)
+	if (g_test_ctx.runtime.cur_case->data.proc[1] != NULL)
 	{
-		g_test_ctx.runtime.cur_case->data.cases[g_test_ctx.runtime.cur_idx].test_fn();
+		g_test_ctx.runtime.cur_case->data.proc[1]();
 	}
+
+procedure_teardown:
+	if (g_test_ctx.runtime.cur_case->data.proc[2] != NULL)
+	{
+		g_test_ctx.runtime.cur_case->data.proc[2]();
+	}
+
 	/* 记录结束时间 */
 	_test_get_timestamp(&g_test_ctx.timestamp.tv_end);
 	_test_timestamp_diff(&g_test_ctx.timestamp.tv_start, &g_test_ctx.timestamp.tv_end, &g_test_ctx.timestamp.tv_diff);
 	_test_timestamp_add(&g_test_ctx.timestamp.tv_total, &g_test_ctx.timestamp.tv_diff);
 
 	const char* prefix_str = COLOR_RED("[  FAILED  ]");
-	if (!HAS_MASK(g_test_ctx.runtime.cur_case->mask, MASK_FAILED))
+	if (!HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILED))
 	{
 		prefix_str = COLOR_GREEN("[       OK ]");
 		g_test_ctx.counter.result.success++;
+	}
+	else
+	{
+		g_test_ctx.counter.result.failed++;
 	}
 
 	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
@@ -721,8 +1027,8 @@ static void _test_reset_all_test(void)
 	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
-		case_data->mask = 0;
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		case_data->data.mask = 0;
 	}
 
 	g_test_ctx.info.tid = GET_TID();
@@ -759,14 +1065,14 @@ static void _test_show_report(void)
 	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
-		if (!HAS_MASK(case_data->mask, MASK_FAILED))
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		if (!HAS_MASK(case_data->data.mask, MASK_FAILED))
 		{
 			continue;
 		}
 
 		snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
-			case_data->data.cases->class_name, case_data->data.cases->case_name);
+			case_data->data.class_name, case_data->data.case_name);
 		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_test_ctx2.strbuf);
 	}
 }
@@ -843,18 +1149,18 @@ static void _etest_list_tests(void)
 	printf("%-16.16s | test case\n", "class");
 	printf("-------------------------------------------------------------------------------\n");
 
-	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
+	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
-		if (last_class_name != case_data->data.cases[0].class_name)
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		if (last_class_name != case_data->data.class_name)
 		{
-			last_class_name = case_data->data.cases[0].class_name;
+			last_class_name = case_data->data.class_name;
 			print_class_name = last_class_name;
 			c_class++;
 		}
 
-		printf("%-16.16s | %s\n", print_class_name, case_data->data.cases[0].case_name);
+		printf("%-16.16s | %s\n", print_class_name, case_data->data.case_name);
 		print_class_name = "";
 
 		c_test++;
@@ -992,7 +1298,11 @@ static int _test_setup_args(int argc, char* argv[])
 
 void etest_register_case(etest_case_t* data)
 {
-	_test_list_push_back(&g_test_ctx.info.case_list, &data->node);
+	if (etest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
+	{
+		return;
+	}
+	_test_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
 }
 
 static void _test_run_test_loop(void)
@@ -1006,7 +1316,7 @@ static void _test_run_test_loop(void)
 	for (; g_test_ctx.runtime.cur_it != NULL;
 		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
 	{
-		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node);
+		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node.queue);
 		_test_run_case();
 	}
 
