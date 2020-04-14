@@ -91,7 +91,7 @@ static void __rb_insert(eaf_map_low_node_t* node, eaf_map_low_t* root)
 {
 	eaf_map_low_node_t* parent = rb_red_parent(node), *gparent, *tmp;
 
-	while (1) {
+	for (;;) {
 		/*
 		* Loop invariant: node is red
 		*
@@ -319,7 +319,7 @@ ____rb_erase_color(eaf_map_low_node_t* parent, eaf_map_low_t* root)
 {
 	eaf_map_low_node_t* node = NULL, *sibling, *tmp1, *tmp2;
 
-	while (1) {
+	for (;;) {
 		/*
 		* Loop invariants:
 		* - node is black (or NULL on first iteration)

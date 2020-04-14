@@ -12,6 +12,14 @@
 #include "utils/memory.h"
 #include "message.h"
 
+/*
+* Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
+* https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
+*/
+#if defined(_MSC_VER) && _MSC_VER <= 1900
+#	pragma warning(disable : 4127)
+#endif
+
 #define PUSH_FLAG_LOCK			(0x01 << 0x00)
 #define PUSH_FLAG_FORCE			(0x01 << 0x01)
 #define HAS_FLAG(flag, bit)		((flag) & (bit))
@@ -256,11 +264,10 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 {
 	eaf_service_t* service;
 	eaf_mutex_enter(&group->objlock);
-	do 
 	{
 		eaf_list_node_t* it = eaf_list_begin(&group->coroutine.busy_list);
 		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, coroutine.node) : NULL;
-	} while (0);
+	}
 	eaf_mutex_leave(&group->objlock);
 
 	return service;
@@ -315,10 +322,9 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group, eaf_service_t* ser
 static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* service, eaf_service_state_t state)
 {
 	eaf_mutex_enter(&group->objlock);
-	do 
 	{
 		_eaf_service_set_state_nolock(group, service, state);
-	} while (0);
+	}
 	eaf_mutex_leave(&group->objlock);
 }
 
@@ -334,7 +340,6 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 	tmp_record.data.priv = NULL;
 
 	eaf_mutex_enter(&group->objlock);
-	do
 	{
 		if (service->subscribe.cbiter == NULL)
 		{
@@ -366,7 +371,7 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 			}
 			service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter);
 		}
-	} while (0);
+	}
 	eaf_mutex_leave(&group->objlock);
 }
 
@@ -674,7 +679,14 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 
 static void _eaf_service_on_req_record_create(eaf_msgq_record_t* record, void* arg)
 {
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4055)
+#endif
 	record->info.req.req_fn = (eaf_req_handle_fn)arg;
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
 }
 
 static int _eaf_service_on_cmp_subscribe_record(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
@@ -773,9 +785,16 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 		return eaf_errno_notfound;
 	}
 
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4054)
+#endif
 	/* ÍÆËÍÏûÏ¢ */
 	return _eaf_service_push_msg(group, service, real_msg,
 		_eaf_service_on_req_record_create, (void*)msg_proc, PUSH_FLAG_LOCK);
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
 }
 
 static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)

@@ -81,10 +81,9 @@ void eaf_msg_add_ref(eaf_msg_t* msg)
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 
 	eaf_mutex_enter(&real_req->objlock);
-	do 
 	{
 		real_req->cnt.refcnt++;
-	} while (0);
+	}
 	eaf_mutex_leave(&real_req->objlock);
 }
 
@@ -94,10 +93,9 @@ void eaf_msg_dec_ref(eaf_msg_t* msg)
 
 	int need_destroy;
 	eaf_mutex_enter(&real_req->objlock);
-	do 
 	{
 		need_destroy = !(--real_req->cnt.refcnt);
-	} while (0);
+	}
 	eaf_mutex_leave(&real_req->objlock);
 
 	if (!need_destroy)

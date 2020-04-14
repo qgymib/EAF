@@ -1,16 +1,6 @@
 #include "EAF/utils/define.h"
 #include "EAF/utils/ringbuffer.h"
 
-/**
-* 向 node 填充长度
-* @param node	ring_buffer_node_t
-* @param size	size
-*/
-#define ASSIGN_LENGTH(_node, _size)	 \
-	do {\
-		*(size_t*)&((_node)->token.size.size) = (size_t)(_size);\
-	} while (0)
-
 typedef enum ring_buffer_node_state
 {
 	stat_writing,										/** 处于writing状态 */
@@ -84,7 +74,7 @@ static eaf_ringbuffer_token_t* _ring_buffer_reserve_empty(eaf_ringbuffer_t* rb,
 	/* 初始化节点 */
 	rb->node.HEAD = (ring_buffer_node_t*)rb->config.cache;
 	rb->node.HEAD->state = stat_writing;
-	ASSIGN_LENGTH(rb->node.HEAD, data_len);
+	rb->node.HEAD->token.size.size = data_len;
 
 	/* 初始化位置链 */
 	rb->node.HEAD->chain_pos.p_forward = rb->node.HEAD;
@@ -167,7 +157,7 @@ static eaf_ringbuffer_token_t* _ring_buffer_perform_overwrite(
 	rb->counter.writing += 1;
 
 	/* 更新长度 */
-	ASSIGN_LENGTH(new_node, data_len);
+	new_node->token.size.size = data_len;
 
 	/* 更改节点状态 */
 	new_node->state = stat_writing;
@@ -214,7 +204,7 @@ static eaf_ringbuffer_token_t* _ring_buffer_reserve_try_overwrite(
 	size_t counter_lost_nodes = 1;
 	ring_buffer_node_t* node_end = rb->node.oldest_reserve;
 
-	while (1)
+	for (;;)
 	{
 		sum_size = (uint8_t*)node_end
 			+ eaf_ringbuffer_node_cost(node_end->token.size.size)
@@ -247,7 +237,7 @@ static void _ring_buffer_insert_new_node(eaf_ringbuffer_t* rb,
 {
 	/* initialize token */
 	new_node->state = stat_writing;
-	ASSIGN_LENGTH(new_node, data_len);
+	new_node->token.size.size = data_len;
 
 	/* update chain_pos */
 	new_node->chain_pos.p_forward = rb->node.HEAD->chain_pos.p_forward;
