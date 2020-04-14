@@ -15,13 +15,14 @@ extern "C" {
 #endif
 
 #define EAF_COROUTINE_REENTER()	\
-	eaf_service_local_t* _eaf_local = eaf_service_get_local();\
-	switch(_eaf_local->branch)\
-		case (unsigned)-1: if (_eaf_local->branch)\
+	eaf_group_local_t* _eaf_group_local = NULL;\
+	eaf_service_local_t* _eaf_service_local = eaf_service_get_local(&_eaf_group_local);\
+	switch(_eaf_service_local->branch)\
+		case (unsigned)-1: if (_eaf_service_local->branch)\
 		{\
 			goto terminate_coroutine;\
 		terminate_coroutine:\
-			_eaf_local->branch = (unsigned)-1;\
+			_eaf_service_local->branch = (unsigned)-1;\
 			goto bail_out_of_coroutine;\
 		bail_out_of_coroutine:\
 			break;\
@@ -29,18 +30,18 @@ extern "C" {
 		else /* fall-through */ case 0:
 
 #define EAF_COROUTINE_YIELD(_fn, _arg, n)	\
-	for (_eaf_local->branch = (n), _eaf_local->cc[0] = EAF_SERVICE_CC0_YIELD,\
-		_eaf_local->yield.hook = _fn, _eaf_local->yield.arg = _arg;;)\
-		if (_eaf_local->branch == 0) {\
+	for (_eaf_service_local->branch = (n), _eaf_group_local->cc[0] = EAF_SERVICE_CC0_YIELD,\
+		_eaf_group_local->yield.hook = _fn, _eaf_group_local->yield.arg = _arg;;)\
+		if (_eaf_service_local->branch == 0) {\
 			case (n): ;\
 			break;\
 		} else\
-		switch (_eaf_local->branch ? 0 : 1)\
+		switch (_eaf_service_local->branch ? 0 : 1)\
 			for(;;)\
-				/* fall-through */ case -1: if (_eaf_local->branch)\
+				/* fall-through */ case -1: if (_eaf_service_local->branch)\
 					goto terminate_coroutine;\
 				else for (;;)\
-					/* fall-through */ case 1: if (_eaf_local->branch)\
+					/* fall-through */ case 1: if (_eaf_service_local->branch)\
 					goto bail_out_of_coroutine;\
 				else /* fall-through */ case 0: { }
 
@@ -57,6 +58,10 @@ typedef struct eaf_service_local
 {
 	uint32_t				id;			/** current service id */
 	uint32_t				branch;		/** yield branch */
+}eaf_service_local_t;
+
+typedef struct eaf_group_local
+{
 	uint32_t				cc[1];		/** coroutine control */
 
 	struct
@@ -64,13 +69,13 @@ typedef struct eaf_service_local
 		eaf_yield_hook_fn	hook;		/** hook */
 		void*				arg;		/** user arg */
 	}yield;
-}eaf_service_local_t;
+}eaf_group_local_t;
 
 /**
 * 获取本地数据
 * @return		eaf_service_local_t*
 */
-eaf_service_local_t* eaf_service_get_local(void);
+eaf_service_local_t* eaf_service_get_local(eaf_group_local_t** local);
 
 #ifdef __cplusplus
 }

@@ -34,34 +34,22 @@
 /**
 * 清除控制位
 */
-#define CLEAR_CC0(service)	\
+#define CLEAR_CC0(group)	\
 	do {\
-		(service)->local.cc[0] = 0;\
+		(group)->coroutine.local.cc[0] = 0;\
 	} while (0)
 
 /**
 * 检查控制位
 */
-#define CHECK_CC0(service, bmask)	\
-	(!!((service)->local.cc[0] & (bmask)))
+#define CHECK_CC0(group, bmask)	\
+	((group)->coroutine.local.cc[0] & (bmask))
 
 /**
 * 获取当前正在运行的任务
 */
 #define CUR_RUN(group)	\
 	((group)->coroutine.cur_run)
-
-/**
-* 清除控制位
-*/
-#define CUR_RUN_CLEAR_CC0(group)	\
-	CLEAR_CC0(CUR_RUN(group))
-
-/**
-* 检查控制位
-*/
-#define CUR_RUN_CHECK_CC0(group, bmask)	\
-	CHECK_CC0(CUR_RUN(group), bmask)
 
 /**
 * 设置当前正在运行的任务
@@ -77,7 +65,7 @@
 */
 #define RESET_BRANCH(service)	\
 	do {\
-		(service)->local.branch = 0;\
+		(service)->coroutine.local.branch = 0;\
 	} while (0)
 
 /**
@@ -89,11 +77,12 @@
 /**
 * call user defined yield hook
 */
-#define CALL_YIELD_HOOK(service)	\
+#define CALL_YIELD_HOOK(group)	\
 	do {\
-		eaf_service_t* _service = service;\
-		if (_service->local.yield.hook != NULL) {\
-			_service->local.yield.hook(_service->local.id, _service->local.yield.arg);\
+		eaf_group_t* _group = group;\
+		if (_group->coroutine.local.yield.hook != NULL) {\
+			_group->coroutine.local.yield.hook(CUR_RUN(_group)->coroutine.local.id,\
+				_group->coroutine.local.yield.arg);\
 		}\
 	} while (0)
 
@@ -157,12 +146,12 @@ typedef struct eaf_subscribe_record
 
 typedef struct eaf_service
 {
-	eaf_service_local_t				local;		/** 本地存储 */
 	eaf_service_state_t				state;		/** 状态 */
 	const eaf_service_info_t*		load;		/** 加载信息 */
 
 	struct
 	{
+		eaf_service_local_t			local;		/** 本地存储 */
 		eaf_list_node_t				node;		/** 侵入式节点。在ready_list或wait_list中 */
 	}coroutine;
 
@@ -190,6 +179,7 @@ typedef struct eaf_group
 
 	struct 
 	{
+		eaf_group_local_t			local;		/** local storage */
 		eaf_service_t*				cur_run;	/** 当前正在处理的服务 */
 		eaf_list_t					busy_list;	/** INIT0/BUSY */
 		eaf_list_t					wait_list;	/** INIT1/IDLE/PEND */
@@ -241,7 +231,7 @@ static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t
 		for (j = 0; j < g_eaf_ctx->group.table[i]->service.size; j++)
 		{
 			eaf_service_t* service = &g_eaf_ctx->group.table[i]->service.table[j];
-			if (service->local.id != service_id)
+			if (service->coroutine.local.id != service_id)
 			{
 				continue;
 			}
@@ -371,7 +361,7 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 			eaf_mutex_enter(&group->objlock);
 
 			/* 若发生yield则终止 */
-			if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
+			if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 			{
 				break;
 			}
@@ -400,10 +390,10 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 
 fin:
 	/* 发生yield */
-	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
+	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
-		CALL_YIELD_HOOK(service);
+		CALL_YIELD_HOOK(group);
 		return;
 	}
 
@@ -471,10 +461,10 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 	int ret = service->load->on_init();
 
 	/* 检查是否执行yield */
-	if (CHECK_CC0(service, EAF_SERVICE_CC0_YIELD))
+	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 	{/* 若init阶段进行了yield */
 		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
-		CALL_YIELD_HOOK(service);
+		CALL_YIELD_HOOK(group);
 		return 0;
 	}
 	RESET_BRANCH(service);
@@ -501,7 +491,7 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 	eaf_sem_pend(&group->msgq.sem, 0);
 
 	CUR_RUN(group) = service;
-	CLEAR_CC0(service);
+	CLEAR_CC0(group);
 
 	if (service->state == eaf_service_state_init0)
 	{
@@ -533,16 +523,16 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 			continue;
 		}
 
-		CUR_RUN_CLEAR_CC0(group);
+		CLEAR_CC0(group);
 		int ret = CUR_RUN(group)->load->on_init();
 
 		/* 检查是否执行yield */
-		if (CUR_RUN_CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+		if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
 		{/* 若init阶段进行了yield */
 			_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_init1);
 
 			/* call user hook */
-			CALL_YIELD_HOOK(CUR_RUN(group));
+			CALL_YIELD_HOOK(group);
 
 			continue;
 		}
@@ -939,7 +929,7 @@ int eaf_setup(const eaf_thread_table_t* info, size_t size)
 		size_t idx;
 		for (idx = 0; idx < info[init_idx].service.size; idx++)
 		{
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].local.id =
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.local.id =
 				info[init_idx].service.table[idx].srv_id;
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity =
 				info[init_idx].service.table[idx].msgq_size;
@@ -1048,7 +1038,7 @@ int eaf_register(uint32_t id, const eaf_service_info_t* info)
 		size_t idx;
 		for (idx = 0; idx < g_eaf_ctx->group.table[i]->service.size; idx++)
 		{
-			if (g_eaf_ctx->group.table[i]->service.table[idx].local.id == id)
+			if (g_eaf_ctx->group.table[i]->service.table[idx].coroutine.local.id == id)
 			{
 				service = &g_eaf_ctx->group.table[i]->service.table[idx];
 				break;
@@ -1237,10 +1227,26 @@ int eaf_resume(uint32_t srv_id)
 	return ret;
 }
 
-eaf_service_local_t* eaf_service_get_local(void)
+eaf_service_local_t* eaf_service_get_local(eaf_group_local_t** local)
 {
-	eaf_service_t* service = g_eaf_ctx != NULL ? _eaf_get_current_service(NULL) : NULL;
-	return service != NULL ? &service->local : NULL;
+	if (g_eaf_ctx == NULL)
+	{
+		return NULL;
+	}
+
+	eaf_group_t* group;
+	eaf_service_t* service = _eaf_get_current_service(&group);
+	if (service == NULL)
+	{
+		return NULL;
+	}
+
+	if (local != NULL)
+	{
+		*local = &group->coroutine.local;
+	}
+
+	return &service->coroutine.local;
 }
 
 int eaf_rpc_init(const eaf_rpc_cfg_t* cfg)
@@ -1279,6 +1285,6 @@ int eaf_rpc_income(eaf_msg_t* msg)
 
 uint32_t eaf_service_self(void)
 {
-	eaf_service_local_t* local = eaf_service_get_local();
+	eaf_service_local_t* local = eaf_service_get_local(NULL);
 	return local != NULL ? local->id : (uint32_t)-1;
 }
