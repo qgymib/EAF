@@ -299,13 +299,13 @@ static void test_optparse_init(test_optparse_t *options, char **argv)
 
 typedef struct test_list
 {
-	test_list_node_t*		head;							/** 头结点 */
-	test_list_node_t*		tail;							/** 尾节点 */
+	etest_list_node_t*		head;							/** 头结点 */
+	etest_list_node_t*		tail;							/** 尾节点 */
 	unsigned				size;							/** 节点数量 */
 }test_list_t;
 #define TEST_LIST_INITIALIZER		{ NULL, NULL, 0 }
 
-static void _test_list_set_once(test_list_t* handler, test_list_node_t* node)
+static void _test_list_set_once(test_list_t* handler, etest_list_node_t* node)
 {
 	handler->head = node;
 	handler->tail = node;
@@ -314,7 +314,7 @@ static void _test_list_set_once(test_list_t* handler, test_list_node_t* node)
 	handler->size = 1;
 }
 
-static void _test_list_push_back(test_list_t* handler, test_list_node_t* node)
+static void _test_list_push_back(test_list_t* handler, etest_list_node_t* node)
 {
 	if (handler->head == NULL)
 	{
@@ -329,12 +329,12 @@ static void _test_list_push_back(test_list_t* handler, test_list_node_t* node)
 	handler->size++;
 }
 
-static test_list_node_t* _test_list_begin(const test_list_t* handler)
+static etest_list_node_t* _test_list_begin(const test_list_t* handler)
 {
 	return handler->head;
 }
 
-static test_list_node_t* _test_list_next(const test_list_t* handler, const test_list_node_t* node)
+static etest_list_node_t* _test_list_next(const test_list_t* handler, const etest_list_node_t* node)
 {
 	return node->p_after;
 }
@@ -344,7 +344,7 @@ static unsigned _test_list_size(const test_list_t* handler)
 	return handler->size;
 }
 
-static void _test_list_erase(test_list_t* handler, test_list_node_t* node)
+static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
 {
 	handler->size--;
 
@@ -460,8 +460,8 @@ typedef struct test_ctx
 	struct
 	{
 		unsigned long long	seed;							/** 随机数 */
-		test_list_node_t*	cur_it;							/** 当前游标位置 */
-		test_case_t*		cur_case;						/** 当前正在运行的用例 */
+		etest_list_node_t*	cur_it;							/** 当前游标位置 */
+		etest_case_t*		cur_case;						/** 当前正在运行的用例 */
 		size_t				cur_idx;						/** 当前游标位置 */
 	}runtime;
 
@@ -718,10 +718,10 @@ static void _test_reset_all_test(void)
 	memset(&g_test_ctx.counter.result, 0, sizeof(g_test_ctx.counter.result));
 	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
 
-	test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		test_case_t* case_data = CONTAINER_OF(it, test_case_t, node);
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
 		case_data->mask = 0;
 	}
 
@@ -756,10 +756,10 @@ static void _test_show_report(void)
 	}
 
 	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
-	test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		test_case_t* case_data = CONTAINER_OF(it, test_case_t, node);
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
 		if (!HAS_MASK(case_data->mask, MASK_FAILED))
 		{
 			continue;
@@ -771,7 +771,7 @@ static void _test_show_report(void)
 	}
 }
 
-static void _test_setup_arg_pattern(const char* user_pattern)
+static void _etest_setup_arg_pattern(const char* user_pattern)
 {
 	int flag_allow_negative = 1;
 	size_t number_of_patterns = 1;
@@ -832,25 +832,31 @@ static void _test_setup_arg_pattern(const char* user_pattern)
 	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
 }
 
-static void _test_list_tests(void)
+static void _etest_list_tests(void)
 {
 	unsigned c_class = 0;
 	unsigned c_test = 0;
 	const char* last_class_name = NULL;
+	const char* print_class_name = "";
 
 	printf("===============================================================================\n");
+	printf("%-16.16s | test case\n", "class");
+	printf("-------------------------------------------------------------------------------\n");
 
-	test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		test_case_t* case_data = CONTAINER_OF(it, test_case_t, node);
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node);
 		if (last_class_name != case_data->data.cases[0].class_name)
 		{
 			last_class_name = case_data->data.cases[0].class_name;
-			printf("%s.\n", last_class_name);
+			print_class_name = last_class_name;
 			c_class++;
 		}
-		printf("  %s\n", case_data->data.cases[0].case_name);
+
+		printf("%-16.16s | %s\n", print_class_name, case_data->data.cases[0].case_name);
+		print_class_name = "";
+
 		c_test++;
 	}
 
@@ -861,21 +867,21 @@ static void _test_list_tests(void)
 	printf("===============================================================================\n");
 }
 
-static void _test_setup_arg_repeat(const char* str)
+static void _etest_setup_arg_repeat(const char* str)
 {
 	int repeat = 1;
 	sscanf(str, "%d", &repeat);
 	g_test_ctx.counter.repeat.repeat = (unsigned)repeat;
 }
 
-static void _test_setup_arg_print_time(const char* str)
+static void _etest_setup_arg_print_time(const char* str)
 {
 	int val = 1;
 	sscanf(str, "%d", &val);
 	g_test_ctx.mask.print_time = !!val;
 }
 
-static void _test_setup_arg_random_seed(const char* str)
+static void _etest_setup_arg_random_seed(const char* str)
 {
 	long long val = time(NULL);
 	sscanf(str, "%lld", &val);
@@ -887,26 +893,26 @@ static int _test_setup_args(int argc, char* argv[])
 {
 	enum test_opt
 	{
-		test_list_tests = 1,
-		test_filter,
-		test_also_run_disabled_tests,
-		test_repeat,
-		test_shuffle,
-		test_random_seed,
-		test_print_time,
-		test_break_on_failure,
+		etest_list_tests = 1,
+		etest_filter,
+		etest_also_run_disabled_tests,
+		etest_repeat,
+		etest_shuffle,
+		etest_random_seed,
+		etest_print_time,
+		etest_break_on_failure,
 		help,
 	};
 
 	test_optparse_long_opt_t longopts[] = {
-		{ "test_list_tests",				test_list_tests,				OPTPARSE_OPTIONAL },
-		{ "test_filter",					test_filter,					OPTPARSE_OPTIONAL },
-		{ "test_also_run_disabled_tests",	test_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
-		{ "test_repeat",					test_repeat,					OPTPARSE_OPTIONAL },
-		{ "test_shuffle",					test_shuffle,					OPTPARSE_OPTIONAL },
-		{ "test_random_seed",				test_random_seed,				OPTPARSE_OPTIONAL },
-		{ "test_print_time",				test_print_time,				OPTPARSE_OPTIONAL },
-		{ "test_break_on_failure",			test_break_on_failure,			OPTPARSE_OPTIONAL },
+		{ "etest_list_tests",				etest_list_tests,				OPTPARSE_OPTIONAL },
+		{ "etest_filter",					etest_filter,					OPTPARSE_OPTIONAL },
+		{ "etest_also_run_disabled_tests",	etest_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
+		{ "etest_repeat",					etest_repeat,					OPTPARSE_OPTIONAL },
+		{ "etest_shuffle",					etest_shuffle,					OPTPARSE_OPTIONAL },
+		{ "etest_random_seed",				etest_random_seed,				OPTPARSE_OPTIONAL },
+		{ "etest_print_time",				etest_print_time,				OPTPARSE_OPTIONAL },
+		{ "test_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
 		{ "help",							help,							OPTPARSE_OPTIONAL },
 		{ 0,								0,								OPTPARSE_NONE },
 	};
@@ -917,28 +923,28 @@ static int _test_setup_args(int argc, char* argv[])
 	int option;
 	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
 		switch (option) {
-		case test_list_tests:
-			_test_list_tests();
+		case etest_list_tests:
+			_etest_list_tests();
 			return -1;
-		case test_filter:
-			_test_setup_arg_pattern(options.optarg);
+		case etest_filter:
+			_etest_setup_arg_pattern(options.optarg);
 			break;
-		case test_also_run_disabled_tests:
+		case etest_also_run_disabled_tests:
 			g_test_ctx.mask.also_run_disabled_tests = 1;
 			break;
-		case test_repeat:
-			_test_setup_arg_repeat(options.optarg);
+		case etest_repeat:
+			_etest_setup_arg_repeat(options.optarg);
 			break;
-		case test_shuffle:
+		case etest_shuffle:
 			g_test_ctx.mask.shuffle = 1;
 			break;
-		case test_random_seed:
-			_test_setup_arg_random_seed(options.optarg);
+		case etest_random_seed:
+			_etest_setup_arg_random_seed(options.optarg);
 			break;
-		case test_print_time:
-			_test_setup_arg_print_time(options.optarg);
+		case etest_print_time:
+			_etest_setup_arg_print_time(options.optarg);
 			break;
-		case test_break_on_failure:
+		case etest_break_on_failure:
 			g_test_ctx.mask.break_on_failure = 1;
 			break;
 		case help:
@@ -948,31 +954,31 @@ static int _test_setup_args(int argc, char* argv[])
 				"following command line flags to control its behavior:\n"
 				"\n"
 				"Test Selection:\n"
-				"  "COLOR_GREEN("--test_list_tests")"\n"
+				"  "COLOR_GREEN("--etest_list_tests")"\n"
 				"      List the names of all tests instead of running them. The name of\n"
 				"      TEST(Foo, Bar) is \"Foo.Bar\".\n"
-				"  "COLOR_GREEN("--test_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
+				"  "COLOR_GREEN("--etest_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
 				"      Run only the tests whose name matches one of the positive patterns but\n"
 				"      none of the negative patterns. '?' matches any single character; '*'\n"
 				"      matches any substring; ':' separates two patterns.\n"
-				"  "COLOR_GREEN("--test_also_run_disabled_tests")"\n"
+				"  "COLOR_GREEN("--etest_also_run_disabled_tests")"\n"
 				"      Run all disabled tests too.\n"
 				"\n"
 				"Test Execution:\n"
-				"  "COLOR_GREEN("--test_repeat=")COLOR_YELLO("[COUNT]")"\n"
+				"  "COLOR_GREEN("--etest_repeat=")COLOR_YELLO("[COUNT]")"\n"
 				"      Run the tests repeatedly; use a negative count to repeat forever.\n"
-				"  "COLOR_GREEN("--test_shuffle")"\n"
+				"  "COLOR_GREEN("--etest_shuffle")"\n"
 				"      Randomize tests' orders on every iteration.\n"
-				"  "COLOR_GREEN("--test_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
+				"  "COLOR_GREEN("--etest_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
 				"      Random number seed to use for shuffling test orders (between 0 and\n"
 				"      99999. By default a seed based on the current time is used for shuffle).\n"
 				"\n"
 				"Test Output:\n"
-				"  "COLOR_GREEN("--test_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
+				"  "COLOR_GREEN("--etest_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
 				"      Don't print the elapsed time of each test.\n"
 				"\n"
 				"Assertion Behavior:\n"
-				"  "COLOR_GREEN("--test_break_on_failure")"\n"
+				"  "COLOR_GREEN("--etest_break_on_failure")"\n"
 				"      Turn assertion failures into debugger break-points.\n"
 				);
 			return -1;
@@ -984,7 +990,7 @@ static int _test_setup_args(int argc, char* argv[])
 	return 0;
 }
 
-void test_register_case(test_case_t* data)
+void etest_register_case(etest_case_t* data)
 {
 	_test_list_push_back(&g_test_ctx.info.case_list, &data->node);
 }
@@ -1000,7 +1006,7 @@ static void _test_run_test_loop(void)
 	for (; g_test_ctx.runtime.cur_it != NULL;
 		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
 	{
-		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, test_case_t, node);
+		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node);
 		_test_run_case();
 	}
 
@@ -1019,7 +1025,7 @@ static void _test_shuffle_cases(void)
 		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
 
 		unsigned i = 0;
-		test_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+		etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
 
 		_test_list_erase(&g_test_ctx.info.case_list, it);
@@ -1029,7 +1035,7 @@ static void _test_shuffle_cases(void)
 	g_test_ctx.info.case_list = copy_case_list;
 }
 
-int test_run_tests(int argc, char* argv[])
+int etest_run_tests(int argc, char* argv[])
 {
 	/* 初始化随机数 */
 	_test_srand(time(NULL));
@@ -1083,89 +1089,89 @@ fin:
 	return (int)g_test_ctx.counter.result.failed;
 }
 
-void test_assert_fail(const char *expr, const char *file, int line, const char *func)
+void etest_assert_fail(const char *expr, const char *file, int line, const char *func)
 {
 	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
 	fflush(NULL);
 	abort();
 }
 
-void test_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_num_ne(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_ne(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_num_lt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_lt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a < b, "<", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_num_le(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_le(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a <= b, "<=", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_num_gt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_gt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a > b, ">", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_num_ge(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_num_ge(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a >= b, ">=", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_ptr_eq(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_ptr_eq(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%p", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_ptr_ne(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_ptr_ne(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%p", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(strcmp(a, b) == 0, "!=", "%p", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_str_ne(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_str_ne(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(strcmp(a, b) != 0, "!=", "%p", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_eq(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_eq(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%f", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_ne(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_ne(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%f", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_lt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_lt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a < b, "<", "%f", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_le(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_le(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a <= b, "<=", "%f", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a > b, ">", "%f", s_a, a, s_b, b, file, line);
 }
 
-void test_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a >= b, ">=", "%f", s_a, a, s_b, b, file, line);
 }
@@ -1174,7 +1180,7 @@ void test_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, co
 /* LOG                                                                  */
 /************************************************************************/
 
-const char* test_pretty_file(const char* file)
+const char* etest_pretty_file(const char* file)
 {
 	const char* pos = file;
 

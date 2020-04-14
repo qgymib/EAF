@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
 #endif
 
-	int ret = test_run_tests(argc, argv);
+	int ret = etest_run_tests(argc, argv);
 
 #if defined(_MSC_VER)
 	_CrtDumpMemoryLeaks();
