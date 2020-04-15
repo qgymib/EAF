@@ -12,7 +12,7 @@ static int _test_subscribe_s1_on_init(void)
 	return 0;
 }
 
-static void _test_ssubscribe_s1_on_exit(void)
+static void _test_subscribe_s1_on_exit(void)
 {
 }
 
@@ -45,7 +45,7 @@ TEST_CLASS_SETUP(subscribe)
 	static eaf_service_info_t s1_info = {
 		0, NULL,
 		_test_subscribe_s1_on_init,
-		_test_ssubscribe_s1_on_exit,
+		_test_subscribe_s1_on_exit,
 	};
 	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 

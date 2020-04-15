@@ -5,7 +5,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <stddef.h>
+#include "EAF/infra/thread.h"
 #include "EAF/core/internal/service.h"
 #include "EAF/core/message.h"
 
@@ -56,13 +56,6 @@ typedef struct eaf_service_table
 	uint32_t						srv_id;			/** service id */
 	uint32_t						msgq_size;		/** message queue capacity */
 }eaf_service_table_t;
-
-typedef struct eaf_thread_attr
-{
-	unsigned long					priority;		/** priority, platform related. */
-	unsigned long					cpuno;			/** cpuno attached. if let system select, set to `-1` */
-	size_t							stacksize;		/** stack size */
-}eaf_thread_attr_t;
 
 typedef struct eaf_group_table
 {

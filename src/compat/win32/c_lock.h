@@ -1,12 +1,12 @@
-#ifndef __EAF_COMPAT_MUTEX_WIN32_INTERNAL_H__
-#define __EAF_COMPAT_MUTEX_WIN32_INTERNAL_H__
+#ifndef __EAF_COMPAT_LOCK_WIN32_INTERNAL_H__
+#define __EAF_COMPAT_LOCK_WIN32_INTERNAL_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <windows.h>
 
-struct eaf_mutex
+struct eaf_compat_lock
 {
 	CRITICAL_SECTION	obj;
 };

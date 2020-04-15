@@ -54,8 +54,11 @@ dkms.conf
 # pre-defined build directory
 /bin
 /build
+/powerpack/bin
+/powerpack/build
 /test/bin
 /test/build
+/third_party
 
 # visual studio files
 /.vs

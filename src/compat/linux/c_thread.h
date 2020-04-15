@@ -6,7 +6,7 @@ extern "C" {
 
 #include <pthread.h>
 
-struct eaf_thread
+struct eaf_compat_thread
 {
 	pthread_t		thr;
 	void			(*proc)(void* arg);

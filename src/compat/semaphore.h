@@ -6,8 +6,8 @@ extern "C" {
 
 #include "c_semaphore.h"
 
-struct eaf_sem;
-typedef struct eaf_sem eaf_sem_t;
+struct eaf_compat_sem;
+typedef struct eaf_compat_sem eaf_compat_sem_t;
 
 /**
 * 创建信号量
@@ -15,13 +15,13 @@ typedef struct eaf_sem eaf_sem_t;
 * @param count		信号量计数
 * @return			eaf_errno
 */
-int eaf_sem_init(eaf_sem_t* handler, unsigned count);
+int eaf_compat_sem_init(eaf_compat_sem_t* handler, unsigned long count);
 
 /**
 * 销毁信号量
 * @param handler	句柄
 */
-void eaf_sem_exit(eaf_sem_t* handler);
+void eaf_compat_sem_exit(eaf_compat_sem_t* handler);
 
 /**
 * 减少信号量
@@ -29,14 +29,14 @@ void eaf_sem_exit(eaf_sem_t* handler);
 * @param ms			超时时间。-1：永久等待；0：非阻塞等待
 * @return			eaf_errno
 */
-int eaf_sem_pend(eaf_sem_t* handler, unsigned ms);
+int eaf_compat_sem_pend(eaf_compat_sem_t* handler, unsigned long ms);
 
 /**
 * 增加信号量
 * @param handler	句柄
 * @return			eaf_errno
 */
-int eaf_sem_post(eaf_sem_t* handler);
+int eaf_compat_sem_post(eaf_compat_sem_t* handler);
 
 #ifdef __cplusplus
 }

@@ -5,7 +5,6 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-#include <setjmp.h>
 #include "EAF/utils/define.h"
 
 #if defined(_MSC_VER)

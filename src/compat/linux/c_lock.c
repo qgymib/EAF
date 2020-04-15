@@ -1,7 +1,7 @@
 #include "EAF/utils/errno.h"
-#include "compat/mutex.h"
+#include "compat/lock.h"
 
-int eaf_mutex_init(eaf_mutex_t* handler, eaf_mutex_attr_t attr)
+int eaf_compat_lock_init(eaf_compat_lock_t* handler, eaf_lock_attr_t attr)
 {
 	pthread_mutexattr_t	mutex_attr;
 	if (pthread_mutexattr_init(&mutex_attr) < 0)
@@ -9,7 +9,7 @@ int eaf_mutex_init(eaf_mutex_t* handler, eaf_mutex_attr_t attr)
 		return eaf_errno_unknown;
 	}
 
-	if (attr == eaf_mutex_attr_recursive)
+	if (attr == eaf_lock_attr_recursive)
 	{
 		pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
 	}
@@ -24,17 +24,17 @@ int eaf_mutex_init(eaf_mutex_t* handler, eaf_mutex_attr_t attr)
 	return ret;
 }
 
-void eaf_mutex_exit(eaf_mutex_t* handler)
+void eaf_compat_lock_exit(eaf_compat_lock_t* handler)
 {
 	pthread_mutex_destroy(&handler->obj);
 }
 
-int eaf_mutex_enter(eaf_mutex_t* handler)
+int eaf_compat_lock_enter(eaf_compat_lock_t* handler)
 {
 	return pthread_mutex_lock(&handler->obj);
 }
 
-int eaf_mutex_leave(eaf_mutex_t* handler)
+int eaf_compat_lock_leave(eaf_compat_lock_t* handler)
 {
 	return pthread_mutex_unlock(&handler->obj);
 }

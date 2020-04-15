@@ -1,7 +1,6 @@
 #include <string.h>
 #include "etest/etest.h"
 #include "EAF/eaf.h"
-#include "compat/semaphore.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_EVT		(TEST_SERVICE_S1 + 0x0001)
@@ -15,7 +14,7 @@ typedef struct test_filber_record
 	int					ret;
 }test_filber_record_t;
 
-static eaf_sem_t			_s_ret_sem;
+static eaf_sem_t*			_s_ret_sem;
 static test_filber_record_t	_s_nodes[4];
 static eaf_list_t			_s_ret_list;
 
@@ -31,7 +30,7 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 		_s_nodes[1].ret = -1;
 		eaf_list_push_back(&_s_ret_list, &_s_nodes[1].node);
 
-		ASSERT(eaf_sem_post(&_s_ret_sem) == 0);
+		ASSERT(eaf_sem_post(_s_ret_sem) == 0);
 	};
 }
 
@@ -73,7 +72,7 @@ TEST_CLASS_SETUP(filber)
 {
 	memset(_s_nodes, 0, sizeof(_s_nodes));
 	eaf_list_init(&_s_ret_list);
-	eaf_sem_init(&_s_ret_sem, 0);
+	ASSERT_PTR_NE(_s_ret_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -110,7 +109,7 @@ TEST_CLASS_TEAREDOWN(filber)
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
 
-	eaf_sem_exit(&_s_ret_sem);
+	eaf_sem_destroy(_s_ret_sem);
 }
 
 TEST_F(filber, yield_in_event)
@@ -134,7 +133,7 @@ TEST_F(filber, yield_in_event)
 	}
 
 	/* 等待处理完成 */
-	ASSERT_NUM_EQ(eaf_sem_pend(&_s_ret_sem, 8 * 1000), 0);
+	ASSERT_NUM_EQ(eaf_sem_pend(_s_ret_sem, 8 * 1000), 0);
 
 	ASSERT_PTR_EQ(eaf_list_pop_front(&_s_ret_list), &_s_nodes[0].node);
 	ASSERT_NUM_EQ(_s_nodes[0].ret, 99);

@@ -6,7 +6,7 @@ extern "C" {
 
 #include <semaphore.h>
 
-struct eaf_sem
+struct eaf_compat_sem
 {
 	sem_t	sem;
 };

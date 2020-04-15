@@ -6,7 +6,7 @@ extern "C" {
 
 #include <pthread.h>
 
-struct eaf_mutex
+struct eaf_compat_lock
 {
 	pthread_mutex_t	obj;
 };

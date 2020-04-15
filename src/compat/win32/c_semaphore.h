@@ -6,7 +6,7 @@ extern "C" {
 
 #include <windows.h>
 
-struct eaf_sem
+struct eaf_compat_sem
 {
 	HANDLE	sem;
 };

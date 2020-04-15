@@ -6,7 +6,7 @@ extern "C" {
 
 #include <windows.h>
 
-struct eaf_thread
+struct eaf_compat_thread
 {
 	HANDLE	thr;
 	void	(*proc)(void* arg);

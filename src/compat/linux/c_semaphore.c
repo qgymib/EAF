@@ -3,17 +3,17 @@
 #include "compat/thread.h"
 #include "compat/semaphore.h"
 
-int eaf_sem_init(eaf_sem_t* handler, unsigned count)
+int eaf_compat_sem_init(eaf_compat_sem_t* handler, unsigned long count)
 {
 	return sem_init(&handler->sem, 0, count);
 }
 
-void eaf_sem_exit(eaf_sem_t* handler)
+void eaf_compat_sem_exit(eaf_compat_sem_t* handler)
 {
 	sem_destroy(&handler->sem);
 }
 
-int eaf_sem_pend(eaf_sem_t* handler, unsigned timeout)
+int eaf_compat_sem_pend(eaf_compat_sem_t* handler, unsigned long timeout)
 {
 	int ret = 0;
 	if (timeout == (unsigned)-1)
@@ -30,13 +30,13 @@ int eaf_sem_pend(eaf_sem_t* handler, unsigned timeout)
 	unsigned times = (timeout + 9) / 10;
 	while (((ret = sem_trywait(&handler->sem)) != 0) && (times-- > 0))
 	{
-		eaf_thread_sleep(10);
+		eaf_compat_thread_sleep(10);
 	}
 
 	return ret == 0 ? eaf_errno_success : eaf_errno_timeout;
 }
 
-int eaf_sem_post(eaf_sem_t* handler)
+int eaf_compat_sem_post(eaf_compat_sem_t* handler)
 {
 	return sem_post(&handler->sem);
 }

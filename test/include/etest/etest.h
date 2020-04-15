@@ -4,14 +4,7 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER)
-#	define _CRTDBG_MAP_ALLOC
-#	include <stdlib.h>
-#	include <crtdbg.h>
-#else
-#	include <stdlib.h>
-#endif
-
+#include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -198,6 +191,32 @@ void etest_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, c
 	printf("[%s:%d %s] " fmt "\n", etest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 const char* etest_pretty_file(const char* file);
+
+/************************************************************************/
+/* time                                                                 */
+/************************************************************************/
+
+typedef struct etest_timestamp
+{
+	uint64_t	sec;		/** seconds */
+	uint64_t	usec;		/** microseconds */
+}etest_timestamp_t;
+
+/**
+* monotonic time since some unspecified starting point
+* @param ts		etest_timestamp_t*
+* @return		0 if success, otherwise failure
+*/
+int etest_timestamp_get(etest_timestamp_t* ts);
+
+/**
+* compare timestamp
+* @param t1		timestamp t1
+* @param t2		timestamp t2
+* @param dif	diff
+* @return		-1 if t1 < t2; 1 if t1 > t2; 0 if t1 == t2
+*/
+int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2, etest_timestamp_t* dif);
 
 #ifdef __cplusplus
 }

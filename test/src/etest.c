@@ -733,12 +733,6 @@ typedef int test_bool;
 #define test_true		1
 #define test_false		0
 
-typedef struct test_time
-{
-	unsigned				sec;							/** 秒 */
-	unsigned				usec;							/** 微秒 */
-}test_time_t;
-
 typedef struct test_ctx
 {
 	struct
@@ -758,10 +752,13 @@ typedef struct test_ctx
 
 	struct
 	{
-		test_time_t			tv_start;						/** 开始时间 */
-		test_time_t			tv_end;							/** 结束时间 */
-		test_time_t			tv_diff;						/** 时间差值 */
-		test_time_t			tv_total;						/** 总耗时 */
+		etest_timestamp_t	tv_case_start;					/** 用例开始时间 */
+		etest_timestamp_t	tv_case_end;					/** 结束时间 */
+
+		etest_timestamp_t	tv_total_start;					/** 总开始时间 */
+		etest_timestamp_t	tv_total_end;					/** 总结束时间 */
+
+		etest_timestamp_t	tv_diff;						/** 时间差值 */
 	}timestamp;
 
 	struct
@@ -809,7 +806,7 @@ static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
 	{ TEST_LIST_INITIALIZER, ETEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
 	{ 0, NULL, NULL, 0 },									// .runtime
-	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },				// .timestamp
+	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },	// .timestamp
 	{ { 0, 0, 0, 0 }, { 1, 0 } },							// .counter
 	{ 0, 1, 0, 0 },											// .mask
 	{ NULL, NULL, 0, 0 },									// .filter
@@ -839,58 +836,115 @@ static unsigned long _test_rand(void)
 	return g_test_ctx.runtime.seed >> 33;
 }
 
-static void _test_get_timestamp(test_time_t* tv)
+#if defined(_MSC_VER)
+LARGE_INTEGER getFILETIMEoffset()
+{
+	SYSTEMTIME s;
+	FILETIME f;
+	LARGE_INTEGER t;
+
+	s.wYear = 1970;
+	s.wMonth = 1;
+	s.wDay = 1;
+	s.wHour = 0;
+	s.wMinute = 0;
+	s.wSecond = 0;
+	s.wMilliseconds = 0;
+	SystemTimeToFileTime(&s, &f);
+	t.QuadPart = f.dwHighDateTime;
+	t.QuadPart <<= 32;
+	t.QuadPart |= f.dwLowDateTime;
+
+	return t;
+}
+#endif
+
+int etest_timestamp_get(etest_timestamp_t* ts)
 {
 #if defined(_MSC_VER)
 
-	/* 时钟频率 */
-	static LARGE_INTEGER _s_freq = { 0 };
-	if (_s_freq.QuadPart == 0)
-	{
-		ASSERT(QueryPerformanceFrequency(&_s_freq));
+	LARGE_INTEGER           t;
+	FILETIME            f;
+	double                  microseconds;
+	static LARGE_INTEGER    offset;
+	static double           frequencyToMicroseconds;
+	static int              initialized = 0;
+	static BOOL             usePerformanceCounter = 0;
+
+	if (!initialized) {
+		LARGE_INTEGER performanceFrequency;
+		initialized = 1;
+		usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
+		if (usePerformanceCounter)
+		{
+			QueryPerformanceCounter(&offset);
+			frequencyToMicroseconds = (double)performanceFrequency.QuadPart / 1000000.;
+		}
+		else
+		{
+			offset = getFILETIMEoffset();
+			frequencyToMicroseconds = 10.;
+		}
 	}
-
-	LARGE_INTEGER tmp_counter;
-	ASSERT(QueryPerformanceCounter(&tmp_counter));
-
-	tv->sec = (unsigned int)(tmp_counter.QuadPart / _s_freq.QuadPart);
-	tv->usec = (unsigned int)((tmp_counter.QuadPart - tv->sec * _s_freq.QuadPart) / (_s_freq.QuadPart / 1000.0 / 1000.0));
-
-#else
-	struct timeval tmp_tv;
-	ASSERT(gettimeofday(&tmp_tv, NULL) == 0);
-	tv->sec = tmp_tv.tv_sec;
-	tv->usec = tmp_tv.tv_usec;
-#endif
-}
-
-static void _test_timestamp_diff(const test_time_t* t1, const test_time_t* t2, test_time_t* td)
-{
-	const test_time_t* large_t = t1->sec > t2->sec ? t1 : (t1->sec < t2->sec ? t2 : (t1->usec > t2->usec ? t1 : t2));
-	const test_time_t* little_t = large_t == t1 ? t2 : t1;
-
-	td->sec = large_t->sec - little_t->sec;
-	if (large_t->usec < little_t->usec)
+	if (usePerformanceCounter)
 	{
-		td->usec = little_t->usec - large_t->usec;
-		td->sec--;
+		QueryPerformanceCounter(&t);
 	}
 	else
 	{
-		td->usec = large_t->usec - little_t->usec;
+		GetSystemTimeAsFileTime(&f);
+		t.QuadPart = f.dwHighDateTime;
+		t.QuadPart <<= 32;
+		t.QuadPart |= f.dwLowDateTime;
 	}
+
+	t.QuadPart -= offset.QuadPart;
+	microseconds = (double)t.QuadPart / frequencyToMicroseconds;
+	t.QuadPart = (LONGLONG)microseconds;
+	ts->sec = t.QuadPart / 1000000;
+	ts->usec = t.QuadPart % 1000000;
+	return 0;
+
+#else
+	struct timespec tmp_ts;
+	if (clock_gettime(CLOCK_MONOTONIC, &tmp_ts) < 0)
+	{
+		return -1;
+	}
+
+	ts->sec = tmp_ts.tv_sec;
+	ts->usec = tmp_ts.tv_nsec / 1000;
+	return 0;
+#endif
 }
 
-static void _test_timestamp_add(test_time_t* dst, const test_time_t* src)
+int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2, etest_timestamp_t* dif)
 {
-	dst->sec += src->sec;
-	dst->usec += src->usec;
+	etest_timestamp_t tmp_dif;
+	const etest_timestamp_t* large_t = t1->sec > t2->sec ? t1 : (t1->sec < t2->sec ? t2 : (t1->usec > t2->usec ? t1 : t2));
+	const etest_timestamp_t* little_t = large_t == t1 ? t2 : t1;
 
-	if (dst->usec > USEC_IN_SEC)
+	tmp_dif.sec = large_t->sec - little_t->sec;
+	if (large_t->usec < little_t->usec)
 	{
-		dst->usec -= USEC_IN_SEC;
-		dst->sec++;
+		tmp_dif.usec = little_t->usec - large_t->usec;
+		tmp_dif.sec--;
 	}
+	else
+	{
+		tmp_dif.usec = large_t->usec - little_t->usec;
+	}
+
+	if (dif != NULL)
+	{
+		*dif = tmp_dif;
+	}
+
+	if (tmp_dif.sec == 0 && tmp_dif.usec == 0)
+	{
+		return 0;
+	}
+	return t1 == little_t ? -1 : 1;
 }
 
 /**
@@ -978,27 +1032,26 @@ static void _test_run_case(void)
 		goto procedure_teardown;
 	}
 
-	_test_get_timestamp(&g_test_ctx.timestamp.tv_start);
 	if (g_test_ctx.runtime.cur_case->data.proc[0] != NULL)
 	{
 		g_test_ctx.runtime.cur_case->data.proc[0]();
 	}
 
+	/* 记录开始时间 */
+	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
 	if (g_test_ctx.runtime.cur_case->data.proc[1] != NULL)
 	{
 		g_test_ctx.runtime.cur_case->data.proc[1]();
 	}
 
 procedure_teardown:
+	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_end) == 0);
 	if (g_test_ctx.runtime.cur_case->data.proc[2] != NULL)
 	{
 		g_test_ctx.runtime.cur_case->data.proc[2]();
 	}
 
-	/* 记录结束时间 */
-	_test_get_timestamp(&g_test_ctx.timestamp.tv_end);
-	_test_timestamp_diff(&g_test_ctx.timestamp.tv_start, &g_test_ctx.timestamp.tv_end, &g_test_ctx.timestamp.tv_diff);
-	_test_timestamp_add(&g_test_ctx.timestamp.tv_total, &g_test_ctx.timestamp.tv_diff);
+	etest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
 
 	const char* prefix_str = COLOR_RED("[  FAILED  ]");
 	if (!HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILED))
@@ -1014,7 +1067,7 @@ procedure_teardown:
 	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%u ms)", g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+		printf(" (%llu ms)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
 	}
 	printf("\n");
 }
@@ -1036,13 +1089,15 @@ static void _test_reset_all_test(void)
 
 static void _test_show_report(void)
 {
+	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start, &g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
+
 	printf(COLOR_GREEN("[==========]") " %u/%u test case%s ran.",
 		g_test_ctx.counter.result.total,
 		_test_list_size(&g_test_ctx.info.case_list),
 		g_test_ctx.counter.result.total > 1 ? "s" : "");
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%u ms total)", g_test_ctx.timestamp.tv_total.sec * 1000 + g_test_ctx.timestamp.tv_total.usec / 1000);
+		printf(" (%llu ms total)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
 	}
 	printf("\n");
 
@@ -1312,6 +1367,8 @@ static void _test_run_test_loop(void)
 		g_test_ctx.info.case_list.size,
 		g_test_ctx.info.case_list.size > 1 ? "s" : "");
 
+	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
+
 	g_test_ctx.runtime.cur_it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; g_test_ctx.runtime.cur_it != NULL;
 		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
@@ -1319,6 +1376,8 @@ static void _test_run_test_loop(void)
 		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node.queue);
 		_test_run_case();
 	}
+
+	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_end);
 
 	_test_show_report();
 }

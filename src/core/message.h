@@ -6,7 +6,7 @@ extern "C" {
 
 #include "EAF/core/message.h"
 #include "EAF/utils/define.h"
-#include "compat/mutex.h"
+#include "compat/lock.h"
 
 /**
 * 获取部消息真实地址
@@ -25,7 +25,7 @@ extern "C" {
 typedef struct eaf_msg_full
 {
 	eaf_msg_t					msg;		/** 原始对象 */
-	eaf_mutex_t					objlock;	/** 对象锁 */
+	eaf_compat_lock_t			objlock;	/** 对象锁 */
 
 	struct
 	{

@@ -11,7 +11,7 @@ static eaf_msg_full_t* _eaf_msg_create(eaf_msg_type_t type, uint32_t id, size_t 
 		return NULL;
 	}
 
-	if (eaf_mutex_init(&msg->objlock, eaf_mutex_attr_normal) < 0)
+	if (eaf_compat_lock_init(&msg->objlock, eaf_lock_attr_normal) < 0)
 	{
 		EAF_FREE(msg);
 		return NULL;
@@ -29,7 +29,7 @@ static eaf_msg_full_t* _eaf_msg_create(eaf_msg_type_t type, uint32_t id, size_t 
 
 static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 {
-	eaf_mutex_exit(&msg->objlock);
+	eaf_compat_lock_exit(&msg->objlock);
 	EAF_FREE(msg);
 }
 
@@ -80,11 +80,11 @@ void eaf_msg_add_ref(eaf_msg_t* msg)
 {
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 
-	eaf_mutex_enter(&real_req->objlock);
+	eaf_compat_lock_enter(&real_req->objlock);
 	{
 		real_req->cnt.refcnt++;
 	}
-	eaf_mutex_leave(&real_req->objlock);
+	eaf_compat_lock_leave(&real_req->objlock);
 }
 
 void eaf_msg_dec_ref(eaf_msg_t* msg)
@@ -92,11 +92,11 @@ void eaf_msg_dec_ref(eaf_msg_t* msg)
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 
 	int need_destroy;
-	eaf_mutex_enter(&real_req->objlock);
+	eaf_compat_lock_enter(&real_req->objlock);
 	{
 		need_destroy = !(--real_req->cnt.refcnt);
 	}
-	eaf_mutex_leave(&real_req->objlock);
+	eaf_compat_lock_leave(&real_req->objlock);
 
 	if (!need_destroy)
 	{

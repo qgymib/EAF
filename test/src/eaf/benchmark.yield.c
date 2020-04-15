@@ -1,7 +1,6 @@
 #include <string.h>
 #include "etest/etest.h"
 #include "EAF/eaf.h"
-#include "compat/semaphore.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_REQ		(TEST_SERVICE_S1 + 0x0001)
@@ -9,8 +8,8 @@
 #define TEST_SERVICE_S2			0x00020000
 #define TEST_SERVICE_S2_REQ		(TEST_SERVICE_S2 + 0x0001)
 
-static eaf_sem_t				s_benchmark_yield_sem_s1;
-static eaf_sem_t				s_benchmark_yield_sem_s2;
+static eaf_sem_t*				s_benchmark_yield_sem_s1;
+static eaf_sem_t*				s_benchmark_yield_sem_s2;
 static size_t					s_benchmark_yield_count_s1;
 static size_t					s_benchmark_yield_count_s2;
 static size_t					s_benchmark_yield_total;
@@ -41,7 +40,7 @@ static void _test_benchmark_yield_s1_on_req(struct eaf_msg* msg)
 			eaf_yield eaf_resume(TEST_SERVICE_S2);
 		}
 
-		eaf_sem_post(&s_benchmark_yield_sem_s1);
+		eaf_sem_post(s_benchmark_yield_sem_s1);
 	};
 }
 
@@ -58,14 +57,15 @@ static void _test_benchmark_yield_s2_on_req(struct eaf_msg* msg)
 			eaf_yield eaf_resume(TEST_SERVICE_S1);
 		}
 
-		eaf_sem_post(&s_benchmark_yield_sem_s2);
+		eaf_sem_post(s_benchmark_yield_sem_s2);
 	};
 }
 
 static void _benchmark_yield_setup(size_t count)
 {
-	eaf_sem_init(&s_benchmark_yield_sem_s1, 0);
-	eaf_sem_init(&s_benchmark_yield_sem_s2, 0);
+	ASSERT_PTR_NE(s_benchmark_yield_sem_s1 = eaf_sem_create(0), NULL);
+	ASSERT_PTR_NE(s_benchmark_yield_sem_s2 = eaf_sem_create(0), NULL);
+
 	s_benchmark_yield_total = count;
 	s_benchmark_yield_count_s1 = 0;
 	s_benchmark_yield_count_s2 = 0;
@@ -110,8 +110,8 @@ static void _benchmark_yield_teardown(void)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
-	eaf_sem_exit(&s_benchmark_yield_sem_s1);
-	eaf_sem_exit(&s_benchmark_yield_sem_s2);
+	eaf_sem_destroy(s_benchmark_yield_sem_s1);
+	eaf_sem_destroy(s_benchmark_yield_sem_s2);
 }
 
 TEST(benchmark, DISABLED_yield_1000000)
@@ -134,8 +134,8 @@ TEST(benchmark, DISABLED_yield_1000000)
 		}
 		/* wait for test complete */
 		{
-			eaf_sem_pend(&s_benchmark_yield_sem_s1, -1);
-			eaf_sem_pend(&s_benchmark_yield_sem_s2, -1);
+			eaf_sem_pend(s_benchmark_yield_sem_s1, -1);
+			eaf_sem_pend(s_benchmark_yield_sem_s2, -1);
 		}
 	}
 	_benchmark_yield_teardown();

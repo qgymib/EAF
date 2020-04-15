@@ -3,13 +3,13 @@
 
 static DWORD WINAPI _eaf_thread_win32_proxy(LPVOID lpParam)
 {
-	eaf_thread_t* impl = lpParam;
+	eaf_compat_thread_t* impl = lpParam;
 
 	impl->proc(impl->priv);
 	return 0;
 }
 
-int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
+int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	handler->proc = fn;
 	handler->priv = arg;
@@ -26,18 +26,18 @@ int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thr
 	return eaf_errno_success;
 }
 
-void eaf_thread_exit(eaf_thread_t* handler)
+void eaf_compat_thread_exit(eaf_compat_thread_t* handler)
 {
 	WaitForSingleObject(handler->thr, INFINITE);
 	CloseHandle(handler->thr);
 }
 
-unsigned long eaf_thread_id(void)
+unsigned long eaf_compat_thread_id(void)
 {
 	return GetCurrentThreadId();
 }
 
-void eaf_thread_sleep(unsigned timeout)
+void eaf_compat_thread_sleep(unsigned timeout)
 {
 	if (timeout == 0)
 	{

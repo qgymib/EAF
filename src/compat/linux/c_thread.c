@@ -5,13 +5,13 @@
 
 static void* _eaf_thread_linux_proxy(void* params)
 {
-	eaf_thread_t* handler = params;
+	eaf_compat_thread_t* handler = params;
 	handler->proc(handler->priv);
 
 	return NULL;
 }
 
-int eaf_thread_init(eaf_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
+int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	int ret = eaf_errno_success;
 
@@ -39,13 +39,13 @@ fin:
 	return ret;
 }
 
-void eaf_thread_exit(eaf_thread_t* handler)
+void eaf_compat_thread_exit(eaf_compat_thread_t* handler)
 {
 	void* ret = NULL;
 	pthread_join(handler->thr, &ret);
 }
 
-void eaf_thread_sleep(unsigned timeout)
+void eaf_compat_thread_sleep(unsigned timeout)
 {
 	if (timeout == 0)
 	{

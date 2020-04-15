@@ -6,7 +6,7 @@
 #include "EAF/utils/define.h"
 #include "EAF/utils/map.h"
 #include "EAF/utils/log.h"
-#include "compat/mutex.h"
+#include "compat/lock.h"
 #include "compat/thread.h"
 #include "compat/semaphore.h"
 #include "utils/memory.h"
@@ -181,8 +181,8 @@ typedef struct eaf_service
 #endif
 typedef struct eaf_group
 {
-	eaf_mutex_t						objlock;	/** 线程锁 */
-	eaf_thread_t					working;	/** 承载线程 */
+	eaf_compat_lock_t				objlock;	/** 线程锁 */
+	eaf_compat_thread_t				working;	/** 承载线程 */
 
 	struct 
 	{
@@ -199,7 +199,7 @@ typedef struct eaf_group
 
 	struct
 	{
-		eaf_sem_t					sem;		/** 信号量 */
+		eaf_compat_sem_t			sem;		/** 信号量 */
 	}msgq;
 
 	struct
@@ -215,7 +215,7 @@ typedef struct eaf_group
 typedef struct eaf_ctx
 {
 	eaf_ctx_state_t					state;		/** 状态 */
-	eaf_sem_t						ready;		/** 退出信号 */
+	eaf_compat_sem_t				ready;		/** 退出信号 */
 	eaf_thread_storage_t			tls;		/** 线程私有变量 */
 
 	struct
@@ -263,12 +263,12 @@ static void _eaf_service_destroy_msg_record(eaf_msgq_record_t* record)
 static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 {
 	eaf_service_t* service;
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	{
 		eaf_list_node_t* it = eaf_list_begin(&group->coroutine.busy_list);
 		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, coroutine.node) : NULL;
 	}
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 
 	return service;
 }
@@ -321,11 +321,11 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group, eaf_service_t* ser
 
 static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* service, eaf_service_state_t state)
 {
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	{
 		_eaf_service_set_state_nolock(group, service, state);
 	}
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 }
 
 static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t* service)
@@ -339,7 +339,7 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 	tmp_record.data.proc = NULL;
 	tmp_record.data.priv = NULL;
 
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	{
 		if (service->subscribe.cbiter == NULL)
 		{
@@ -358,11 +358,11 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 			priv = orig->data.priv;
 
 			/* 执行回调 */
-			eaf_mutex_leave(&group->objlock);
+			eaf_compat_lock_leave(&group->objlock);
 			{
 				proc(EAF_MSG_C2I(service->msgq.cur_msg->data.msg), priv);
 			}
-			eaf_mutex_enter(&group->objlock);
+			eaf_compat_lock_enter(&group->objlock);
 
 			/* 若发生yield则终止 */
 			if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
@@ -372,7 +372,7 @@ static void _eaf_service_resume_message_event(eaf_group_t* group, eaf_service_t*
 			service->subscribe.cbiter = eaf_map_next(&group->subscribe.table, service->subscribe.cbiter);
 		}
 	}
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 }
 
 static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
@@ -420,7 +420,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 	}
 
 	/* 取出消息。若消息队列为空，则将服务置于IDLE状态 */
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
 		eaf_list_node_t* it = eaf_list_pop_front(&service->msgq.queue);
@@ -431,7 +431,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 		}
 		service->msgq.cur_msg = EAF_CONTAINER_OF(it, eaf_msgq_record_t, node);
 	} while (0);
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 
 	if (service->msgq.cur_msg == NULL)
 	{
@@ -443,7 +443,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 
 static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_t* service)
 {
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	do
 	{
 		/* 切换至IDLE态 */
@@ -454,7 +454,7 @@ static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
 		}
 	} while (0);
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 }
 
 /**
@@ -489,10 +489,10 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
 	if (service == NULL)
 	{
-		eaf_sem_pend(&group->msgq.sem, (unsigned)-1);
+		eaf_compat_sem_pend(&group->msgq.sem, (unsigned)-1);
 		return 0;
 	}
-	eaf_sem_pend(&group->msgq.sem, 0);
+	eaf_compat_sem_pend(&group->msgq.sem, 0);
 
 	CUR_RUN(group) = service;
 	CLEAR_CC0(group);
@@ -538,6 +538,12 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 			/* call user hook */
 			CALL_YIELD_HOOK(group);
 
+			/*
+			* need to consider it as init success,
+			* because if no service finish init process here, this thread will be exited.
+			*/
+			counter++;
+
 			continue;
 		}
 		CUR_RUN_RESET_BRANCH(group);
@@ -574,7 +580,7 @@ static void _eaf_service_thread(void* arg)
 	/* 等待就绪 */
 	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
 	{
-		eaf_sem_pend(&group->msgq.sem, (unsigned)-1);
+		eaf_compat_sem_pend(&group->msgq.sem, (unsigned)-1);
 	}
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -585,7 +591,7 @@ static void _eaf_service_thread(void* arg)
 	int init_count = _eaf_group_init(group, &init_idx);
 
 	/* 通告初始化完毕 */
-	eaf_sem_post(&g_eaf_ctx->ready);
+	eaf_compat_sem_post(&g_eaf_ctx->ready);
 
 	/* 失败时清理 */
 	if (init_count <= 0)
@@ -616,10 +622,10 @@ cleanup:
 static void _eaf_service_cleanup_group(eaf_group_t* group)
 {
 	/* 向队列推送以保证线程感知到状态改变 */
-	eaf_sem_post(&group->msgq.sem);
+	eaf_compat_sem_post(&group->msgq.sem);
 
 	/* 等待线程退出 */
-	eaf_thread_exit(&group->working);
+	eaf_compat_thread_exit(&group->working);
 
 	eaf_map_node_t* it = eaf_map_begin(&group->subscribe.table);
 	while (it != NULL)
@@ -633,8 +639,8 @@ static void _eaf_service_cleanup_group(eaf_group_t* group)
 	}
 
 	/* 清理资源 */
-	eaf_mutex_exit(&group->objlock);
-	eaf_sem_exit(&group->msgq.sem);
+	eaf_compat_lock_exit(&group->objlock);
+	eaf_compat_sem_exit(&group->msgq.sem);
 }
 
 static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg,
@@ -662,7 +668,7 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 		on_create(record, arg);
 	}
 
-	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_mutex_enter(&group->objlock); }
+	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_enter(&group->objlock); }
 	do
 	{
 		if (service->state == eaf_service_state_idle)
@@ -671,9 +677,9 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 		}
 		eaf_list_push_back(&service->msgq.queue, &record->node);
 	} while (0);
-	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_mutex_leave(&group->objlock); }
+	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_leave(&group->objlock); }
 
-	eaf_sem_post(&group->msgq.sem);
+	eaf_compat_sem_post(&group->msgq.sem);
 	return eaf_errno_success;
 }
 
@@ -842,7 +848,7 @@ static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
 	size_t i;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_mutex_enter(&g_eaf_ctx->group.table[i]->objlock);
+		eaf_compat_lock_enter(&g_eaf_ctx->group.table[i]->objlock);
 		do
 		{
 			eaf_map_node_t* it = eaf_map_find_upper(&g_eaf_ctx->group.table[i]->subscribe.table, &tmp_key.node);
@@ -856,7 +862,7 @@ static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
 				_eaf_service_push_msg(g_eaf_ctx->group.table[i], record->data.service, real_msg, NULL, NULL, 0);
 			}
 		} while (0);
-		eaf_mutex_leave(&g_eaf_ctx->group.table[i]->objlock);
+		eaf_compat_lock_leave(&g_eaf_ctx->group.table[i]->objlock);
 	}
 
 	/* send to rpc */
@@ -889,7 +895,7 @@ int eaf_setup(const eaf_group_table_t* info, size_t size)
 		return eaf_errno_memory;
 	}
 	g_eaf_ctx->state = eaf_ctx_state_init;
-	if (eaf_sem_init(&g_eaf_ctx->ready, 0) < 0)
+	if (eaf_compat_sem_init(&g_eaf_ctx->ready, 0) < 0)
 	{
 		EAF_FREE(g_eaf_ctx);
 		g_eaf_ctx = NULL;
@@ -897,7 +903,7 @@ int eaf_setup(const eaf_group_table_t* info, size_t size)
 	}
 	if (eaf_thread_storage_init(&g_eaf_ctx->tls) < 0)
 	{
-		eaf_sem_exit(&g_eaf_ctx->ready);
+		eaf_compat_sem_exit(&g_eaf_ctx->ready);
 		EAF_FREE(g_eaf_ctx);
 		g_eaf_ctx = NULL;
 		return eaf_errno_unknown;
@@ -922,21 +928,21 @@ int eaf_setup(const eaf_group_table_t* info, size_t size)
 		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.wait_list);
 		eaf_map_init(&g_eaf_ctx->group.table[init_idx]->subscribe.table,
 			_eaf_service_on_cmp_subscribe_record, NULL);
-		if (eaf_mutex_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_mutex_attr_normal) < 0)
+		if (eaf_compat_lock_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_lock_attr_normal) < 0)
 		{
 			goto err;
 		}
-		if (eaf_sem_init(&g_eaf_ctx->group.table[init_idx]->msgq.sem, 0) < 0)
+		if (eaf_compat_sem_init(&g_eaf_ctx->group.table[init_idx]->msgq.sem, 0) < 0)
 		{
-			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+			eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
 			goto err;
 		}
 
-		if (eaf_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &info[init_idx].attr,
+		if (eaf_compat_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &info[init_idx].attr,
 			_eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
 		{
-			eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
-			eaf_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+			eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+			eaf_compat_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
 			goto err;
 		}
 
@@ -961,15 +967,15 @@ int eaf_setup(const eaf_group_table_t* info, size_t size)
 err:
 	for (i = 0; i < init_idx; i++)
 	{
-		eaf_sem_post(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+		eaf_compat_sem_post(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
 
-		eaf_thread_exit(&g_eaf_ctx->group.table[init_idx]->working);
-		eaf_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
-		eaf_mutex_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
+		eaf_compat_thread_exit(&g_eaf_ctx->group.table[init_idx]->working);
+		eaf_compat_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
+		eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
 	}
 
 	eaf_thread_storage_exit(&g_eaf_ctx->tls);
-	eaf_sem_exit(&g_eaf_ctx->ready);
+	eaf_compat_sem_exit(&g_eaf_ctx->ready);
 
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
@@ -995,13 +1001,13 @@ int eaf_load(void)
 	g_eaf_ctx->state = eaf_ctx_state_busy;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_sem_post(&g_eaf_ctx->group.table[i]->msgq.sem);
+		eaf_compat_sem_post(&g_eaf_ctx->group.table[i]->msgq.sem);
 	}
 
 	/* 等待所有服务就绪 */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_sem_pend(&g_eaf_ctx->ready, (unsigned)-1);
+		eaf_compat_sem_pend(&g_eaf_ctx->ready, (unsigned)-1);
 	}
 
 	return eaf_errno_success;
@@ -1109,7 +1115,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 
 	int ret;
 	int need_notify_rpc = 0;
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
 		ret = eaf_map_insert(&group->subscribe.table, &record->node);
@@ -1119,7 +1125,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 		}
 		need_notify_rpc = g_eaf_ctx->rpc != NULL && _eaf_is_subscribe_near_nolock(group, record);
 	} while (0);
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 
 	/* insert failed. duplicate subscribe */
 	if (ret < 0)
@@ -1154,7 +1160,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 
 	int need_notify_rpc = 0;
 	eaf_subscribe_record_t* record = NULL;
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
 		eaf_map_node_t* it = eaf_map_find(&group->subscribe.table, &tmp_key.node);
@@ -1173,7 +1179,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 			service->subscribe.cbiter = eaf_map_prev(&group->subscribe.table, it);
 		}
 	} while (0);
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 
 	if (record == NULL)
 	{
@@ -1215,7 +1221,7 @@ int eaf_resume(uint32_t srv_id)
 	}
 
 	int ret = eaf_errno_success;
-	eaf_mutex_enter(&group->objlock);
+	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
 		switch (service->state)
@@ -1233,9 +1239,9 @@ int eaf_resume(uint32_t srv_id)
 			break;
 		}
 	} while (0);
-	eaf_mutex_leave(&group->objlock);
+	eaf_compat_lock_leave(&group->objlock);
 
-	eaf_sem_post(&group->msgq.sem);
+	eaf_compat_sem_post(&group->msgq.sem);
 
 	return ret;
 }
