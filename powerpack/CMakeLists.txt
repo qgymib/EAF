@@ -3,7 +3,8 @@ project(eafpowerpack)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/powerpack SRC_C)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_POWERPACK_C)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/powerpack SRC_POWERPACK_C)
 
-add_library(${CMAKE_PROJECT_NAME} STATIC ${SRC_C})
+set(SRC_POWERPACK_C ${SRC_POWERPACK_C} CACHE INTERNAL "POWERPACK source code")
+add_library(${PROJECT_NAME} STATIC ${SRC_POWERPACK_C})
