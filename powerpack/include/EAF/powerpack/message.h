@@ -33,22 +33,26 @@ extern "C" {
 */
 #define eaf_msg_call(ret, p_dat, to, MSG_ID, TYPE, ...)	\
 	do {\
-		size_t size; void* p_buffer; eaf_msg_t* rsp;\
-		TYPE proto = { __VA_ARGS__ };\
-		eaf_msg_t* req = eaf_msg_create_req(MSG_ID, sizeof(proto), NULL);\
+		eaf_msg_t* rsp;\
+		eaf_msg_t* req = eaf_msg_create_req(MSG_ID, sizeof(TYPE), NULL);\
 		if (req == NULL) {\
 			(ret) = eaf_errno_memory;\
 			break;\
 		}\
-		memcpy(eaf_msg_get_data(req, NULL), &proto, sizeof(proto));\
+		{\
+			*(TYPE*)eaf_msg_get_data(req, NULL) = (TYPE){ __VA_ARGS__ };\
+		}\
 		eaf_send_req_sync(rsp, _eaf_local->id, to, req, 1);\
 		if (rsp == NULL) {\
 			(ret) = eaf_errno_unknown;\
 			break;\
 		}\
 		ret = eaf_errno_success;\
-		p_buffer = eaf_msg_get_data(rsp, &size);\
-		memcpy(p_dat, p_buffer, size);\
+		{\
+			size_t size;\
+			void* p_buffer = eaf_msg_get_data(rsp, &size);\
+			memcpy(p_dat, p_buffer, size);\
+		}\
 		eaf_msg_dec_ref(rsp);\
 	} while (0)
 
