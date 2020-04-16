@@ -5,11 +5,13 @@ extern "C" {
 #endif
 
 #include "EAF/eaf.h"
+#include "EAF/powerpack/message.h"
 #include "EAF/powerpack/timer.h"
 
 typedef struct eaf_powerpack_cfg
 {
-	eaf_thread_attr_t	unistd;	/** thread configure for unistd */
+	uint32_t			service_id;	/** powerpack need a empty service to attach */
+	eaf_thread_attr_t	unistd;		/** thread configure for unistd */
 }eaf_powerpack_cfg_t;
 
 /**

@@ -1,4 +1,5 @@
 #include "EAF/eaf.h"
+#include "powerpack/message.h"
 #include "powerpack/timer.h"
 #include "powerpack.h"
 
@@ -10,7 +11,8 @@ typedef struct powerpack_init_item
 
 typedef struct powerpack_ctx
 {
-	uv_loop_t		uv_loop;
+	uint32_t		service_id;		/** working service id */
+	uv_loop_t		uv_loop;		/** uv loop */
 	eaf_thread_t*	working;		/** working thread */
 
 	struct
@@ -21,7 +23,8 @@ typedef struct powerpack_ctx
 
 static powerpack_ctx_t* g_powerpack_ctx = NULL;
 static powerpack_init_item_t g_powerpack_table[] = {
-	{ eaf_powerpack_timer_init, eaf_powerpack_timer_exit },
+	{ eaf_powerpack_timer_init,		eaf_powerpack_timer_exit },
+	{ eaf_powerpack_message_init,	eaf_powerpack_message_exit },
 };
 
 static void _powerpack_thread(void* arg)
@@ -31,6 +34,15 @@ static void _powerpack_thread(void* arg)
 	{
 		uv_run(&g_powerpack_ctx->uv_loop, UV_RUN_DEFAULT);
 	}
+}
+
+static int _powerpack_on_init(void)
+{
+	return 0;
+}
+
+static void _powerpack_on_exit(void)
+{
 }
 
 int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
@@ -46,20 +58,19 @@ int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
 		return eaf_errno_memory;
 	}
 	g_powerpack_ctx->mask.looping = 1;
+	g_powerpack_ctx->service_id = cfg->service_id;
 
 	/* initialize libuv */
 	if (uv_loop_init(&g_powerpack_ctx->uv_loop) < 0)
 	{
-		free(g_powerpack_ctx);
-		g_powerpack_ctx = NULL;
-		return eaf_errno_unknown;
+		ret = eaf_errno_unknown;
+		goto err_free;
 	}
 
-	/* create working thread */
-	g_powerpack_ctx->working = eaf_thread_create(&cfg->unistd, _powerpack_thread, NULL);
-	if (g_powerpack_ctx->working == NULL)
+	static eaf_service_info_t service_info = { 0, NULL, _powerpack_on_init, _powerpack_on_exit };
+	if ((ret = eaf_register(cfg->service_id, &service_info)) < 0)
 	{
-		goto err;
+		goto err_close;
 	}
 
 	size_t i;
@@ -67,14 +78,29 @@ int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
 	{
 		if (g_powerpack_table[i].on_init() < 0)
 		{
-			goto err;
+			goto err_init;
 		}
+	}
+
+	/* create working thread */
+	g_powerpack_ctx->working = eaf_thread_create(&cfg->unistd, _powerpack_thread, NULL);
+	if (g_powerpack_ctx->working == NULL)
+	{
+		goto err_init;
 	}
 
 	return eaf_errno_success;
 
-err:
-	eaf_powerpack_exit();
+err_init:
+	for (i = 0; i < EAF_ARRAY_SIZE(g_powerpack_table); i++)
+	{
+		g_powerpack_table[i].on_exit();
+	}
+err_close:
+	uv_loop_close(&g_powerpack_ctx->uv_loop);
+err_free:
+	free(g_powerpack_ctx);
+	g_powerpack_ctx = NULL;
 	return ret;
 }
 
@@ -112,4 +138,14 @@ uv_loop_t* powerpack_get_uv(void)
 	}
 
 	return &g_powerpack_ctx->uv_loop;
+}
+
+uint32_t powerpack_get_service_id(void)
+{
+	if (g_powerpack_ctx == NULL)
+	{
+		return (uint32_t)-1;
+	}
+
+	return g_powerpack_ctx->service_id;
 }

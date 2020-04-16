@@ -5,6 +5,8 @@
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_EVT		(TEST_SERVICE_S1 + 0x0001)
 
+#define TEST_SERVICE_SS			0x11110000
+
 static etest_timestamp_t	s_powerpack_timer_start;
 static etest_timestamp_t	s_powerpack_timer_end;
 static eaf_sem_t*			s_powerpack_timer_sem;
@@ -36,6 +38,7 @@ TEST_CLASS_SETUP(powerpack_timer)
 	/* ≈‰÷√EAF */
 	static eaf_service_table_t service_table_1[] = {
 		{ TEST_SERVICE_S1, 8 },
+		{ TEST_SERVICE_SS, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
 		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
@@ -52,6 +55,7 @@ TEST_CLASS_SETUP(powerpack_timer)
 
 	eaf_powerpack_cfg_t powerpack_cfg;
 	memset(&powerpack_cfg, 0, sizeof(powerpack_cfg));
+	powerpack_cfg.service_id = TEST_SERVICE_SS;
 	ASSERT_NUM_EQ(eaf_powerpack_init(&powerpack_cfg), 0);
 
 	/* º”‘ÿEAF */

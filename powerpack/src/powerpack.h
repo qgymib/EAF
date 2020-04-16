@@ -9,6 +9,8 @@ extern "C" {
 
 uv_loop_t* powerpack_get_uv(void);
 
+uint32_t powerpack_get_service_id(void);
+
 #ifdef __cplusplus
 }
 #endif
