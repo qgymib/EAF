@@ -44,6 +44,13 @@ static int _powerpack_on_init(void)
 
 static void _powerpack_on_exit(void)
 {
+	/* stop thread */
+	g_powerpack_ctx->mask.looping = 0;
+	uv_stop(&g_powerpack_ctx->uv_loop);
+
+	/* wait for thread exit */
+	eaf_thread_destroy(g_powerpack_ctx->working);
+	g_powerpack_ctx->working = NULL;
 }
 
 int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
@@ -112,7 +119,6 @@ void eaf_powerpack_exit(void)
 		return;
 	}
 
-	g_powerpack_ctx->mask.looping = 0;
 	if (g_powerpack_ctx->working != NULL)
 	{
 		eaf_thread_destroy(g_powerpack_ctx->working);
