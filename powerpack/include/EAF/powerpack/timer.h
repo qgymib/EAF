@@ -8,13 +8,14 @@ extern "C" {
 
 #define eaf_sleep(ms)	\
 	do {\
-		eaf_yield_ext(eaf_powerpack_sleep_commit, (void*)(uintptr_t)(ms));\
+		_eaf_local->unsafe.v_ulong = ms;\
+		eaf_yield_ext(eaf_powerpack_sleep_commit, NULL);\
 	} while (0)
 
 /**
 * sleep
 */
-void eaf_powerpack_sleep_commit(uint32_t id, void* arg);
+void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg);
 
 #ifdef __cplusplus
 }

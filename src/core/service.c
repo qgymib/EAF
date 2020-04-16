@@ -88,7 +88,7 @@
 	do {\
 		eaf_group_t* _group = group;\
 		if (_group->coroutine.local.yield.hook != NULL) {\
-			_group->coroutine.local.yield.hook(CUR_RUN(_group)->coroutine.local.id,\
+			_group->coroutine.local.yield.hook(&(CUR_RUN(_group)->coroutine.local),\
 				_group->coroutine.local.yield.arg);\
 		}\
 	} while (0)

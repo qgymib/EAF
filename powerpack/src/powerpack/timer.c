@@ -144,20 +144,21 @@ static void _powerpack_timer_on_timer(uv_timer_t* handle)
 	uv_close((uv_handle_t*)handle, _powerpack_timer_on_close);
 }
 
-void eaf_powerpack_sleep_commit(uint32_t id, void* arg)
+void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg)
 {
+	(void)arg;
 	powerpack_timer_record_t* record = NULL;
 	if (g_powerpack_timer_ctx == NULL)
 	{
 		goto err;
 	}
 
-	unsigned long sleep_timeout = (unsigned long)(uintptr_t)arg;
+	unsigned long sleep_timeout = local->unsafe.v_ulong;
 	if ((record = malloc(sizeof(powerpack_timer_record_t))) == NULL)
 	{
 		goto err;
 	}
-	record->data.service_id = id;
+	record->data.service_id = local->id;
 
 	/* initialize timer */
 	if (uv_timer_init(powerpack_get_uv(), &record->data.uv_timer) < 0)
@@ -194,6 +195,6 @@ err:
 	{
 		free(record);
 	}
-	eaf_resume(id);
+	eaf_resume(local->id);
 	return;
 }
