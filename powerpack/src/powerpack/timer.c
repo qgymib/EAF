@@ -186,6 +186,7 @@ void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg)
 		goto err_erase_record;
 	}
 
+	powerpack_notify();
 	return;
 
 err_erase_record:

@@ -15,6 +15,7 @@ typedef struct powerpack_ctx
 	uint32_t		service_id;		/** working service id */
 	uv_loop_t		uv_loop;		/** uv loop */
 	eaf_thread_t*	working;		/** working thread */
+	eaf_sem_t*		sem_loop;		/** loop sem */
 
 	struct
 	{
@@ -34,6 +35,7 @@ static void _powerpack_thread(void* arg)
 	while (g_powerpack_ctx->mask.looping)
 	{
 		uv_run(&g_powerpack_ctx->uv_loop, UV_RUN_DEFAULT);
+		eaf_sem_pend(g_powerpack_ctx->sem_loop, (unsigned long)-1);
 	}
 }
 
@@ -47,6 +49,8 @@ static void _powerpack_on_exit(void)
 	/* stop thread */
 	g_powerpack_ctx->mask.looping = 0;
 	uv_stop(&g_powerpack_ctx->uv_loop);
+
+	eaf_sem_post(g_powerpack_ctx->sem_loop);
 
 	/* wait for thread exit */
 	eaf_thread_destroy(g_powerpack_ctx->working);
@@ -67,6 +71,10 @@ int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
 	}
 	g_powerpack_ctx->mask.looping = 1;
 	g_powerpack_ctx->service_id = cfg->service_id;
+	if ((g_powerpack_ctx->sem_loop = eaf_sem_create(0)) == NULL)
+	{
+		goto err_free;
+	}
 
 	/* initialize libuv */
 	if (uv_loop_init(&g_powerpack_ctx->uv_loop) < 0)
@@ -107,6 +115,11 @@ err_init:
 err_close:
 	uv_loop_close(&g_powerpack_ctx->uv_loop);
 err_free:
+	if (g_powerpack_ctx->sem_loop != NULL)
+	{
+		eaf_sem_destroy(g_powerpack_ctx->sem_loop);
+		g_powerpack_ctx->sem_loop = NULL;
+	}
 	free(g_powerpack_ctx);
 	g_powerpack_ctx = NULL;
 	return ret;
@@ -133,6 +146,12 @@ void eaf_powerpack_exit(void)
 
 	uv_loop_close(&g_powerpack_ctx->uv_loop);
 
+	if (g_powerpack_ctx->sem_loop != NULL)
+	{
+		eaf_sem_destroy(g_powerpack_ctx->sem_loop);
+		g_powerpack_ctx->sem_loop = NULL;
+	}
+
 	free(g_powerpack_ctx);
 	g_powerpack_ctx = NULL;
 }
@@ -145,6 +164,16 @@ uv_loop_t* powerpack_get_uv(void)
 	}
 
 	return &g_powerpack_ctx->uv_loop;
+}
+
+void powerpack_notify(void)
+{
+	if (g_powerpack_ctx == NULL)
+	{
+		return;
+	}
+
+	eaf_sem_post(g_powerpack_ctx->sem_loop);
 }
 
 uint32_t powerpack_get_service_id(void)

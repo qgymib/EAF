@@ -183,6 +183,7 @@ void eaf_powerpack_message_commit(eaf_service_local_t* local, void* arg)
 	}
 
 	/* here just wait for response */
+	powerpack_notify();
 	return;
 
 err_send:

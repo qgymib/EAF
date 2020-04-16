@@ -8,6 +8,7 @@ extern "C" {
 #include "uv.h"
 
 uv_loop_t* powerpack_get_uv(void);
+void powerpack_notify(void);
 
 uint32_t powerpack_get_service_id(void);
 
