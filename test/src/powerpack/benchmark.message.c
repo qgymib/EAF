@@ -28,9 +28,8 @@ static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
 	(void)req;
 	eaf_reenter
 	{
-		for (;
-		s_powerpack_benchmark_message_count < s_powerpack_benchmark_message_total;
-		s_powerpack_benchmark_message_count++)
+		for (;s_powerpack_benchmark_message_count < s_powerpack_benchmark_message_total;
+			s_powerpack_benchmark_message_count++)
 		{
 			eaf_msg_t* tmp_req = eaf_msg_create_req(TEST_SERVICE_S2_REQ, 0, NULL);
 			ASSERT(tmp_req != NULL);
@@ -41,6 +40,8 @@ static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
 			ASSERT(rsp != NULL);
 			eaf_msg_dec_ref(rsp);
 		}
+
+		eaf_sem_post(s_powerpack_benchmark_message_sem);
 	};
 }
 
@@ -62,7 +63,7 @@ static void _test_powerpack_benchmark_message_on_exit(void)
 
 TEST_CLASS_SETUP(benchmark)
 {
-	s_powerpack_benchmark_message_total = 1000;
+	s_powerpack_benchmark_message_total = 100000;
 	s_powerpack_benchmark_message_count = 0;
 	ASSERT_PTR_NE(s_powerpack_benchmark_message_sem = eaf_sem_create(0), NULL);
 
@@ -117,7 +118,7 @@ TEST_CLASS_TEAREDOWN(benchmark)
 	eaf_sem_destroy(s_powerpack_benchmark_message_sem);
 }
 
-TEST_F(benchmark, DISABLED_powerpack_message_1000)
+TEST_F(benchmark, DISABLED_powerpack_message_100000)
 {
 	{
 		eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S1_REQ, 0, NULL);

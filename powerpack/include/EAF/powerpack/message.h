@@ -19,7 +19,7 @@ extern "C" {
 	do {\
 		(_req)->from = (_from); (_req)->to = (_to);\
 		_eaf_local->unsafe.v_ulong = _dec;\
-		eaf_yield_ext(eaf_powerpack_message_commit, req);\
+		eaf_yield_ext(eaf_powerpack_message_commit, _req);\
 		(_rsp) = (eaf_msg_t*)_eaf_local->unsafe.v_ptr;\
 	} while (0)
 
