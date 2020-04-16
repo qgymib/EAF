@@ -16,7 +16,7 @@ void eaf_compat_sem_exit(eaf_compat_sem_t* handler)
 int eaf_compat_sem_pend(eaf_compat_sem_t* handler, unsigned long timeout)
 {
 	int ret = 0;
-	if (timeout == (unsigned)-1)
+	if (timeout == (unsigned long)-1)
 	{
 		while ((ret = sem_wait(&handler->sem)) != 0 && errno == EINTR);
 		return ret == 0 ? eaf_errno_success : eaf_errno_unknown;
@@ -27,7 +27,7 @@ int eaf_compat_sem_pend(eaf_compat_sem_t* handler, unsigned long timeout)
 		return sem_trywait(&handler->sem) == 0 ? 0 : -1;
 	}
 
-	unsigned times = (timeout + 9) / 10;
+	unsigned long times = (timeout + 9) / 10;
 	while (((ret = sem_trywait(&handler->sem)) != 0) && (times-- > 0))
 	{
 		eaf_compat_thread_sleep(10);

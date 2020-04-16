@@ -18,7 +18,7 @@ void eaf_compat_sem_exit(eaf_compat_sem_t* handler)
 
 int eaf_compat_sem_pend(eaf_compat_sem_t* handler, unsigned long timeout)
 {
-	return WaitForSingleObject(handler->sem, timeout == -1 ? INFINITE : timeout)
+	return WaitForSingleObject(handler->sem, timeout == (unsigned long)-1 ? INFINITE : timeout)
 		== WAIT_OBJECT_0 ? eaf_errno_success : eaf_errno_timeout;
 }
 
