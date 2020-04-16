@@ -1315,7 +1315,7 @@ static int _test_setup_args(int argc, char* argv[])
 		{ "etest_shuffle",					etest_shuffle,					OPTPARSE_OPTIONAL },
 		{ "etest_random_seed",				etest_random_seed,				OPTPARSE_OPTIONAL },
 		{ "etest_print_time",				etest_print_time,				OPTPARSE_OPTIONAL },
-		{ "test_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
+		{ "etest_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
 		{ "help",							help,							OPTPARSE_OPTIONAL },
 		{ 0,								0,								OPTPARSE_NONE },
 	};
