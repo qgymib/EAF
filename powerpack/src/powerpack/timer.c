@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "EAF/eaf.h"
 #include "timer.h"
 #include "powerpack.h"
