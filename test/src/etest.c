@@ -1193,15 +1193,45 @@ static void _etest_setup_arg_pattern(const char* user_pattern)
 	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
 }
 
+static size_t _etest_calculate_max_class_length(void)
+{
+	size_t tmp_len;
+	size_t max_length = 0;
+	const char* last_class_name = NULL;
+
+	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
+	{
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		if (last_class_name == case_data->data.class_name)
+		{
+			continue;
+		}
+
+		last_class_name = case_data->data.class_name;
+		if ((tmp_len = strlen(last_class_name)) > max_length)
+		{
+			max_length = tmp_len;
+		}
+	}
+
+	return max_length;
+}
+
 static void _etest_list_tests(void)
 {
 	unsigned c_class = 0;
 	unsigned c_test = 0;
 	const char* last_class_name = NULL;
 	const char* print_class_name = "";
+	unsigned max_class_length = _etest_calculate_max_class_length();
+	if (max_class_length > 32)
+	{
+		max_class_length = 32;
+	}
 
 	printf("===============================================================================\n");
-	printf("%-16.16s | test case\n", "class");
+	printf("%-*.*s | test case\n", max_class_length, max_class_length, "class");
 	printf("-------------------------------------------------------------------------------\n");
 
 	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
@@ -1215,7 +1245,7 @@ static void _etest_list_tests(void)
 			c_class++;
 		}
 
-		printf("%-16.16s | %s\n", print_class_name, case_data->data.case_name);
+		printf("%-*.*s | %s\n", max_class_length, max_class_length, print_class_name, case_data->data.case_name);
 		print_class_name = "";
 
 		c_test++;
