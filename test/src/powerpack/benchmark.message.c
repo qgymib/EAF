@@ -32,11 +32,11 @@ static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
 		s_powerpack_benchmark_message_count < s_powerpack_benchmark_message_total;
 		s_powerpack_benchmark_message_count++)
 		{
-			eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S2_REQ, 0, NULL);
-			ASSERT(req != NULL);
+			eaf_msg_t* tmp_req = eaf_msg_create_req(TEST_SERVICE_S2_REQ, 0, NULL);
+			ASSERT(tmp_req != NULL);
 
 			eaf_msg_t* rsp;
-			eaf_send_req_sync(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, req, 1);
+			eaf_send_req_sync(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, tmp_req, 1);
 
 			ASSERT(rsp != NULL);
 			eaf_msg_dec_ref(rsp);

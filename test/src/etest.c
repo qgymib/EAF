@@ -1235,7 +1235,7 @@ static void _etest_list_tests(void)
 	unsigned c_test = 0;
 	const char* last_class_name = NULL;
 	const char* print_class_name = "";
-	unsigned max_class_length = _etest_calculate_max_class_length();
+	unsigned max_class_length = (unsigned)_etest_calculate_max_class_length();
 	if (max_class_length > 32)
 	{
 		max_class_length = 32;
