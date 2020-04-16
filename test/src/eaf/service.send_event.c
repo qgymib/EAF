@@ -54,7 +54,7 @@ static void _test_send_event_s2_on_exit(void)
 	// do nothing
 }
 
-TEST_CLASS_SETUP(send_event)
+TEST_CLASS_SETUP(eaf_service)
 {
 	_s1_ret_val = 0;
 	ASSERT_PTR_NE(_s1_ret_sem = eaf_sem_create(0), NULL);
@@ -92,7 +92,7 @@ TEST_CLASS_SETUP(send_event)
 	ASSERT_NUM_EQ(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(send_event)
+TEST_CLASS_TEAREDOWN(eaf_service)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
@@ -100,7 +100,7 @@ TEST_CLASS_TEAREDOWN(send_event)
 	eaf_sem_destroy(_s2_ret_sem);
 }
 
-TEST_F(send_event, check)
+TEST_F(eaf_service, send_event)
 {
 	ASSERT_NUM_EQ(eaf_sem_pend(_s1_ret_sem, 8 * 1000), 0);
 	ASSERT_NUM_EQ(eaf_sem_pend(_s2_ret_sem, 8 * 1000), 0);

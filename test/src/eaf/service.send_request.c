@@ -58,7 +58,7 @@ static void _test_send_request_s2_on_req(eaf_msg_t* req)
 	eaf_msg_dec_ref(rsp);
 }
 
-TEST_CLASS_SETUP(send_request)
+TEST_CLASS_SETUP(eaf_service)
 {
 	_s_ret_val = 0;
 	ASSERT_PTR_NE(s_service_send_request_sem = eaf_sem_create(0), NULL);
@@ -99,7 +99,7 @@ TEST_CLASS_SETUP(send_request)
 	ASSERT_NUM_EQ(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(send_request)
+TEST_CLASS_TEAREDOWN(eaf_service)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
@@ -107,7 +107,7 @@ TEST_CLASS_TEAREDOWN(send_request)
 	eaf_sem_destroy(s_service_send_request_sem);
 }
 
-TEST_F(send_request, check)
+TEST_F(eaf_service, send_request)
 {
 	/* 等待结果 */
 	ASSERT_NUM_EQ(eaf_sem_pend(s_service_send_request_sem, 8 * 1000), 0);

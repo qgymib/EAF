@@ -68,7 +68,7 @@ static void _test_filber_s2_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(filber)
+TEST_CLASS_SETUP(eaf_filber)
 {
 	memset(_s_nodes, 0, sizeof(_s_nodes));
 	eaf_list_init(&_s_ret_list);
@@ -104,7 +104,7 @@ TEST_CLASS_SETUP(filber)
 	ASSERT_NUM_EQ(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(filber)
+TEST_CLASS_TEAREDOWN(eaf_filber)
 {
 	/* 退出并清理 */
 	ASSERT_NUM_EQ(eaf_cleanup(), 0);
@@ -112,7 +112,7 @@ TEST_CLASS_TEAREDOWN(filber)
 	eaf_sem_destroy(_s_ret_sem);
 }
 
-TEST_F(filber, yield_in_event)
+TEST_F(eaf_filber, yield_in_event)
 {
 	/* 发送EVT_1 */
 	{
