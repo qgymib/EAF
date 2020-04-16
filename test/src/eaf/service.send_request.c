@@ -45,7 +45,7 @@ static void _test_send_request_s2_on_exit(void)
 
 static void _test_send_request_s1_on_req(eaf_msg_t* msg)
 {
-	// do nothing
+	(void)msg;
 }
 
 static void _test_send_request_s2_on_req(eaf_msg_t* req)
@@ -69,7 +69,7 @@ TEST_CLASS_SETUP(eaf_service)
 		{ TEST_SERVICE_S2, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
-		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+		{ { 0, 0, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 

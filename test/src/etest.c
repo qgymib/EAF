@@ -9,6 +9,14 @@
 #include <stdint.h>
 #include "etest/etest.h"
 
+/*
+* Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
+* https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
+*/
+#if defined(_MSC_VER) && _MSC_VER <= 1900
+#	pragma warning(disable : 4127)
+#endif
+
 /************************************************************************/
 /* map                                                                  */
 /************************************************************************/
@@ -267,6 +275,7 @@ static etest_map_node_t* etest_map_begin(const etest_map_t* handler)
 
 static etest_map_node_t* etest_map_next(const etest_map_t* handler, const etest_map_node_t* node)
 {
+	(void)handler;
 	etest_map_node_t* parent;
 
 	if (RB_EMPTY_NODE(node))
@@ -373,7 +382,7 @@ static void _test_optparse_from_long(const test_optparse_long_opt_t *longopts, c
 	for (i = 0; !_test_optparse_longopts_end(longopts, i); i++) {
 		if (longopts[i].shortname) {
 			int a;
-			*p++ = longopts[i].shortname;
+			*p++ = (char)(longopts[i].shortname);
 			for (a = 0; a < (int)longopts[i].argtype; a++)
 				*p++ = ':';
 		}
@@ -624,6 +633,7 @@ static etest_list_node_t* _test_list_begin(const test_list_t* handler)
 
 static etest_list_node_t* _test_list_next(const test_list_t* handler, const etest_list_node_t* node)
 {
+	(void)handler;
 	return node->p_after;
 }
 
@@ -814,6 +824,7 @@ static test_ctx_t			g_test_ctx = {
 
 static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg)
 {
+	(void)arg;
 	const etest_case_t* t_case_1 = CONTAINER_OF(key1, etest_case_t, node.table);
 	const etest_case_t* t_case_2 = CONTAINER_OF(key2, etest_case_t, node.table);
 
@@ -1282,6 +1293,7 @@ static void _etest_setup_arg_random_seed(const char* str)
 
 static int _test_setup_args(int argc, char* argv[])
 {
+	(void)argc;
 	enum test_opt
 	{
 		etest_list_tests = 1,

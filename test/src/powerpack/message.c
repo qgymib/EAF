@@ -2,6 +2,13 @@
 #include "EAF/powerpack.h"
 #include "etest/etest.h"
 
+/*
+* Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
+* https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
+*/
+#if defined(_MSC_VER) && _MSC_VER <= 1900
+#	pragma warning(disable : 4127)
+#endif
 
 #define TEST_SERVICE_S1			0x00010000
 
@@ -68,7 +75,7 @@ TEST_CLASS_SETUP(powerpack_message)
 		{ TEST_SERVICE_SS, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
-		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+		{ { 0, 0, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
@@ -111,6 +118,6 @@ TEST_CLASS_TEAREDOWN(powerpack_message)
 
 TEST_F(powerpack_message, send_req)
 {
-	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_message_sem, -1), 0);
+	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_message_sem, 8 * 1000), 0);
 	ASSERT_NUM_EQ(s_powerpack_message_val_rsp_rel, s_powerpack_message_val_rsp_exp);
 }

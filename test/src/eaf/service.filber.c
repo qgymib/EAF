@@ -20,6 +20,7 @@ static eaf_list_t			_s_ret_list;
 
 static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 {
+	(void)arg;
 	eaf_reenter
 	{
 		_s_nodes[0].ret = *(int*)eaf_msg_get_data(msg, NULL);
@@ -36,6 +37,8 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg, void* arg)
 
 static void _test_filber_s2_on_evt(eaf_msg_t* msg, void* arg)
 {
+	(void)arg;
+
 	_s_nodes[2].ret = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[2].node);
 
@@ -80,7 +83,7 @@ TEST_CLASS_SETUP(eaf_filber)
 		{ TEST_SERVICE_S2, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
-		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+		{ { 0, 0, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
@@ -120,7 +123,7 @@ TEST_F(eaf_filber, yield_in_event)
 		ASSERT_PTR_NE(s1_evt, NULL);
 		*(int*)eaf_msg_get_data(s1_evt, NULL) = 99;
 
-		ASSERT_NUM_EQ(eaf_send_evt(-1, s1_evt), 0);
+		ASSERT_NUM_EQ(eaf_send_evt((uint32_t)-1, s1_evt), 0);
 		eaf_msg_dec_ref(s1_evt);
 	}
 	/* ·¢ËÍEVT_2 */
@@ -128,7 +131,7 @@ TEST_F(eaf_filber, yield_in_event)
 		eaf_msg_t* s2_evt = eaf_msg_create_evt(TEST_SERVICE_S2_EVT, sizeof(int));
 		ASSERT_PTR_NE(s2_evt, NULL);
 		*(int*)eaf_msg_get_data(s2_evt, NULL) = 88;
-		ASSERT_NUM_EQ(eaf_send_evt(-1, s2_evt), 0);
+		ASSERT_NUM_EQ(eaf_send_evt((uint32_t)-1, s2_evt), 0);
 		eaf_msg_dec_ref(s2_evt);
 	}
 

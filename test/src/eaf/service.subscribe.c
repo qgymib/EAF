@@ -21,6 +21,8 @@ static void _test_subscribe_s2_on_exit(void)
 
 static void _test_subscribe_on_evt(eaf_msg_t* msg, void* arg)
 {
+	(void)msg;
+	(void)arg;
 }
 
 TEST_CLASS_SETUP(eaf_service)
@@ -30,7 +32,7 @@ TEST_CLASS_SETUP(eaf_service)
 		{ TEST_SERVICE_S1, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
-		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+		{ { 0, 0, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 

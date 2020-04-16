@@ -16,6 +16,7 @@ static size_t					s_benchmark_yield_total;
 
 static void _test_benchmark_yield_on_rsp(eaf_msg_t* msg)
 {
+	(void)msg;
 }
 
 static int _test_benchmark_yield_on_init(void)
@@ -29,6 +30,7 @@ static void _test_benchmark_yield_on_exit(void)
 
 static void _test_benchmark_yield_s1_on_req(struct eaf_msg* msg)
 {
+	(void)msg;
 	eaf_reenter
 	{
 		/* first we need s2 continue run */
@@ -46,6 +48,7 @@ static void _test_benchmark_yield_s1_on_req(struct eaf_msg* msg)
 
 static void _test_benchmark_yield_s2_on_req(struct eaf_msg* msg)
 {
+	(void)msg;
 	eaf_reenter
 	{
 		/* first we need s1 continue run */
@@ -76,7 +79,7 @@ static void _benchmark_yield_setup(size_t count)
 		{ TEST_SERVICE_S2, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
-		{ { 0, -1, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
+		{ { 0, 0, 0 }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
@@ -122,20 +125,20 @@ TEST(benchmark, DISABLED_yield_1000000)
 		{
 			eaf_msg_t* msg = eaf_msg_create_req(TEST_SERVICE_S1_REQ, sizeof(int), _test_benchmark_yield_on_rsp);
 			ASSERT_PTR_NE(msg, NULL);
-			ASSERT_NUM_EQ(eaf_send_req(-1, TEST_SERVICE_S1, msg), 0);
+			ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S1, msg), 0);
 			eaf_msg_dec_ref(msg);
 		}
 		/* send to s2 */
 		{
 			eaf_msg_t* msg = eaf_msg_create_req(TEST_SERVICE_S2_REQ, sizeof(int), _test_benchmark_yield_on_rsp);
 			ASSERT_PTR_NE(msg, NULL);
-			ASSERT_NUM_EQ(eaf_send_req(-1, TEST_SERVICE_S2, msg), 0);
+			ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S2, msg), 0);
 			eaf_msg_dec_ref(msg);
 		}
 		/* wait for test complete */
 		{
-			eaf_sem_pend(s_benchmark_yield_sem_s1, -1);
-			eaf_sem_pend(s_benchmark_yield_sem_s2, -1);
+			eaf_sem_pend(s_benchmark_yield_sem_s1, (unsigned long)-1);
+			eaf_sem_pend(s_benchmark_yield_sem_s2, (unsigned long)-1);
 		}
 	}
 	_benchmark_yield_teardown();
