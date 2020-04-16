@@ -23,6 +23,36 @@ extern "C" {
 	} while (0)
 
 /**
+* Generate a request, send to peer, and parse into data
+* @param ret		operation result
+* @param p_dat		pointer to store response
+* @param to			the service which will receive the request
+* @param MSG_ID		message id
+* @param TYPE		message type
+* @param ...		message fields
+*/
+#define eaf_msg_call(ret, p_dat, to, MSG_ID, TYPE, ...)	\
+	do {\
+		size_t size; void* p_buffer; eaf_msg_t* rsp;\
+		TYPE proto = { __VA_ARGS__ };\
+		eaf_msg_t* req = eaf_msg_create_req(MSG_ID, sizeof(proto), NULL);\
+		if (req == NULL) {\
+			(ret) = eaf_errno_memory;\
+			break;\
+		}\
+		memcpy(eaf_msg_get_data(req, NULL), &proto, sizeof(proto));\
+		eaf_send_req_sync(rsp, _eaf_local->id, to, req, 1);\
+		if (rsp == NULL) {\
+			(ret) = eaf_errno_unknown;\
+			break;\
+		}\
+		ret = eaf_errno_success;\
+		p_buffer = eaf_msg_get_data(rsp, &size);\
+		memcpy(p_dat, p_buffer, size);\
+		eaf_msg_dec_ref(rsp);\
+	} while (0)
+
+/**
 * Internal operation for `eaf_send_req_sync`
 * @param local	service local storage
 * @param arg	eaf_msg_t*

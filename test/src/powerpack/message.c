@@ -19,17 +19,11 @@ static int _test_powerpack_message_s1_on_init(void)
 {
 	eaf_reenter
 	{
-		eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S2_REQ, sizeof(int), NULL);
-		ASSERT(req != NULL);
-		*(int*)eaf_msg_get_data(req, NULL) = s_powerpack_message_val_req_exp;
+		int ret;
+		eaf_msg_call(ret, &s_powerpack_message_val_rsp_rel,
+			TEST_SERVICE_S2, TEST_SERVICE_S2_REQ, int, s_powerpack_message_val_req_exp);
 
-		eaf_msg_t* rsp;
-		eaf_send_req_sync(rsp, TEST_SERVICE_S1, TEST_SERVICE_S2, req, 1);
-		ASSERT(rsp != NULL);
-
-		s_powerpack_message_val_rsp_rel = *(int*)eaf_msg_get_data(rsp, NULL);
-		eaf_msg_dec_ref(rsp);
-
+		ASSERT(ret == 0);
 		ASSERT(eaf_sem_post(s_powerpack_message_sem) == 0);
 	};
 
