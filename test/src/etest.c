@@ -1249,7 +1249,9 @@ static void _etest_list_tests(void)
 	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
 	{
 		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
-		if (last_class_name != case_data->data.class_name)
+		/* some compiler will make same string with different address */
+		if (last_class_name != case_data->data.class_name
+			&& strcmp(last_class_name, case_data->data.class_name) != 0)
 		{
 			last_class_name = case_data->data.class_name;
 			print_class_name = last_class_name;
