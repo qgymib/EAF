@@ -87,5 +87,5 @@ TEST_F(powerpack_timer, sleep)
 	ASSERT_NUM_LT(etest_timestamp_dif(&s_powerpack_timer_start, &s_powerpack_timer_end, &dif), 0);
 
 	uint64_t diff_time = dif.sec * 1000 + dif.usec / 1000;
-	ASSERT_NUM_GE(diff_time, (long long)(s_sleep_time * 0.9));
+	ASSERT_NUM_GE(diff_time, (long long)(s_sleep_time * 0.8));
 }
