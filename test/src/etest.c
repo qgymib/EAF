@@ -1309,7 +1309,6 @@ static int _test_setup_args(int argc, char* argv[])
 			g_test_ctx.mask.break_on_failure = 1;
 			break;
 		case help:
-		case '?':
 			printf(
 				"This program contains tests written using Test. You can use the\n"
 				"following command line flags to control its behavior:\n"
