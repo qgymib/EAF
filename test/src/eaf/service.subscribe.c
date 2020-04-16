@@ -15,10 +15,6 @@ static void _test_subscribe_on_exit(void)
 {
 }
 
-static void _test_subscribe_s2_on_exit(void)
-{
-}
-
 static void _test_subscribe_on_evt(eaf_msg_t* msg, void* arg)
 {
 	(void)msg;
