@@ -1,0 +1,14 @@
+language: c
+os:
+  - linux
+compiler:
+  - clang
+  - gcc
+addons:
+  apt:
+    packages:
+    - cmake
+    - make
+    - libuv1-dev
+script:
+  - mkdir build && cd build && cmake .. && make && make test
