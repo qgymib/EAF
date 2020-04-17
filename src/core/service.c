@@ -703,8 +703,8 @@ static int _eaf_service_on_cmp_subscribe_record(const eaf_map_node_t* key1, cons
 
 	COMPARE_TEMPLATE(record1->data.evt_id, record2->data.evt_id);
 	COMPARE_TEMPLATE(record1->data.service, record2->data.service);
-	COMPARE_TEMPLATE(record1->data.proc, record2->data.proc);
-	COMPARE_TEMPLATE(record1->data.priv, record2->data.priv);
+	COMPARE_TEMPLATE((uintptr_t)record1->data.proc, (uintptr_t)record2->data.proc);
+	COMPARE_TEMPLATE((uintptr_t)record1->data.priv, (uintptr_t)record2->data.priv);
 
 	return 0;
 }
