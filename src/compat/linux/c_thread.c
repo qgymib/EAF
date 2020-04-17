@@ -1,5 +1,9 @@
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#define __USE_GNU
+#include <sched.h>
 #include "EAF/utils/errno.h"
 #include "compat/thread.h"
 
@@ -14,6 +18,7 @@ static void* _eaf_thread_linux_proxy(void* params)
 int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	int ret = eaf_errno_success;
+	cpu_set_t* c_set = NULL;
 
 	pthread_attr_t thr_attr;
 	if (pthread_attr_init(&thr_attr) < 0)
@@ -21,9 +26,16 @@ int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t
 		return eaf_errno_unknown;
 	}
 
-	if (cfg != NULL && cfg->stacksize != 0)
+	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_STACKSIZE))
 	{
-		pthread_attr_setstacksize(&thr_attr, cfg->stacksize);
+		pthread_attr_setstacksize(&thr_attr, cfg->field.stacksize);
+	}
+
+	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_PRIORITY))
+	{
+		struct sched_param sp;
+		sp.sched_priority = (int)cfg->field.priority;
+		pthread_attr_setschedparam(&thr_attr, &sp);
 	}
 
 	handler->proc = fn;
@@ -34,7 +46,22 @@ int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t
 		goto fin;
 	}
 
+	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_AFFINITY))
+	{
+		if ((c_set = malloc(sizeof(cpu_set_t))) == NULL)
+		{
+			goto fin;
+		}
+		CPU_ZERO(c_set);
+		CPU_SET(cfg->field.affinity, c_set);
+		pthread_setaffinity_np(handler->thr, sizeof(*c_set), c_set);
+	}
+
 fin:
+	if (c_set != NULL)
+	{
+		free(c_set);
+	}
 	pthread_attr_destroy(&thr_attr);
 	return ret;
 }
@@ -43,6 +70,11 @@ void eaf_compat_thread_exit(eaf_compat_thread_t* handler)
 {
 	void* ret = NULL;
 	pthread_join(handler->thr, &ret);
+}
+
+unsigned long eaf_compat_thread_id(void)
+{
+	return syscall(__NR_gettid);
 }
 
 void eaf_compat_thread_sleep(unsigned timeout)

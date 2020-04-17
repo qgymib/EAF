@@ -30,3 +30,8 @@ void eaf_thread_destroy(eaf_thread_t* handler)
 	eaf_compat_thread_exit(&handler->thr);
 	EAF_FREE(handler);
 }
+
+unsigned long eaf_thread_id(void)
+{
+	return eaf_compat_thread_id();
+}

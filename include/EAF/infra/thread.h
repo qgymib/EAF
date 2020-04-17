@@ -9,11 +9,20 @@ extern "C" {
 struct eaf_thread;
 typedef struct eaf_thread eaf_thread_t;
 
+#define EAF_THREAD_VALID_PRIORITY		(0x01 << 0x00)
+#define EAF_THREAD_VALID_AFFINITY		(0x01 << 0x01)
+#define EAF_THREAD_VALID_STACKSIZE		(0x01 << 0x02)
+
 typedef struct eaf_thread_attr
 {
-	unsigned long					priority;		/** priority, platform related. */
-	unsigned long					cpuno;			/** cpuno attached. if let system select, set to `-1` */
-	size_t							stacksize;		/** stack size */
+	unsigned long				valid;			/** mark which field will be valid */
+
+	struct
+	{
+		unsigned long			priority;		/** priority, platform related. */
+		size_t					affinity;		/** cpu affinity. only one core can be selected */
+		size_t					stacksize;		/** stack size */
+	}field;
 }eaf_thread_attr_t;
 
 /**
@@ -36,6 +45,12 @@ eaf_thread_t* eaf_thread_create(const eaf_thread_attr_t* cfg, eaf_thread_fn fn, 
 * @param handler	thread handler
 */
 void eaf_thread_destroy(eaf_thread_t* handler);
+
+/**
+* Get current thread id.
+* @return			thread id
+*/
+unsigned long eaf_thread_id(void);
 
 #ifdef __cplusplus
 }

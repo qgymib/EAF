@@ -11,18 +11,25 @@ static DWORD WINAPI _eaf_thread_win32_proxy(LPVOID lpParam)
 
 int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
+	SIZE_T stacksize = ((cfg != NULL) && (cfg->valid & EAF_THREAD_VALID_STACKSIZE)) ? cfg->field.stacksize : 0;
+
 	handler->proc = fn;
 	handler->priv = arg;
-	handler->thr = CreateThread(NULL, cfg != NULL ? cfg->stacksize : 0, _eaf_thread_win32_proxy, handler, 0, NULL);
+	handler->thr = CreateThread(NULL, stacksize, _eaf_thread_win32_proxy, handler, 0, NULL);
 	if (handler->thr == NULL)
 	{
 		return eaf_errno_unknown;
 	}
 
-	if (cfg != NULL)
+	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_PRIORITY))
 	{
-		SetPriorityClass(handler->thr, cfg->priority);
+		SetPriorityClass(handler->thr, cfg->field.priority);
 	}
+	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_AFFINITY))
+	{
+		SetThreadAffinityMask(handler->thr, 1 << cfg->field.affinity);
+	}
+
 	return eaf_errno_success;
 }
 
