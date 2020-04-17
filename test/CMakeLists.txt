@@ -1,23 +1,38 @@
-cmake_minimum_required(VERSION 3.2)
-project(eaf_test C ASM)
+set(TEST_BUILD_NAME eaf_test)
 
+# eaf_test
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_TEST_C)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/eaf SRC_TEST_C)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/powerpack SRC_TEST_C)
+add_executable(${TEST_BUILD_NAME} ${SRC_TEST_C})
+
+# add include search pathes
+target_include_directories(${TEST_BUILD_NAME}
+	PUBLIC
+		$<INSTALL_INTERFACE:include>
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# add warning check
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
+    target_compile_options(${TEST_BUILD_NAME} PRIVATE -Wall -Wextra -Werror)
 elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
+    target_compile_options(${TEST_BUILD_NAME} PRIVATE -Wall -Wextra -Werror)
+elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(${TEST_BUILD_NAME} PRIVATE /W4 /WX)
 endif ()
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/../powerpack/include)
-include_directories(${PROJECT_SOURCE_DIR}/../powerpack/src)
-include_directories(${PROJECT_SOURCE_DIR}/src)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_TEST_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/eaf SRC_TEST_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/powerpack SRC_TEST_C)
+# add dependencies
+target_link_libraries(${TEST_BUILD_NAME}
+	PRIVATE
+		eaf
+		powerpack
+		rt
+)
 
-find_package(Threads)
-add_executable(${PROJECT_NAME} ${SRC_TEST_C} ${SRC_EAF_C} ${SRC_POWERPACK_C})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(${PROJECT_NAME} rt uv)
+# add cmake test
+add_test(NAME ${TEST_BUILD_NAME}
+	COMMAND ${TEST_BUILD_NAME})
 
-add_test(TEST eaf_test)

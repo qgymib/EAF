@@ -1,10 +1,32 @@
-cmake_minimum_required(VERSION 3.2)
-project(eafpowerpack)
+set(POWERPACK_BUILD_NAME powerpack)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/src)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_POWERPACK_C)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/powerpack SRC_POWERPACK_C)
+# libpowerpack
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_POWERPACK_C)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/powerpack SRC_POWERPACK_C)
+add_library(${POWERPACK_BUILD_NAME} ${SRC_POWERPACK_C})
 
-set(SRC_POWERPACK_C ${SRC_POWERPACK_C} CACHE INTERNAL "POWERPACK source code")
-add_library(${PROJECT_NAME} STATIC ${SRC_POWERPACK_C})
+# define target include search paths
+target_include_directories(${POWERPACK_BUILD_NAME}
+	PUBLIC
+		$<INSTALL_INTERFACE:include>
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# add warning check
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(${POWERPACK_BUILD_NAME} PRIVATE -Wall -Wextra -Werror)
+elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${POWERPACK_BUILD_NAME} PRIVATE -Wall -Wextra -Werror)
+elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(${POWERPACK_BUILD_NAME} PRIVATE /W4 /WX)
+endif ()
+
+target_link_libraries(${POWERPACK_BUILD_NAME}
+	PUBLIC
+		eaf
+	PRIVATE
+		uv
+)
+
