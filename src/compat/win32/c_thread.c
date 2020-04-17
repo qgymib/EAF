@@ -27,7 +27,7 @@ int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t
 	}
 	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_AFFINITY))
 	{
-		SetThreadAffinityMask(handler->thr, 1 << cfg->field.affinity);
+		SetThreadAffinityMask(handler->thr, (size_t)1 << cfg->field.affinity);
 	}
 
 	return eaf_errno_success;
