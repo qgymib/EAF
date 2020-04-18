@@ -13,7 +13,7 @@ addons:
     - lcov
 script:
   - if [ "$CC" = "gcc" ]; then (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage); fi
-  - if [ "$CC" = "clang" ]; then (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make CTEST_OUTPUT_ON_FAILURE=1 test); fi
+  - if [ "$CC" = "clang" ]; then (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && make CTEST_OUTPUT_ON_FAILURE=1 test); fi
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - if [ "$CC" = "gcc" ]; then bash <(curl -s https://codecov.io/bash); fi
 
