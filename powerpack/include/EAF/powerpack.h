@@ -6,6 +6,7 @@ extern "C" {
 
 #include "EAF/eaf.h"
 #include "EAF/powerpack/message.h"
+#include "EAF/powerpack/net.h"
 #include "EAF/powerpack/timer.h"
 
 typedef struct eaf_powerpack_cfg

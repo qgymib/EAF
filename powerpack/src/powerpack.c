@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "EAF/eaf.h"
 #include "powerpack/message.h"
+#include "powerpack/net.h"
 #include "powerpack/timer.h"
 #include "powerpack.h"
 
@@ -27,6 +28,7 @@ static powerpack_ctx_t* g_powerpack_ctx = NULL;
 static powerpack_init_item_t g_powerpack_table[] = {
 	{ eaf_powerpack_timer_init,		eaf_powerpack_timer_exit },
 	{ eaf_powerpack_message_init,	eaf_powerpack_message_exit },
+	{ eaf_powerpack_net_init,		eaf_powerpack_net_exit },
 };
 
 static void _powerpack_thread(void* arg)
