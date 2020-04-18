@@ -10,6 +10,7 @@ addons:
     - cmake
     - make
     - libuv1-dev
+    - lcov
 script:
   - (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage)
 after_success:
