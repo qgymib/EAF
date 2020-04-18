@@ -11,4 +11,4 @@ addons:
     - make
     - libuv1-dev
 script:
-  - mkdir build && cd build && cmake .. && make && make test
+  - mkdir build && cd build && cmake .. && make && make CTEST_OUTPUT_ON_FAILURE=1 test
