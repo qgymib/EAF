@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.2)
-project(eaf C ASM)
+project(eaf)
 
 # add custom cmake files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+option(ENABLE_COVERAGE "Enable code coverage. GCC/Clang only" OFF)
+if (ENABLE_COVERAGE)
+	include(CodeCoverage)
+	append_coverage_compiler_flags()
+endif ()
 
 # check system
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")

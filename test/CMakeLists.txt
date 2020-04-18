@@ -36,3 +36,11 @@ target_link_libraries(${TEST_BUILD_NAME}
 add_test(NAME ${TEST_BUILD_NAME}
 	COMMAND ${TEST_BUILD_NAME})
 
+if (ENABLE_COVERAGE)
+	setup_target_for_coverage_lcov(
+		NAME coverage
+		EXECUTABLE ${TEST_BUILD_NAME}
+		EXCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+	)
+endif ()
+
