@@ -428,9 +428,8 @@ function(setup_target_for_coverage_gcovr_html)
 
 endfunction() # setup_target_for_coverage_gcovr_html
 
-function(append_coverage_compiler_flags)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
-    message(STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
-endfunction() # append_coverage_compiler_flags
+function(coverage_setup_target_compiler)
+	cmake_parse_arguments(COVERAGE "" "NAME" "" ${ARGN})
+	target_compile_options(${COVERAGE_NAME} PRIVATE -fprofile-arcs -ftest-coverage)
+endfunction()
+

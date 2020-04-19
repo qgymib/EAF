@@ -23,6 +23,11 @@ elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(${POWERPACK_BUILD_NAME} PRIVATE /W4 /WX)
 endif ()
 
+if (ENABLE_COVERAGE)
+    include(CodeCoverage)
+    coverage_setup_target_compiler(NAME ${POWERPACK_BUILD_NAME})
+endif ()
+
 target_link_libraries(${POWERPACK_BUILD_NAME}
 	PUBLIC
 		eaf

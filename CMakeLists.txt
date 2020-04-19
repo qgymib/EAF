@@ -5,10 +5,6 @@ project(eaf)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 option(ENABLE_COVERAGE "Enable code coverage. GCC/Clang only" OFF)
-if (ENABLE_COVERAGE)
-	include(CodeCoverage)
-	append_coverage_compiler_flags()
-endif ()
 
 # check system
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
@@ -50,6 +46,11 @@ target_link_libraries(${PROJECT_NAME}
 	PRIVATE
 		Threads::Threads
 )
+
+if (ENABLE_COVERAGE)
+	include(CodeCoverage)
+	coverage_setup_target_compiler(NAME ${PROJECT_NAME})
+endif ()
 
 # build powerpack
 add_subdirectory(powerpack)

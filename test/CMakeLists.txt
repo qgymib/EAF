@@ -40,7 +40,6 @@ if (ENABLE_COVERAGE)
 	setup_target_for_coverage_lcov(
 		NAME coverage
 		EXECUTABLE ${TEST_BUILD_NAME}
-		EXCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/src/*
 	)
 endif ()
 
