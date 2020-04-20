@@ -4,7 +4,6 @@ os:
   - linux
 
 compiler:
-  - clang
   - gcc
 
 git:
@@ -20,10 +19,10 @@ before_install:
   - if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then (echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-); fi
 
 script:
-  - (chmod +x ci/build.sh && ci/build.sh)
+  - if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then (chmod +x ci/build.sh && ci/build.sh); fi
 
 after_success:
-  - (chmod +x ci/upload_coverage.sh && ci/upload_coverage.sh)
+  - if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then (chmod +x ci/upload_coverage.sh && ci/upload_coverage.sh); fi
 
 addons:
   apt:
