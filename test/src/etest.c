@@ -1538,12 +1538,12 @@ void etest_assert_num_ge(long long a, long long b, const char* s_a, const char* 
 	JUDGE_GENERIC_TEMPLATE(a >= b, ">=", "%lld", s_a, a, s_b, b, file, line);
 }
 
-void etest_assert_ptr_eq(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_ptr_eq(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%p", s_a, a, s_b, b, file, line);
 }
 
-void etest_assert_ptr_ne(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_assert_ptr_ne(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line)
 {
 	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%p", s_a, a, s_b, b, file, line);
 }

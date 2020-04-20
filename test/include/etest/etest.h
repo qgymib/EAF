@@ -163,8 +163,8 @@ void etest_register_case(etest_case_t* data);
 int etest_run_tests(int argc, char* argv[]);
 
 void etest_assert_fail(const char *expr, const char *file, int line, const char *func);
-void etest_assert_ptr_eq(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_ptr_ne(void* a, void* b, const char* s_a, const char* s_b, const char* file, int line);
+void etest_assert_ptr_eq(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line);
+void etest_assert_ptr_ne(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line);
 void etest_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line);
 void etest_assert_str_ne(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line);
 void etest_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
