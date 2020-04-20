@@ -106,12 +106,27 @@ eaf_list_node_t* eaf_list_pop_back(eaf_list_t* handler);
 eaf_list_node_t* eaf_list_begin(const eaf_list_t* handler);
 
 /**
+ * Get the last node
+ * @param handler	the handler of list
+ * @return			the last node
+ */
+eaf_list_node_t* eaf_list_end(const eaf_list_t* handler);
+
+/**
 * 获取下一个节点
 * @param handler	链表
 * @param node		当前节点
 * @return			下一个节点
 */
 eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t* node);
+
+/**
+ * Get previous node
+ * @param handler	the handler of list
+ * @param node		current node
+ * @return			previous node
+ */
+eaf_list_node_t* eaf_list_prev(const eaf_list_t* handler, const eaf_list_node_t* node);
 
 #ifdef __cplusplus
 }

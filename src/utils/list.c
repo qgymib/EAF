@@ -42,6 +42,7 @@ void eaf_list_insert_before(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_
 	node->p_after = pos;
 	pos->p_before->p_after = node;
 	pos->p_before = node;
+	handler->size++;
 }
 
 void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_node_t* node)
@@ -56,6 +57,7 @@ void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_n
 	node->p_after = pos->p_after;
 	pos->p_after->p_before = node;
 	pos->p_after = node;
+	handler->size++;
 }
 
 void eaf_list_push_front(eaf_list_t* handler, eaf_list_node_t* node)
@@ -78,10 +80,21 @@ eaf_list_node_t* eaf_list_begin(const eaf_list_t* handler)
 	return handler->head;
 }
 
+eaf_list_node_t* eaf_list_end(const eaf_list_t* handler)
+{
+	return handler->tail;
+}
+
 eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t* node)
 {
 	(void)handler;
 	return node->p_after;
+}
+
+eaf_list_node_t* eaf_list_prev(const eaf_list_t* handler, const eaf_list_node_t* node)
+{
+	(void)handler;
+	return node->p_before;
 }
 
 void eaf_list_erase(eaf_list_t* handler, eaf_list_node_t* node)
