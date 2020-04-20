@@ -1036,6 +1036,9 @@ int eaf_cleanup(void)
 		_eaf_service_cleanup_group(g_eaf_ctx->group.table[i]);
 	}
 
+	eaf_compat_sem_exit(&g_eaf_ctx->ready);
+	eaf_thread_storage_exit(&g_eaf_ctx->tls);
+
 	/* resource cleanup */
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
