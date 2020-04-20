@@ -1,9 +1,24 @@
 language: c
+
 os:
   - linux
+
 compiler:
   - clang
   - gcc
+
+git:
+  depth: 1
+
+env:
+  global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "cUWTAPmJE7+N37/UdoMUEg6w/gvkhDxUvZKNpr/yhyiJwzdtHu+G53bVdA99HCrJU5xdy7vP1R2/BRnpbK9tJtePc0uUosmNIdrAGmIKfRnQFnXB4fBwTliztgvPONXVRcXirhJE5hooGLkVedTPl5FUMHSGd1+mecTVUhqB73t64E3A5hGob7RSgZTMAUOcXyiuuq6bgOrvSjAbsurACsZpq3LiCc8BiVmVwhTT+BeVDONhCrBdc/KL9QPB60eVoYUlRemZcVzZRainXCbxDaYBJ5N4ctnFdf7+9317imc1L1PH4U58N/iKtX3lEnTyjWGMEOLu4DwA6420sdK1bkQtf8kEt0vXEAFC6ALpEdJLPtX3NE1tjzWKQPXt1RkO6XQFurKvma+VEXma1/novhmvlEVLfGeJtSlIeXHxeGjopFl420gVK8/zusSNWGdoFyYQxJ4Cigo6DIdXd/8CapVjQncLLz3DxUL/lQ9kO+HXlfxGW/IYCEDW0NdXaOZwGrtv+EI8SSs8XDZd1Zcslg8Y8g18Ej+7ZnSPYvb/DxGmSOQmQGVdpNCk1UUeLDLinZF387aDvM8OrYWmWRiJb2FNyaFWQGpwJBdVeLgvExtX63cSDVWmFp4op6epD0CvO/3poWtosPm0kNY6DXj9FZH0/nPS8IZlBLEKMxEft2g="
+
+before_install:
+  - if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then (echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-); fi
+
 addons:
   apt:
     packages:
@@ -11,9 +26,19 @@ addons:
     - make
     - libuv1-dev
     - lcov
-script:
-  - if [ "$CC" = "gcc" ]; then (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage); fi
-  - if [ "$CC" = "clang" ]; then (mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && make CTEST_OUTPUT_ON_FAILURE=1 test); fi
-after_success:
-  - if [ "$CC" = "gcc" ]; then bash <(curl -s https://codecov.io/bash); fi
 
+script:
+  - (chmod +x ci/build.sh && ci/build.sh)
+
+after_success:
+  - (chmod +x ci/upload_coverage.sh && ci/upload_coverage.sh)
+
+addons:
+  coverity_scan:
+    project:
+      name: "qgymib/EAF"
+      description: "Embedded Application Framework"
+    notification_email: qgymib@gmail.com
+    build_command_prepend: "cmake ."
+    build_command: "make"
+    branch_pattern: coverity_scan
