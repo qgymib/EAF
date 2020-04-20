@@ -6,11 +6,11 @@ if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then
 fi
 
 if [ "$CC" = "gcc" ]; then
-	(rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage)
-	exit 0
+	rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage
+	exit $?
 fi
 
 if [ "$CC" = "clang" ]; then
-	(rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && make CTEST_OUTPUT_ON_FAILURE=1 test)
-	exit 0
+	rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && make CTEST_OUTPUT_ON_FAILURE=1 test
+	exit $?
 fi

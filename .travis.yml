@@ -19,14 +19,6 @@ env:
 before_install:
   - if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then (echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-); fi
 
-addons:
-  apt:
-    packages:
-    - cmake
-    - make
-    - libuv1-dev
-    - lcov
-
 script:
   - (chmod +x ci/build.sh && ci/build.sh)
 
@@ -34,6 +26,12 @@ after_success:
   - (chmod +x ci/upload_coverage.sh && ci/upload_coverage.sh)
 
 addons:
+  apt:
+    packages:
+    - cmake
+    - make
+    - libuv1-dev
+    - lcov
   coverity_scan:
     project:
       name: "qgymib/EAF"
