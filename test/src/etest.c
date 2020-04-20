@@ -734,7 +734,7 @@ static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
 			"              actual:    " _fmt " vs " _fmt "\n",\
 			_file, _line, _l, _r, _a, _b);\
 		if (g_test_ctx.mask.break_on_failure) {\
-			abort();\
+			*(volatile int*)NULL = 1;\
 		}\
 		longjmp(g_test_ctx2.jmpbuf, 1);\
 	} while (0)

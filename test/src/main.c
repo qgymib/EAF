@@ -48,16 +48,6 @@ int main(int argc, char* argv[])
 	{
 		_CrtDumpMemoryLeaks();
 	}
-#if _MSC_VER < 1900
-	for (i = 0; i < argc; i++)
-	{
-		if (strstr(argv[i], "pause") != NULL)
-		{
-			system("pause");
-			break;
-		}
-	}
-#endif
 #endif
 
 	return ret;
