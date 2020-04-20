@@ -6,7 +6,7 @@ typedef struct test_eaf_map_node
 	eaf_map_node_t		node;	/** node */
 	struct
 	{
-		unsigned		value;	/** value */
+		size_t			value;	/** value */
 	}data;
 }test_eaf_map_node_t;
 
