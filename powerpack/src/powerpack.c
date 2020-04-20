@@ -160,30 +160,15 @@ void eaf_powerpack_exit(void)
 
 uv_loop_t* powerpack_get_uv(void)
 {
-	if (g_powerpack_ctx == NULL)
-	{
-		return NULL;
-	}
-
 	return &g_powerpack_ctx->uv_loop;
 }
 
 void powerpack_notify(void)
 {
-	if (g_powerpack_ctx == NULL)
-	{
-		return;
-	}
-
 	eaf_sem_post(g_powerpack_ctx->sem_loop);
 }
 
 uint32_t powerpack_get_service_id(void)
 {
-	if (g_powerpack_ctx == NULL)
-	{
-		return (uint32_t)-1;
-	}
-
 	return g_powerpack_ctx->service_id;
 }
