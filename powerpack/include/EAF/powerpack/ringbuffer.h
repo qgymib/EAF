@@ -1,5 +1,5 @@
-#ifndef __EAF_UTILS_RINGBUFFER_H__
-#define __EAF_UTILS_RINGBUFFER_H__
+#ifndef __EAF_POWERPACK_RINGBUFFER_H__
+#define __EAF_POWERPACK_RINGBUFFER_H__
 #ifdef __cplusplus
 extern "C" {
 #endif

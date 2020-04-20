@@ -1,5 +1,5 @@
 #include "EAF/utils/define.h"
-#include "EAF/utils/ringbuffer.h"
+#include "EAF/powerpack/ringbuffer.h"
 
 typedef enum ring_buffer_node_state
 {
