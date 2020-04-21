@@ -59,6 +59,7 @@ dkms.conf
 /test/bin
 /test/build
 /third_party
+/doc
 
 # visual studio files
 /.vs
