@@ -1,28 +1,39 @@
+/** @file
+ * EAF errno
+ */
 #ifndef __EAF_ERRNO_H__
 #define __EAF_ERRNO_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @brief All known EAF error codes.
+ */
 typedef enum eaf_errno
 {
-	eaf_errno_success		=  0x00,		/** 成功 */
-	eaf_errno_unknown		= -0x01,		/** 未知错误 */
-	eaf_errno_duplicate		= -0x02,		/** 重复操作 */
-	eaf_errno_memory		= -0x03,		/** 内存异常 */
-	eaf_errno_state			= -0x04,		/** 状态错误 */
-	eaf_errno_notfound		= -0x05,		/** 资源未找到 */
-	eaf_errno_overflow		= -0x06,		/** 溢出 */
-	eaf_errno_timeout		= -0x07,		/** 操作超时 */
-	eaf_errno_invalid		= -0x08,		/** 非法参数 */
-	eaf_errno_rpc_failure	= -0x09,		/** RPC failure */
+	eaf_errno_success		=  0x00,		/**< Success */
+	eaf_errno_unknown		= -0x01,		/**< Unknown error */
+	eaf_errno_duplicate		= -0x02,		/**< Duplicated operation */
+	eaf_errno_memory		= -0x03,		/**< Out of memory */
+	eaf_errno_state			= -0x04,		/**< Wrong state */
+	eaf_errno_notfound		= -0x05,		/**< Resource not found */
+	eaf_errno_overflow		= -0x06,		/**< Overflow */
+	eaf_errno_timeout		= -0x07,		/**< Operation timeout */
+	eaf_errno_invalid		= -0x08,		/**< Invalid Parameter */
+	eaf_errno_rpc_failure	= -0x09,		/**< RPC failure */
 }eaf_errno_t;
 
 /**
-* 获取描述自定错误码的字符串
-* @param err	错误码
-* @return		描述
-*/
+ * @brief Convert a error code into string.
+ * 
+ * This function returns a pointer to a string that describes the error code
+ * passed in the argument `err`. If error code not defined, `NULL` will be
+ * returned.
+ * 
+ * @param err	error code
+ * @return		description
+ */
 const char* eaf_strerror(int err);
 
 #ifdef __cplusplus
