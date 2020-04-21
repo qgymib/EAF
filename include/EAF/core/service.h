@@ -1,3 +1,6 @@
+/** @file
+* EAF service defines.
+*/
 #ifndef __EAF_CORE_SERVICE_H__
 #define __EAF_CORE_SERVICE_H__
 #ifdef __cplusplus
@@ -10,149 +13,189 @@ extern "C" {
 #include "EAF/core/message.h"
 
 /**
-* coroutine body
-*/
+ * @brief coroutine body
+ */
 #define eaf_reenter					EAF_COROUTINE_REENTER()
 
 /**
-* Suspend service until `eaf_resume` is called
-*/
+ * @brief Suspend service until `eaf_resume` is called
+ * @see eaf_resume
+ */
 #define eaf_yield					eaf_yield_ext(NULL, NULL)
 
 /**
-* Like `eaf_yield`, service will suspend until `eaf_resume` is called,
-* and when service was suspended, `fn` will be called immediately.
-* `fn` is a function with proto `void(*)(uint32_t service_id, void* arg)`.
-*/
+ * @brief The extended version of `eaf_yield`
+ * 
+ * Like `eaf_yield`, service will suspend until `eaf_resume` is called,
+ * and when service was suspended, `fn` will be called immediately.
+ * `fn` is a function with proto `void(*)(uint32_t service_id, void* arg)`.
+ * 
+ * @see eaf_resume
+ */
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
 
+/**
+ * @brief Request table
+ */
 typedef struct eaf_message_table
 {
-	uint32_t						msg_id;			/** 请求消息ID */
-	eaf_req_handle_fn				fn;				/** 消息处理函数 */
+	uint32_t						msg_id;			/**< Request ID */
+	eaf_req_handle_fn				fn;				/**< The handler of request */
 }eaf_message_table_t;
 
+/**
+ * @brief Service initialize info
+ */
 typedef struct eaf_service_info
 {
-	size_t							msg_table_size;	/** 处理映射表大小 */
-	const eaf_message_table_t*		msg_table;		/** 处理映射表 */
+	size_t							msg_table_size;	/**< The sizeof request table */
+	const eaf_message_table_t*		msg_table;		/**< Request table */
 
 	/**
-	* 初始化回调
-	* @param arg	自定义参数
-	* @return		0：成功；<0：失败
-	*/
+	 * @brief Initialize callback
+	 * @return		0 if success, -1 otherwise
+	 */
 	int (*on_init)(void);
 
 	/**
-	* 去初始化回调
-	* @param arg	自定义参数
-	*/
+	 * @brief Exit callback
+	 */
 	void (*on_exit)(void);
 }eaf_service_info_t;
 
+/**
+ * @brief Service configure
+ */
 typedef struct eaf_service_table
 {
-	uint32_t						srv_id;			/** service id */
-	uint32_t						msgq_size;		/** message queue capacity */
+	uint32_t						srv_id;			/**< Service ID */
+	uint32_t						msgq_size;		/**< The capacity of message queue */
 }eaf_service_table_t;
 
+/**
+ * @brief Service group configure
+ */
 typedef struct eaf_group_table
 {
-	eaf_thread_attr_t				attr;			/** thread attribute */
+	eaf_thread_attr_t				attr;			/**< Thread attribute */
 
 	struct
 	{
-		size_t						size;			/** configure table size */
-		eaf_service_table_t*		table;			/** configure table */
-	}service;
+		size_t						size;			/**< The size of configure table */
+		eaf_service_table_t*		table;			/**< The pointer of configure table */
+	}service;										/**< Configure table */
 }eaf_group_table_t;
 
 /**
-* 允许指定服务继续执行
-* @param srv_id	服务ID
-* @return		eaf_errno
-*/
+ * @brief Resume service
+ * @param srv_id	Service ID
+ * @return			eaf_errno
+ */
 int eaf_resume(uint32_t srv_id);
 
 /**
-* 配置EAF平台
-* @param info	信息列表。必须为全局变量
-* @param size	列表长度
-* @return		eaf_errno
-*/
+ * @brief Setup EAF
+ *
+ * This will allocate every necessary resource and wait for service register.
+ * Service must registered into EAF after this function call and before `eaf_load`
+ * is called.
+ *
+ * @warning The parameter `info` must be globally accessible.
+ * @see eaf_load
+ * @see eaf_register
+ * @param info		Service group table. Must be globally accessible.
+ * @param size		The size of service group table
+ * @return			eaf_errno
+ */
 int eaf_setup(const eaf_group_table_t* info /*static*/, size_t size);
 
 /**
-* 开启EAF平台
-* 函数返回时，所有服务均已初始化完毕
-* @return		eaf_errno
-*/
+ * @brief Load EAF.
+ * 
+ * At this stage, EAF will try to initialize every registered services.
+ * If a service failed to load, other service in the same group will be 
+ * exited.
+ * After this call return, EAF guarantee every registered services was either
+ * initialized or exited.
+ *
+ * @return			eaf_errno
+ */
 int eaf_load(void);
 
 /**
-* 清理EAF平台
-* @return		eaf_errno
-*/
+ * @brief Tear down EAF.
+ *
+ * At this stage, EAF will tear down every registered services.
+ * After this call return, EAF guarantee every registered services was exited.
+ *
+ * @return			eaf_errno
+ */
 int eaf_cleanup(void);
 
 /**
-* 注册服务
-* @param srv_id	服务ID
-* @param info	服务信息。必须为全局变量
-* @return		eaf_errno
-*/
+ * @brief Register service
+ *
+ * Register service info into EAF. This function can only be called after
+ * `eaf_setup` and before `eaf_load`.
+ *
+ * @warning The parameter `info` must be globally accessible.
+ * @see eaf_setup
+ * @see eaf_load
+ * @param srv_id	Service ID
+ * @param info		Service info. Must be globally accessible.
+ * @return			eaf_errno
+ */
 int eaf_register(uint32_t srv_id, const eaf_service_info_t* info /*static*/);
 
 /**
-* 事件订阅
-* @param srv_id	服务ID
-* @param evt_id	事件ID
-* @param fn		处理函数
-* @param arg	自定义参数
-* @return		eaf_errno
-*/
+ * @brief Subscribe event.
+ * @param srv_id	Service ID
+ * @param evt_id	Event ID
+ * @param fn		Event handler
+ * @param arg		User defined argument
+ * @return			eaf_errno
+ */
 int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
 /**
-* 取消事件订阅
-* @param srv_id	服务ID
-* @param evt_id	事件ID
-* @param fn		处理函数
-* @param arg	自定义参数
-* @return		eaf_errno
-*/
+ * @brief Unsubscribe event.
+ * @param srv_id	Service ID
+ * @param evt_id	Event ID
+ * @param fn		Event handler
+ * @param arg		User defined argument
+ * @return			eaf_errno
+ */
 int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
 /**
-* 发送请求数据
-* @param from	发送方服务ID
-* @param to		接收方服务ID
-* @param req	请求数据
-* @return		eaf_errno
-*/
+ * @brief Send request
+ * @param from		The service id of sender
+ * @param to		The service id of receiver
+ * @param req		The request
+ * @return			eaf_errno
+ */
 int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
 
 /**
-* 发送响应数据
-* @param from	发送方服务ID
-* @param rsp	响应数据
-* @return		eaf_errno
-*/
+ * @brief Send response
+ * @param from		The service id of sender
+ * @param rsp		The response
+ * @return			eaf_errno
+ */
 int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp);
 
 /**
-* 发送广播数据
-* @param from	发送方服务ID
-* @param evt	广播数据
-* @return		eaf_errno
-*/
+ * @brief Send Event
+ * @param from		The service id of sender
+ * @param evt		The event
+ * @return			eaf_errno
+ */
 int eaf_send_evt(uint32_t from, eaf_msg_t* evt);
 
 /**
-* Get self's ID
-* @return		service id
-*/
+ * @brief Get caller's service id
+ * @return			service id
+ */
 uint32_t eaf_service_self(void);
 
 #ifdef __cplusplus
