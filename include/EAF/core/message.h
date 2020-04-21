@@ -1,3 +1,6 @@
+/** @file
+ * eaf_msg_t is a structure used by services to communicate to each other.
+ */
 #ifndef __EAF_CORE_MESSAGE_H__
 #define __EAF_CORE_MESSAGE_H__
 #ifdef __cplusplus
@@ -9,92 +12,100 @@ extern "C" {
 
 struct eaf_msg;
 
+/**
+ * @brief The type of eaf_msg_t
+ * @see eaf_msg_t
+ */
 typedef enum eaf_msg_type
 {
-	eaf_msg_type_req,					/** 请求 */
-	eaf_msg_type_rsp,					/** 响应 */
-	eaf_msg_type_evt,					/** 事件 */
+	eaf_msg_type_req,					/**< Request */
+	eaf_msg_type_rsp,					/**< Response */
+	eaf_msg_type_evt,					/**< Event */
 }eaf_msg_type_t;
 
 /**
-* 请求消息处理函数
-* @param msg		消息
-*/
-typedef void(*eaf_req_handle_fn)(struct eaf_msg* msg);
+ * @brief Prototype for request handler
+ * @param req		Request
+ */
+typedef void(*eaf_req_handle_fn)(struct eaf_msg* req);
 
 /**
-* 响应消息处理函数
-* @param msg		消息
-*/
-typedef void(*eaf_rsp_handle_fn)(struct eaf_msg* msg);
+ * @brief Prototype for response handler
+ * @param rsp		Response
+ */
+typedef void(*eaf_rsp_handle_fn)(struct eaf_msg* rsp);
 
 /**
-* 事件处理函数
-* @param msg		事件
-* @param arg		自定义参数
-*/
-typedef void(*eaf_evt_handle_fn)(struct eaf_msg* msg, void* arg);
+ * @brief Prototype for event handler
+ * @param evt		Event
+ * @param arg		User defined argument
+ */
+typedef void(*eaf_evt_handle_fn)(struct eaf_msg* evt, void* arg);
 
+/**
+ * @brief A communicate structure
+ */
 typedef struct eaf_msg
 {
-	eaf_msg_type_t				type;	/** 消息类型 */
-	uint32_t					id;		/** 消息ID */
-	uint32_t					from;	/** 发送者服务ID */
-	uint32_t					to;		/** 接受者服务ID */
+	eaf_msg_type_t				type;	/**< Message type */
+	uint32_t					id;		/**< Message ID */
+	uint32_t					from;	/**< The service ID of sender */
+	uint32_t					to;		/**< The service ID of receiver */
 
 	struct
 	{
 		struct
 		{
-			eaf_rsp_handle_fn	rfn;	/** response handle function, automatically filled by EAF. user should not modify this field. */
-			uintptr_t			orig;	/** original request address, automatically filled by EAF. user should not modify this field. */
-			uintptr_t			uid;	/** resource id, not initialized by default. use at your wish. */
-		}rr;							/** information for request/response. */
-	}info;
+			eaf_rsp_handle_fn	rfn;	/**< response handle function, automatically filled by EAF. user should not modify this field. */
+			uintptr_t			orig;	/**< original request address, automatically filled by EAF. user should not modify this field. */
+			uintptr_t			uid;	/**< resource id, not initialized by default. use at your wish. */
+		}rr;							/**< information for request/response. */
+	}info;								/**< information collection */
 }eaf_msg_t;
 
 /**
- * 创建请求
- * @param msg_id	消息ID
- * @param size_t	消息大小
- * @param rsp_fn	处理响应消息函数
- * @return			消息句柄
+ * @brief Create request.
+ * @param msg_id	Message ID
+ * @param size		The size of user structure
+ * @param rsp_fn	The response handler for the response
+ * @return			The pointer of the request
  */
 eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rsp_fn);
 
 /**
- * 创建响应
- * @param msg_id	消息ID
- * @param size_t	消息大小
- * @return			消息句柄
+ * @brief Create response.
+ * @note This does not affect the reference count of original request.
+ * @param req		The original request
+ * @param size		The size of user structure
+ * @return			The pointer of the response
  */
 eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size);
 
 /**
- * 创建事件
- * @param msg_id	消息ID
- * @param size_t	消息大小
- * @return			消息句柄
+ * @brief Create event.
+ * @param evt_id	Event id
+ * @param size		The size of user structure
+ * @return			The pointer of the event
  */
 eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size);
 
 /**
- * 增加引用
- * @param msg		消息句柄
+ * @brief Add reference count
+ * @param msg		The message you want to add reference
  */
 void eaf_msg_add_ref(eaf_msg_t* msg);
 
 /**
- * 减少引用
- * @param msg		消息句柄
+ * @brief Reduce reference count
+ * @param msg		The message you want to add reference
  */
 void eaf_msg_dec_ref(eaf_msg_t* msg);
 
 /**
- * 获取数据地址
- * @param msg		消息句柄
- * @param size		数据大小
- * @return			数据地址
+ * @brief Get user structure address.
+ * @param msg		The message
+ * @param size		The size of user structure
+ * @return			The address of user structure
  */
 void* eaf_msg_get_data(eaf_msg_t* msg, size_t* size);
 
