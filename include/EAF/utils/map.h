@@ -1,3 +1,9 @@
+/** @file
+ * eaf_map_t is a sorted associative container that contains data structures
+ * with unique keys. Keys are sorted by using the comparison function Compare.
+ * Search, removal, and insertion operations have logarithmic complexity. Maps
+ * are usually implemented as red-black trees.
+ */
 #ifndef __EAF_UTILS_MAP_H__
 #define __EAF_UTILS_MAP_H__
 #ifdef __cplusplus
@@ -7,118 +13,122 @@ extern "C" {
 #include <stddef.h>
 #include "EAF/utils/map_low.h"
 
-struct eaf_map;
-typedef struct eaf_map eaf_map_t;
-
+/**
+ * @brief The node for map
+ * @see eaf_map_t
+ */
 typedef eaf_map_low_node_t eaf_map_node_t;
 
 /**
-* KEY对比函数
-* @param key1	第一个key
-* @param key2	第二个key
-* @param arg	自定义参数
-* @return		当Key_1小于Key_2时，返回小于0的值；当Key_1等于Key_2时，返回0；当Key_1大于Key_2时，返回大于0的值
-*/
+ * @brief Compare function.
+ * @param key1	The key in the map
+ * @param key2	The key user given
+ * @param arg	User defined argument
+ * @return		-1 if key1 < key2. 1 if key1 > key2. 0 if key1 == key2.
+ */
 typedef int(*eaf_map_cmp_fn)(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
 
-struct eaf_map
+/**
+ * @brief Map implemented as red-black tree
+ */
+typedef struct eaf_map
 {
-	eaf_map_low_t		map_low;
+	eaf_map_low_t		map_low;	/**< Underlying structure */
 
 	struct
 	{
-		eaf_map_cmp_fn	cmp;	/** 对比函数 */
-		void*			arg;	/** 自定义参数 */
-	}cmp;
+		eaf_map_cmp_fn	cmp;		/**< Pointer to compare function */
+		void*			arg;		/**< User defined argument, which will passed to compare function */
+	}cmp;							/**< Compare function data */
 
-	size_t				size;	/** 当前元素容量 */
-};
+	size_t				size;		/**< The number of nodes */
+}eaf_map_t;
 
 /**
-* 初始化红黑树
-* @param handler	红黑树
-* @param cmp		对比函数
-* @param arg		自定义参数
-*/
+ * @brief Initialize the map referenced by handler.
+ * @param handler	The pointer to the map
+ * @param cmp		The compare function. Must not NULL
+ * @param arg		User defined argument. Can be anything
+ */
 void eaf_map_init(eaf_map_t* handler, eaf_map_cmp_fn cmp, void* arg);
 
 /**
-* 插入元素
-* @param handler	红黑树
-* @param node		待插入节点
-* @return			0：成功；<0：失败
-*/
+ * @brief Insert the node into map.
+ * @warning the node must not exist in any map.
+ * @param handler	The pointer to the map
+ * @param node		The node
+ * @return			0 if success, -1 otherwise
+ */
 int eaf_map_insert(eaf_map_t* handler, eaf_map_node_t* node);
 
 /**
-* 删除元素
-* @param handler	红黑树
-* @param node		待删除节点
-* @return			0：成功；<0：失败
-*/
+ * @brief Delete the node from the map.
+ * @warning The node must already in the map.
+ * @param handler	The pointer to the map
+ * @param node		The node
+ * @return			0 if success, -1 otherwise
+ */
 void eaf_map_erase(eaf_map_t* handler, eaf_map_node_t* node);
 
 /**
-* 取得当前中数据量
-* @param handler	红黑树
-* @return			数据量
-*/
+ * @brief Get the number of nodes in the map.
+ * @param handler	The pointer to the map
+ * @return			The number of nodes
+ */
 size_t eaf_map_size(const eaf_map_t* handler);
 
 /**
-* 查找节点
-* @param handler	红黑树
-* @param key		查找节点
-* @return			包含所需信息的真实节点
-*/
+ * @brief Finds element with specific key
+ * @param handler	The pointer to the map
+ * @param key		The key
+ * @return			An iterator point to the found node
+ */
 eaf_map_node_t* eaf_map_find(const eaf_map_t* handler, const eaf_map_node_t* key);
 
 /**
-* 查找小于等于key的节点
-* @param handler	红黑树
-* @param key		索引
-* @return			lower节点
-*/
+ * @brief Returns an iterator to the first element not less than the given key
+ * @param handler	The pointer to the map
+ * @param key		The key
+ * @return			An iterator point to the found node
+ */
 eaf_map_node_t* eaf_map_find_lower(const eaf_map_t* handler, const eaf_map_node_t* key);
 
 /**
-* 查找大于key的节点
-* @param handler	红黑树
-* @param key		索引
-* @return			upper节点
-*/
+ * @brief Returns an iterator to the first element greater than the given key
+ * @param handler	The pointer to the map
+ * @param key		The key
+ * @return			An iterator point to the found node
+ */
 eaf_map_node_t* eaf_map_find_upper(const eaf_map_t* handler, const eaf_map_node_t* key);
 
 /**
-* 取得此树的游标
-* 游标处于开始位置
-* @param handler	红黑树
-* @return			游标
-*/
+ * @brief Returns an iterator to the beginning
+ * @param handler	The pointer to the map
+ * @return			An iterator
+ */
 eaf_map_node_t* eaf_map_begin(const eaf_map_t* handler);
 
 /**
-* 取得此树的游标
-* 游标处于末尾位置
-* @param handler	红黑树
-* @return			游标
-*/
+ * @brief Returns an iterator to the end
+ * @param handler	The pointer to the map
+ * @return			An iterator
+ */
 eaf_map_node_t* eaf_map_end(const eaf_map_t* handler);
 
 /**
-* 取得下一个节点
-* @param handler	红黑树
-* @param node		当前节点
-* @return			下一个节点
-*/
+ * @brief Get an iterator next to the given one.
+ * @param handler	The pointer to the map
+ * @param node		Current iterator
+ * @return			Next iterator
+ */
 eaf_map_node_t* eaf_map_next(const eaf_map_t* handler, const eaf_map_node_t* node);
 
 /**
-* 取得上一个节点
-* @param handler	红黑树
-* @param node		当前节点
-* @return			下一个节点
-*/
+ * @brief Get an iterator before the given one.
+ * @param handler	The pointer to the map
+ * @param node		Current iterator
+ * @return			Previous iterator
+ */
 eaf_map_node_t* eaf_map_prev(const eaf_map_t* handler, const eaf_map_node_t* node);
 
 #ifdef __cplusplus
