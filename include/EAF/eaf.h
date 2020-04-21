@@ -1,3 +1,6 @@
+/** @file
+ * Include this file to use all EAF feature.
+ */
 #ifndef __EAF_H__
 #define __EAF_H__
 #ifdef __cplusplus
