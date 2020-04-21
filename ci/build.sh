@@ -1,3 +1,7 @@
 #!/bin/bash
 
-rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage
+# run test and generate coverage
+(rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 .. && make coverage)
+
+# doxygen
+(doxygen Doxyfile)
