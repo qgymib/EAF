@@ -14,22 +14,29 @@ extern "C" {
 
 /**
  * @brief coroutine body
+ *
+ * The coroutine body must be surrounded by `{}`. Wthin coroutine body, you
+ * are able to use coroutine series functions like #eaf_yield or #eaf_yield_ext.
+ *
+ * @see eaf_yield
+ * @see eaf_yield_ext
  */
 #define eaf_reenter					EAF_COROUTINE_REENTER()
 
 /**
- * @brief Suspend service until `eaf_resume` is called
+ * @brief Suspend service until #eaf_resume is called
  * @see eaf_resume
  */
 #define eaf_yield					eaf_yield_ext(NULL, NULL)
 
 /**
- * @brief The extended version of `eaf_yield`
- * 
- * Like `eaf_yield`, service will suspend until `eaf_resume` is called,
+ * @brief The extended version of #eaf_yield
+ *
+ * Like #eaf_yield, service will suspend until #eaf_resume is called,
  * and when service was suspended, `fn` will be called immediately.
- * `fn` is a function with proto `void(*)(uint32_t service_id, void* arg)`.
- * 
+ * `fn` is a function with proto #eaf_yield_hook_fn.
+ *
+ * @see eaf_yield_hook_fn
  * @see eaf_resume
  */
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
@@ -89,7 +96,7 @@ typedef struct eaf_group_table
 /**
  * @brief Resume service
  * @param srv_id	Service ID
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_resume(uint32_t srv_id);
 
@@ -97,7 +104,7 @@ int eaf_resume(uint32_t srv_id);
  * @brief Setup EAF
  *
  * This will allocate every necessary resource and wait for service register.
- * Service must registered into EAF after this function call and before `eaf_load`
+ * Service must registered into EAF after this function call and before #eaf_load
  * is called.
  *
  * @warning The parameter `info` must be globally accessible.
@@ -105,7 +112,7 @@ int eaf_resume(uint32_t srv_id);
  * @see eaf_register
  * @param info		Service group table. Must be globally accessible.
  * @param size		The size of service group table
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_setup(const eaf_group_table_t* info /*static*/, size_t size);
 
@@ -118,7 +125,7 @@ int eaf_setup(const eaf_group_table_t* info /*static*/, size_t size);
  * After this call return, EAF guarantee every registered services was either
  * initialized or exited.
  *
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_load(void);
 
@@ -128,7 +135,7 @@ int eaf_load(void);
  * At this stage, EAF will tear down every registered services.
  * After this call return, EAF guarantee every registered services was exited.
  *
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_cleanup(void);
 
@@ -136,14 +143,14 @@ int eaf_cleanup(void);
  * @brief Register service
  *
  * Register service info into EAF. This function can only be called after
- * `eaf_setup` and before `eaf_load`.
+ * #eaf_setup and before #eaf_load.
  *
  * @warning The parameter `info` must be globally accessible.
  * @see eaf_setup
  * @see eaf_load
  * @param srv_id	Service ID
  * @param info		Service info. Must be globally accessible.
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_register(uint32_t srv_id, const eaf_service_info_t* info /*static*/);
 
@@ -153,7 +160,7 @@ int eaf_register(uint32_t srv_id, const eaf_service_info_t* info /*static*/);
  * @param evt_id	Event ID
  * @param fn		Event handler
  * @param arg		User defined argument
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
@@ -163,7 +170,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
  * @param evt_id	Event ID
  * @param fn		Event handler
  * @param arg		User defined argument
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg);
 
@@ -172,7 +179,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
  * @param from		The service id of sender
  * @param to		The service id of receiver
  * @param req		The request
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
 
@@ -180,7 +187,7 @@ int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req);
  * @brief Send response
  * @param from		The service id of sender
  * @param rsp		The response
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp);
 
@@ -188,7 +195,7 @@ int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp);
  * @brief Send Event
  * @param from		The service id of sender
  * @param evt		The event
- * @return			eaf_errno
+ * @return			#eaf_errno
  */
 int eaf_send_evt(uint32_t from, eaf_msg_t* evt);
 

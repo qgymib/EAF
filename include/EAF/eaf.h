@@ -7,6 +7,10 @@
 extern "C" {
 #endif
 
+/** @mainpage EAF - Embedded Application Framework
+ *
+ */
+
 #include "EAF/core/message.h"
 #include "EAF/core/rpc.h"
 #include "EAF/core/service.h"
