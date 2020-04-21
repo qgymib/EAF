@@ -66,7 +66,6 @@ int eaf_map_insert(eaf_map_t* handler, eaf_map_node_t* node);
  * @warning The node must already in the map.
  * @param handler	The pointer to the map
  * @param node		The node
- * @return			0 if success, -1 otherwise
  */
 void eaf_map_erase(eaf_map_t* handler, eaf_map_node_t* node);
 
