@@ -702,7 +702,7 @@ TEST_F(powerpack_ringbuffer, consume_discard_only_one)
  * 2. 2st consume
  * 3. discard 1st consume token
  */
-TEST_F(powerpack_ringbuffer, discard_older_consume_after_newer_consume_coming)
+TEST_F(powerpack_ringbuffer, discard_older_consume)
 {
 	const size_t cache_size = 1 * 1024;
 	uint8_t* cache = malloc(cache_size);
@@ -776,7 +776,7 @@ TEST_F(powerpack_ringbuffer, discard_older_consume_after_newer_consume_coming)
  * 2. 2st consume
  * 3. force discard 1st consume
  */
-TEST_F(powerpack_ringbuffer, force_discard_older_consume_after_newer_consume_coming)
+TEST_F(powerpack_ringbuffer, force_discard_older_consume)
 {
 	const size_t number_of_elements = 2;
 	const size_t cache_size = eaf_ringbuffer_heap_cost() + number_of_elements * eaf_ringbuffer_node_cost(sizeof(uint32_t));
