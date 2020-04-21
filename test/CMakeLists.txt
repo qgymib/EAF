@@ -1,6 +1,6 @@
-set(TEST_BUILD_NAME eaf_test)
+set(TEST_BUILD_NAME etest)
 
-# eaf_test
+# test
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_TEST_C)
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/eaf SRC_TEST_C)
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/powerpack SRC_TEST_C)
@@ -29,8 +29,15 @@ target_link_libraries(${TEST_BUILD_NAME}
 	PRIVATE
 		eaf
 		powerpack
-		rt
 )
+
+# linux need -lrt
+if (NOT WIN32)
+	target_link_libraries(${TEST_BUILD_NAME}
+		PRIVATE
+			rt
+	)
+endif ()
 
 # add cmake test
 add_test(NAME ${TEST_BUILD_NAME}
