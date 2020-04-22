@@ -1,3 +1,10 @@
+/** @file
+ * eaf_map_low is a sorted associative container that contains data structures
+ * with unique keys. Keys are sorted by using the comparison function Compare.
+ * Search, removal, and insertion operations have logarithmic complexity. Maps
+ * are usually implemented as red-black trees.
+ * Low level operation are available for advanced usage.
+ */
 #ifndef __EAF_UTILS_MAP_LOW_H__
 #define __EAF_UTILS_MAP_LOW_H__
 #ifdef __cplusplus
@@ -6,16 +13,19 @@ extern "C" {
 
 #include <stddef.h>
 
+/**
+ * @brief eaf_map_low initializer.
+ */
 #define EAF_MAP_LOW_INIT	((eaf_map_low_t){ NULL })
 
 /**
-* 辅助查找工具
-* @param ret			返回结果
-* @param p_table		eaf_map_low_t*
-* @param USER_TYPE		用户类型
-* @param user			用户数据
-* @param user_vs_orig	对比规则
-*/
+ * @brief find helper
+ * @param ret			result
+ * @param p_table		eaf_map_low_t*
+ * @param USER_TYPE		user type
+ * @param user			user data
+ * @param user_vs_orig	compare rule
+ */
 #define EAF_MAP_LOW_FIND_HELPER(ret, p_table, USER_TYPE, user, user_vs_orig)	\
 	do {\
 		int flag_success = 0;\
@@ -41,13 +51,13 @@ extern "C" {
 	} while (0)
 
 /**
-* 辅助插入工具
-* @param ret				返回结果，eaf_errno
-* @param p_table			eaf_map_low_t*
-* @param DATA_TYPE			用户数据类型
-* @param data				用户数据地址
-* @param orig_vs_data		data与orig的对比结果
-*/
+ * @brief insert helper
+ * @param ret				result
+ * @param p_table			eaf_map_low_t*
+ * @param USER_TYPE			user type
+ * @param user				address
+ * @param user_vs_orig		compare rule
+ */
 #define EAF_MAP_LOW_INSERT_HELPER(ret, p_table, USER_TYPE, user, user_vs_orig)	\
 	do {\
 		int flag_failed = 0;\
@@ -75,26 +85,81 @@ extern "C" {
 		eaf_map_low_insert_color(&(user)->node, __table);\
 	} while (0)
 
+/**
+ * @brief eaf_map_low node
+ */
 typedef struct eaf_map_low_node
 {
-	struct eaf_map_low_node*	__rb_parent_color;	/** 父节点|颜色 */
-	struct eaf_map_low_node*	rb_right;			/** 右子节点 */
-	struct eaf_map_low_node*	rb_left;			/** 左子节点 */
+	struct eaf_map_low_node*	__rb_parent_color;	/**< parent node | color */
+	struct eaf_map_low_node*	rb_right;			/**< right node */
+	struct eaf_map_low_node*	rb_left;			/**< left node */
 }eaf_map_low_node_t;
 
+/**
+ * @brief red-black tree
+ */
 typedef struct eaf_map_low
 {
-	eaf_map_low_node_t*			rb_root;			/** 根元素节点 */
+	eaf_map_low_node_t*			rb_root;			/**< root node */
 }eaf_map_low_t;
 
-eaf_map_low_node_t* eaf_map_low_first(const eaf_map_low_t *root);
+/**
+ * @brief Returns an iterator to the beginning
+ * @param root		The pointer to the map
+ * @return			An iterator
+ */
+eaf_map_low_node_t* eaf_map_low_first(const eaf_map_low_t* root);
+
+/**
+ * @brief Returns an iterator to the end
+ * @param root		The pointer to the map
+ * @return			An iterator
+ */
 eaf_map_low_node_t* eaf_map_low_last(const eaf_map_low_t* root);
 
+/**
+ * @brief Get an iterator next to the given one.
+ * @param node		Current iterator
+ * @return			Next iterator
+ */
 eaf_map_low_node_t* eaf_map_low_next(const eaf_map_low_node_t* node);
+
+/**
+ * @brief Get an iterator before the given one.
+ * @param node		Current iterator
+ * @return			Previous iterator
+ */
 eaf_map_low_node_t* eaf_map_low_prev(const eaf_map_low_node_t* node);
 
+/**
+ * @brief Inserting data into the tree.
+ *
+ * The insert instead must be implemented
+ * in two steps: First, the code must insert the element in order as a red leaf
+ * in the tree, and then the support library function #eaf_map_low_insert_color
+ * must be called.
+ *
+ * @param node		The node you want to insert
+ * @param parent	The position you want to insert
+ * @param rb_link	Child of parent
+ * @see eaf_map_low_insert_color
+ */
 void eaf_map_low_link_node(eaf_map_low_node_t* node, eaf_map_low_node_t* parent, eaf_map_low_node_t** rb_link);
+
+/**
+ * @brief rebalancing ("recoloring") the tree.
+ * @param node		The node just linked
+ * @param root		The map
+ * @see eaf_map_low_link_node
+ */
 void eaf_map_low_insert_color(eaf_map_low_node_t* node, eaf_map_low_t* root);
+
+/**
+ * @brief Delete the node from the map.
+ * @warning The node must already in the map.
+ * @param root		The pointer to the map
+ * @param node		The node
+ */
 void eaf_map_low_erase(eaf_map_low_t* root, eaf_map_low_node_t* node);
 
 #ifdef __cplusplus

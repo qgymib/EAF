@@ -1,8 +1,6 @@
 /** @file
- * eaf_map_t is a sorted associative container that contains data structures
- * with unique keys. Keys are sorted by using the comparison function Compare.
- * Search, removal, and insertion operations have logarithmic complexity. Maps
- * are usually implemented as red-black trees.
+ * eaf_map is a high level wrapper for eaf_map_low
+ * @see eaf_map_low
  */
 #ifndef __EAF_UTILS_MAP_H__
 #define __EAF_UTILS_MAP_H__
