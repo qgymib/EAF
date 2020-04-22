@@ -45,6 +45,28 @@ TEST_CLASS_TEAREDOWN(eaf_map)
 	// do nothing
 }
 
+TEST_F(eaf_map, insert_r)
+{
+	/* reset */
+	eaf_map_init(&s_eaf_map_table, _test_eaf_map_on_cmp, NULL);
+
+	int i;
+	for (i = (int)EAF_ARRAY_SIZE(s_eaf_map_node) - 1; i >= 0; i--)
+	{
+		ASSERT_NUM_EQ(eaf_map_insert(&s_eaf_map_table, &s_eaf_map_node[i].node), 0);
+	}
+
+	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+}
+
+TEST_F(eaf_map, insert_duplicate)
+{
+	test_eaf_map_node_t tmp_node = s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2];
+	ASSERT_NUM_LT(eaf_map_insert(&s_eaf_map_table, &tmp_node.node), 0);
+
+	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+}
+
 TEST_F(eaf_map, erase)
 {
 	eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2].node);
@@ -59,26 +81,24 @@ TEST_F(eaf_map, erase)
 	}
 }
 
-TEST_F(eaf_map, insert)
+TEST_F(eaf_map, erase_l)
 {
-	/* reset */
-	eaf_map_init(&s_eaf_map_table, _test_eaf_map_on_cmp, NULL);
-
-	int i;
-	for (i = (int)EAF_ARRAY_SIZE(s_eaf_map_node) - 1; i >= 0 ; i--)
+	size_t i;
+	for (i = 0; i < EAF_ARRAY_SIZE(s_eaf_map_node); i++)
 	{
-		ASSERT_NUM_EQ(eaf_map_insert(&s_eaf_map_table, &s_eaf_map_node[i].node), 0);
+		eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[i].node);
 	}
-
-	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), 0);
 }
 
-TEST_F(eaf_map, insert_duplicate)
+TEST_F(eaf_map, erase_r)
 {
-	test_eaf_map_node_t tmp_node = s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2];
-	ASSERT_NUM_LT(eaf_map_insert(&s_eaf_map_table, &tmp_node.node), 0);
-
-	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+	int i;
+	for (i = EAF_ARRAY_SIZE(s_eaf_map_node) - 1; i >= 0; i--)
+	{
+		eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[i].node);
+	}
+	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), 0);
 }
 
 TEST_F(eaf_map, find)
