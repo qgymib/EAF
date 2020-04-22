@@ -1140,7 +1140,7 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 	/* notify RPC */
 	if (need_notify_rpc)
 	{
-		g_eaf_ctx->rpc->on_event_subscribe(srv_id, evt_id);
+		g_eaf_ctx->rpc->on_event_register(srv_id, evt_id);
 	}
 
 	return eaf_errno_success;
@@ -1192,7 +1192,7 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 	/* notify RPC */
 	if (need_notify_rpc)
 	{
-		g_eaf_ctx->rpc->on_event_unsubscribe(srv_id, evt_id);
+		g_eaf_ctx->rpc->on_event_unregister(srv_id, evt_id);
 	}
 
 	EAF_FREE(record);
