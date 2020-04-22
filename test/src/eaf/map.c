@@ -59,6 +59,20 @@ TEST_F(eaf_map, erase)
 	}
 }
 
+TEST_F(eaf_map, insert)
+{
+	/* reset */
+	eaf_map_init(&s_eaf_map_table, _test_eaf_map_on_cmp, NULL);
+
+	int i;
+	for (i = (int)EAF_ARRAY_SIZE(s_eaf_map_node) - 1; i >= 0 ; i--)
+	{
+		ASSERT_NUM_EQ(eaf_map_insert(&s_eaf_map_table, &s_eaf_map_node[i].node), 0);
+	}
+
+	ASSERT_NUM_EQ(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+}
+
 TEST_F(eaf_map, insert_duplicate)
 {
 	test_eaf_map_node_t tmp_node = s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2];
