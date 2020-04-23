@@ -85,7 +85,7 @@ int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
 		goto err_free;
 	}
 
-	static eaf_service_info_t service_info = { 0, NULL, _powerpack_on_init, _powerpack_on_exit };
+	static eaf_entrypoint_t service_info = { 0, NULL, _powerpack_on_init, _powerpack_on_exit };
 	if ((ret = eaf_register(cfg->service_id, &service_info)) < 0)
 	{
 		goto err_close;

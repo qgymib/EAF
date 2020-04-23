@@ -81,7 +81,7 @@ TEST_CLASS_SETUP(benchmark)
 	static eaf_message_table_t s1_msg[] = {
 		{ TEST_SERVICE_S1_REQ, _test_powerpack_benchmark_message_s1_on_req }
 	};
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		EAF_ARRAY_SIZE(s1_msg), s1_msg,
 		_test_powerpack_benchmark_message_on_init,
 		_test_powerpack_benchmark_message_on_exit,
@@ -92,7 +92,7 @@ TEST_CLASS_SETUP(benchmark)
 	static eaf_message_table_t s2_msg[] = {
 		{ TEST_SERVICE_S2_REQ, _test_powerpack_benchmark_message_s2_on_req }
 	};
-	static eaf_service_info_t s2_info = {
+	static eaf_entrypoint_t s2_info = {
 		EAF_ARRAY_SIZE(s2_msg), s2_msg,
 		_test_powerpack_benchmark_message_on_init,
 		_test_powerpack_benchmark_message_on_exit,

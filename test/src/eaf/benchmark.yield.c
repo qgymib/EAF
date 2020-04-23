@@ -87,7 +87,7 @@ static void _benchmark_yield_setup(size_t count)
 	static eaf_message_table_t s1_msg_table[] = {
 		{ TEST_SERVICE_S1_REQ, _test_benchmark_yield_s1_on_req },
 	};
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		EAF_ARRAY_SIZE(s1_msg_table), s1_msg_table,
 		_test_benchmark_yield_on_init,
 		_test_benchmark_yield_on_exit,
@@ -98,7 +98,7 @@ static void _benchmark_yield_setup(size_t count)
 	static eaf_message_table_t s2_msg_table[] = {
 		{ TEST_SERVICE_S2_REQ, _test_benchmark_yield_s2_on_req },
 	};
-	static eaf_service_info_t s2_info = {
+	static eaf_entrypoint_t s2_info = {
 		EAF_ARRAY_SIZE(s2_msg_table), s2_msg_table,
 		_test_benchmark_yield_on_init,
 		_test_benchmark_yield_on_exit,

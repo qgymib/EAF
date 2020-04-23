@@ -81,12 +81,12 @@ extern "C" {
  * {
  *     // define entrypoint here.
  *     // note: entrypoint must global accessable
- *     static eaf_service_info_t entrypoint = {
+ *     static eaf_entrypoint_t entry = {
  *         0, NULL,
  *         _example_init,
  *         _example_exit,
  *     };
- *     return eaf_register(EXAMPLE_SERVICE_ID, &entrypoint);
+ *     return eaf_register(EXAMPLE_SERVICE_ID, &entry);
  * }
  * ```
  *

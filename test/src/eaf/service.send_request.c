@@ -77,7 +77,7 @@ TEST_CLASS_SETUP(eaf_service)
 	static eaf_message_table_t s1_msg_table[] = {
 		{ TEST_SERVICE_S1_MSG, _test_send_request_s1_on_req },
 	};
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		EAF_ARRAY_SIZE(s1_msg_table), s1_msg_table,
 		_test_send_request_s1_on_init,
 		_test_send_request_s1_on_exit,
@@ -88,7 +88,7 @@ TEST_CLASS_SETUP(eaf_service)
 	static eaf_message_table_t s2_msg_table[] = {
 		{ TEST_SERVICE_S2_MSG, _test_send_request_s2_on_req },
 	};
-	static eaf_service_info_t s2_info = {
+	static eaf_entrypoint_t s2_info = {
 		EAF_ARRAY_SIZE(s2_msg_table), s2_msg_table,
 		_test_send_request_s2_on_init,
 		_test_send_request_s2_on_exit,

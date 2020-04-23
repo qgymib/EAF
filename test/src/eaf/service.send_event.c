@@ -76,7 +76,7 @@ TEST_CLASS_SETUP(eaf_service)
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		0, NULL,
 		_test_send_event_s1_on_init,
 		_test_send_event_s1_on_exit,
@@ -84,7 +84,7 @@ TEST_CLASS_SETUP(eaf_service)
 	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
-	static eaf_service_info_t s2_info = {
+	static eaf_entrypoint_t s2_info = {
 		0, NULL,
 		_test_send_event_s2_on_init,
 		_test_send_event_s2_on_exit,

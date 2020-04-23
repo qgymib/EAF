@@ -80,7 +80,7 @@ TEST_CLASS_SETUP(powerpack_message)
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* ²¿Êð·þÎñS1 */
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		0, NULL,
 		_test_powerpack_message_s1_on_init,
 		_test_powerpack_message_on_exit,
@@ -91,7 +91,7 @@ TEST_CLASS_SETUP(powerpack_message)
 	static eaf_message_table_t s2_msg[] = {
 		{ TEST_SERVICE_S2_REQ, _test_powerpack_message_s2_on_req }
 	};
-	static eaf_service_info_t s2_info = {
+	static eaf_entrypoint_t s2_info = {
 		EAF_ARRAY_SIZE(s2_msg), s2_msg,
 		_test_powerpack_message_s2_on_init,
 		_test_powerpack_message_on_exit,

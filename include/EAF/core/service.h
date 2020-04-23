@@ -54,7 +54,7 @@ typedef struct eaf_message_table
 /**
  * @brief Service initialize info
  */
-typedef struct eaf_service_info
+typedef struct eaf_entrypoint
 {
 	size_t							msg_table_size;	/**< The sizeof request table */
 	const eaf_message_table_t*		msg_table;		/**< Request table */
@@ -69,7 +69,7 @@ typedef struct eaf_service_info
 	 * @brief Exit callback
 	 */
 	void (*on_exit)(void);
-}eaf_service_info_t;
+}eaf_entrypoint_t;
 
 /**
  * @brief Service configure
@@ -150,10 +150,10 @@ int eaf_cleanup(void);
  * @see eaf_setup
  * @see eaf_load
  * @param srv_id	Service ID
- * @param info		Service info. Must be globally accessible.
+ * @param entry		Service entrypoint. Must be globally accessible.
  * @return			#eaf_errno
  */
-int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_service_info_t* info /*static*/);
+int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
 
 /**
  * @brief Subscribe event.

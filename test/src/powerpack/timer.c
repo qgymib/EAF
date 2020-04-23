@@ -54,7 +54,7 @@ TEST_CLASS_SETUP(powerpack_timer)
 	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* ²¿Êð·þÎñS1 */
-	static eaf_service_info_t s1_info = {
+	static eaf_entrypoint_t s1_info = {
 		0, NULL,
 		_test_powerpack_timer_on_init,
 		_test_powerpack_timer_on_exit,

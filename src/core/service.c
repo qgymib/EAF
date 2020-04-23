@@ -154,7 +154,7 @@ typedef struct eaf_subscribe_record
 typedef struct eaf_service
 {
 	eaf_service_state_t				state;		/** 状态 */
-	const eaf_service_info_t*		load;		/** 加载信息 */
+	const eaf_entrypoint_t*			entry;		/** 加载信息 */
 
 	struct
 	{
@@ -462,7 +462,7 @@ static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_
 */
 static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 {
-	int ret = service->load->on_init();
+	int ret = service->entry->on_init();
 
 	/* 检查是否执行yield */
 	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
@@ -522,13 +522,13 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 	{
 		CUR_RUN_SET_BY_IDX(group, *idx);
 
-		if (CUR_RUN(group)->load == NULL || CUR_RUN(group)->load->on_init == NULL)
+		if (CUR_RUN(group)->entry == NULL || CUR_RUN(group)->entry->on_init == NULL)
 		{
 			continue;
 		}
 
 		CLEAR_CC0(group);
-		int ret = CUR_RUN(group)->load->on_init();
+		int ret = CUR_RUN(group)->entry->on_init();
 
 		/* 检查是否执行yield */
 		if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
@@ -611,10 +611,10 @@ cleanup:
 		CUR_RUN_SET_BY_IDX(group, i);
 		_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_exit);
 
-		if (group->service.table[i].load != NULL
-			&& group->service.table[i].load->on_exit != NULL)
+		if (group->service.table[i].entry != NULL
+			&& group->service.table[i].entry->on_exit != NULL)
 		{
-			CUR_RUN(group)->load->on_exit();
+			CUR_RUN(group)->entry->on_exit();
 		}
 	}
 }
@@ -777,11 +777,11 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	/* 查找消息处理函数 */
 	size_t i;
 	eaf_req_handle_fn msg_proc = NULL;
-	for (i = 0; i < service->load->msg_table_size; i++)
+	for (i = 0; i < service->entry->msg_table_size; i++)
 	{
-		if (service->load->msg_table[i].msg_id == req->id)
+		if (service->entry->msg_table[i].msg_id == req->id)
 		{
-			msg_proc = service->load->msg_table[i].fn;
+			msg_proc = service->entry->msg_table[i].fn;
 			break;
 		}
 	}
@@ -1046,7 +1046,7 @@ int eaf_cleanup(void)
 	return eaf_errno_success;
 }
 
-int eaf_register(_In_ uint32_t id, _In_ const eaf_service_info_t* info)
+int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 {
 	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_init)
 	{
@@ -1073,7 +1073,7 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_service_info_t* info)
 		return eaf_errno_notfound;
 	}
 
-	if (service->load != NULL)
+	if (service->entry != NULL)
 	{
 		return eaf_errno_duplicate;
 	}
@@ -1087,7 +1087,7 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_service_info_t* info)
 		g_eaf_ctx->rpc->on_service_register(&service_info);
 	}
 
-	service->load = info;
+	service->entry = entry;
 	return eaf_errno_success;
 }
 
