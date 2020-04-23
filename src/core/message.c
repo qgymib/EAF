@@ -33,7 +33,7 @@ static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 	EAF_FREE(msg);
 }
 
-eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rsp_fn)
+eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size, _In_ eaf_rsp_handle_fn rsp_fn)
 {
 	eaf_msg_full_t* msg = _eaf_msg_create(eaf_msg_type_req, msg_id, size);
 	if (msg == NULL)
@@ -47,7 +47,7 @@ eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rs
 	return EAF_MSG_C2I(msg);
 }
 
-eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size)
+eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size)
 {
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(req);
 	eaf_msg_full_t* msg = _eaf_msg_create(eaf_msg_type_rsp, req->id, size);
@@ -62,7 +62,7 @@ eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size)
 	return EAF_MSG_C2I(msg);
 }
 
-eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size)
+eaf_msg_t* eaf_msg_create_evt(_In_ uint32_t evt_id, _In_ size_t size)
 {
 	eaf_msg_full_t* msg = _eaf_msg_create(eaf_msg_type_evt, evt_id, size);
 	if (msg == NULL)
@@ -76,7 +76,7 @@ eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size)
 	return EAF_MSG_C2I(msg);
 }
 
-void eaf_msg_add_ref(eaf_msg_t* msg)
+void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg)
 {
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 
@@ -87,7 +87,7 @@ void eaf_msg_add_ref(eaf_msg_t* msg)
 	eaf_compat_lock_leave(&real_req->objlock);
 }
 
-void eaf_msg_dec_ref(eaf_msg_t* msg)
+void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg)
 {
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 
@@ -106,7 +106,7 @@ void eaf_msg_dec_ref(eaf_msg_t* msg)
 	_eaf_msg_destroy(real_req);
 }
 
-void* eaf_msg_get_data(eaf_msg_t* msg, size_t* size)
+void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size)
 {
 	eaf_msg_full_t* real_req = EAF_MSG_I2C(msg);
 

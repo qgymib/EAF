@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 #include "EAF/core/message.h"
+#include "EAF/utils/annotations.h"
 
 /**
  * @brief Service info
@@ -36,7 +37,7 @@ typedef struct eaf_rpc_cfg
 	 * @brief Service registered.
 	 * @param info	service info
 	 */
-	void(*on_service_register)(eaf_rpc_service_info_t* info);
+	void(*on_service_register)(_In_ const eaf_rpc_service_info_t* info);
 
 	/**
 	 * Initialize process must finish.
@@ -56,21 +57,21 @@ typedef struct eaf_rpc_cfg
 	 * @param service_id	service id
 	 * @param event_id		event id
 	 */
-	void(*on_event_register)(uint32_t service_id, uint32_t event_id);
+	void(*on_event_subscribe)(_In_ uint32_t service_id, _In_ uint32_t event_id);
 
 	/**
 	 * @brief Callback when service unregister a event.
 	 * @param service_id	service id
 	 * @param event_id		event id
 	 */
-	void(*on_event_unregister)(uint32_t service_id, uint32_t event_id);
+	void(*on_event_unsubscribe)(_In_ uint32_t service_id, _In_ uint32_t event_id);
 
 	/**
 	 * @brief Send message to remote
 	 * @param msg			message
 	 * @return				#eaf_errno
 	 */
-	int(*send_msg)(eaf_msg_t* msg);
+	int(*send_msg)(_Inout_ eaf_msg_t* msg);
 }eaf_rpc_cfg_t;
 
 /**
@@ -79,14 +80,14 @@ typedef struct eaf_rpc_cfg
  * @return		eaf_errno
  * @see			eaf_errno_t
  */
-int eaf_rpc_init(const eaf_rpc_cfg_t* cfg /*static*/);
+int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg /*static*/);
 
 /**
  * @brief Handle incoming RPC message
  * @param msg	incoming message
  * @return		eaf_errno
  */
-int eaf_rpc_income(eaf_msg_t* msg);
+int eaf_rpc_income(_Inout_ eaf_msg_t* msg);
 
 #ifdef __cplusplus
 }

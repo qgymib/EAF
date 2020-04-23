@@ -874,7 +874,7 @@ static int _eaf_send_evt(uint32_t from, eaf_msg_t* evt, int rpc)
 	return eaf_errno_success;
 }
 
-int eaf_setup(const eaf_group_table_t* info, size_t size)
+int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
 {
 	size_t i;
 	if (g_eaf_ctx != NULL)
@@ -1046,7 +1046,7 @@ int eaf_cleanup(void)
 	return eaf_errno_success;
 }
 
-int eaf_register(uint32_t id, const eaf_service_info_t* info)
+int eaf_register(_In_ uint32_t id, _In_ const eaf_service_info_t* info)
 {
 	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_init)
 	{
@@ -1091,7 +1091,7 @@ int eaf_register(uint32_t id, const eaf_service_info_t* info)
 	return eaf_errno_success;
 }
 
-int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg)
+int eaf_subscribe(_In_ uint32_t srv_id, _In_ uint32_t evt_id, _In_ eaf_evt_handle_fn fn, _In_ void* arg)
 {
 	/* ·Ç¹¤×÷×´Ì¬½ûÖ¹¶©ÔÄ */
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
@@ -1140,13 +1140,13 @@ int eaf_subscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* 
 	/* notify RPC */
 	if (need_notify_rpc)
 	{
-		g_eaf_ctx->rpc->on_event_register(srv_id, evt_id);
+		g_eaf_ctx->rpc->on_event_subscribe(srv_id, evt_id);
 	}
 
 	return eaf_errno_success;
 }
 
-int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void* arg)
+int eaf_unsubscribe(_In_ uint32_t srv_id, _In_ uint32_t evt_id, _In_ eaf_evt_handle_fn fn, _In_ void* arg)
 {
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
@@ -1192,29 +1192,29 @@ int eaf_unsubscribe(uint32_t srv_id, uint32_t evt_id, eaf_evt_handle_fn fn, void
 	/* notify RPC */
 	if (need_notify_rpc)
 	{
-		g_eaf_ctx->rpc->on_event_unregister(srv_id, evt_id);
+		g_eaf_ctx->rpc->on_event_unsubscribe(srv_id, evt_id);
 	}
 
 	EAF_FREE(record);
 	return eaf_errno_success;
 }
 
-int eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
+int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 {
 	return _eaf_send_req(from, to, req, 1);
 }
 
-int eaf_send_rsp(uint32_t from, eaf_msg_t* rsp)
+int eaf_send_rsp(_In_ uint32_t from, _Inout_ eaf_msg_t* rsp)
 {
 	return _eaf_send_rsp(from, rsp, 1);
 }
 
-int eaf_send_evt(uint32_t from, eaf_msg_t* evt)
+int eaf_send_evt(_In_ uint32_t from, _Inout_ eaf_msg_t* evt)
 {
 	return _eaf_send_evt(from, evt, 1);
 }
 
-int eaf_resume(uint32_t srv_id)
+int eaf_resume(_In_ uint32_t srv_id)
 {
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(srv_id, &group);
@@ -1249,7 +1249,7 @@ int eaf_resume(uint32_t srv_id)
 	return ret;
 }
 
-eaf_service_local_t* eaf_service_get_local(eaf_group_local_t** local)
+eaf_service_local_t* eaf_service_get_local(_Outptr_ eaf_group_local_t** local)
 {
 	if (g_eaf_ctx == NULL)
 	{
@@ -1271,7 +1271,7 @@ eaf_service_local_t* eaf_service_get_local(eaf_group_local_t** local)
 	return &service->coroutine.local;
 }
 
-int eaf_rpc_init(const eaf_rpc_cfg_t* cfg)
+int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg)
 {
 	if (g_eaf_ctx->rpc != NULL)
 	{
@@ -1285,7 +1285,7 @@ int eaf_rpc_init(const eaf_rpc_cfg_t* cfg)
 	return eaf_errno_success;
 }
 
-int eaf_rpc_income(eaf_msg_t* msg)
+int eaf_rpc_income(_Inout_ eaf_msg_t* msg)
 {
 	switch (msg->type)
 	{

@@ -9,6 +9,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
+#include "EAF/utils/annotations.h"
 
 struct eaf_msg;
 
@@ -27,20 +28,20 @@ typedef enum eaf_msg_type
  * @brief Prototype for request handler
  * @param req		Request
  */
-typedef void(*eaf_req_handle_fn)(struct eaf_msg* req);
+typedef void(*eaf_req_handle_fn)(_Inout_ struct eaf_msg* req);
 
 /**
  * @brief Prototype for response handler
  * @param rsp		Response
  */
-typedef void(*eaf_rsp_handle_fn)(struct eaf_msg* rsp);
+typedef void(*eaf_rsp_handle_fn)(_Inout_ struct eaf_msg* rsp);
 
 /**
  * @brief Prototype for event handler
  * @param evt		Event
  * @param arg		User defined argument
  */
-typedef void(*eaf_evt_handle_fn)(struct eaf_msg* evt, void* arg);
+typedef void(*eaf_evt_handle_fn)(_Inout_ struct eaf_msg* evt, void* arg);
 
 /**
  * @brief A communicate structure
@@ -70,7 +71,8 @@ typedef struct eaf_msg
  * @param rsp_fn	The response handler for the response
  * @return			The pointer of the request
  */
-eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rsp_fn);
+eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
+	_In_ eaf_rsp_handle_fn rsp_fn);
 
 /**
  * @brief Create response.
@@ -79,7 +81,7 @@ eaf_msg_t* eaf_msg_create_req(uint32_t msg_id, size_t size, eaf_rsp_handle_fn rs
  * @param size		The size of user structure
  * @return			The pointer of the response
  */
-eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size);
+eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size);
 
 /**
  * @brief Create event.
@@ -87,19 +89,19 @@ eaf_msg_t* eaf_msg_create_rsp(eaf_msg_t* req, size_t size);
  * @param size		The size of user structure
  * @return			The pointer of the event
  */
-eaf_msg_t* eaf_msg_create_evt(uint32_t evt_id, size_t size);
+eaf_msg_t* eaf_msg_create_evt(_In_ uint32_t evt_id, _In_ size_t size);
 
 /**
  * @brief Add reference count
  * @param msg		The message you want to add reference
  */
-void eaf_msg_add_ref(eaf_msg_t* msg);
+void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg);
 
 /**
  * @brief Reduce reference count
  * @param msg		The message you want to add reference
  */
-void eaf_msg_dec_ref(eaf_msg_t* msg);
+void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
 
 /**
  * @brief Get user structure address.
@@ -107,7 +109,7 @@ void eaf_msg_dec_ref(eaf_msg_t* msg);
  * @param size		The size of user structure
  * @return			The address of user structure
  */
-void* eaf_msg_get_data(eaf_msg_t* msg, size_t* size);
+void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size);
 
 #ifdef __cplusplus
 }

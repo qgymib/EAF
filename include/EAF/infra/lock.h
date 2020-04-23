@@ -1,42 +1,52 @@
+/** @file
+ * Lock operations.
+ */
 #ifndef __EAF_INFRA_LOCK_H__
 #define __EAF_INFRA_LOCK_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct eaf_lock;
+#include "EAF/utils/annotations.h"
+
+/**
+ * @brief Lock instance
+ */
 typedef struct eaf_lock eaf_lock_t;
 
+/**
+ * @brief Lock attribute
+ */
 typedef enum eaf_lock_attr
 {
-	eaf_lock_attr_normal,		/** normal lock */
-	eaf_lock_attr_recursive,	/** recursive lock */
+	eaf_lock_attr_normal,		/**< Normal lock */
+	eaf_lock_attr_recursive,	/**< Recursive lock */
 }eaf_lock_attr_t;
 
 /**
-* create a lock
-* @param attr	attribute
-* @return		lock handler
-*/
-eaf_lock_t* eaf_lock_create(eaf_lock_attr_t attr);
+ * @brief Create a lock
+ * @param attr	attribute
+ * @return		lock handler
+ */
+eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr);
 
 /**
-* destroy a lock
-* @param handler	the lock you want to destroy
-*/
-void eaf_lock_destroy(eaf_lock_t* handler);
+ * @brief Destroy a lock
+ * @param handler	the lock you want to destroy
+ */
+void eaf_lock_destroy(_Inout_ eaf_lock_t* handler);
 
 /**
-* Enter critical section
-* @param handler	the lock
-*/
-void eaf_lock_enter(eaf_lock_t* handler);
+ * @brief Enter critical section
+ * @param handler	the lock
+ */
+void eaf_lock_enter(_Inout_ eaf_lock_t* handler);
 
 /**
-* Leave critical section
-* @param handler	the lock
-*/
-void eaf_lock_leave(eaf_lock_t* handler);
+ * @brief Leave critical section
+ * @param handler	the lock
+ */
+void eaf_lock_leave(_Inout_ eaf_lock_t* handler);
 
 #ifdef __cplusplus
 }

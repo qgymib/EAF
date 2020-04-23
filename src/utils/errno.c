@@ -15,7 +15,7 @@ static eaf_errno_table_t err_table[] = {
 #undef __EAF_HEADER_MULTI_READ__
 };
 
-const char* eaf_strerror(int err)
+const char* eaf_strerror(_In_ int err)
 {
 	size_t i;
 	for (i = 0; i < (sizeof(err_table) / sizeof(err_table[0])); i++)

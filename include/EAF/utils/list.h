@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include "EAF/utils/annotations.h"
 
 /**
  * @brief The list node.
@@ -50,7 +51,7 @@ typedef struct eaf_list
  * @brief Initialize Double Linked List.
  * @param handler	Pointer to list
  */
-void eaf_list_init(eaf_list_t* handler);
+void eaf_list_init(_Out_ eaf_list_t* handler);
 
 /**
  * @brief Insert a node to the head of the list.
@@ -58,7 +59,8 @@ void eaf_list_init(eaf_list_t* handler);
  * @param handler	Pointer to list
  * @param node		Pointer to a new node
  */
-void eaf_list_push_front(eaf_list_t* handler, eaf_list_node_t* node);
+void eaf_list_push_front(_Inout_ eaf_list_t* handler,
+	_Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Insert a node to the tail of the list.
@@ -66,7 +68,8 @@ void eaf_list_push_front(eaf_list_t* handler, eaf_list_node_t* node);
  * @param handler	Pointer to list
  * @param node		Pointer to a new node
  */
-void eaf_list_push_back(eaf_list_t* handler, eaf_list_node_t* node);
+void eaf_list_push_back(_Inout_ eaf_list_t* handler,
+	_Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Insert a node in front of a given node.
@@ -75,7 +78,8 @@ void eaf_list_push_back(eaf_list_t* handler, eaf_list_node_t* node);
  * @param pos		Pointer to a exist node
  * @param node		Pointer to a new node
  */
-void eaf_list_insert_before(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_node_t* node);
+void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
+	_Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Insert a node right after a given node.
@@ -84,7 +88,8 @@ void eaf_list_insert_before(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_
  * @param pos		Pointer to a exist node
  * @param node		Pointer to a new node
  */
-void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_node_t* node);
+void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
+	_Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Delete a exist node
@@ -92,42 +97,43 @@ void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_n
  * @param handler	Pointer to list
  * @param node		The node you want to delete
  */
-void eaf_list_erase(eaf_list_t* handler, eaf_list_node_t* node);
+void eaf_list_erase(_Inout_ eaf_list_t* handler,
+	_Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Get the number of nodes in the list.
  * @param handler	Pointer to list
  * @return			The number of nodes
  */
-size_t eaf_list_size(const eaf_list_t* handler);
+size_t eaf_list_size(_In_ const eaf_list_t* handler);
 
 /**
  * @brief Get the first node and remove it from the list.
  * @param handler	Pointer to list
  * @return			The first node
  */
-eaf_list_node_t* eaf_list_pop_front(eaf_list_t* handler);
+eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler);
 
 /**
  * @brief Get the last node and remove it from the list.
  * @param handler	Pointer to list
  * @return			The last node
  */
-eaf_list_node_t* eaf_list_pop_back(eaf_list_t* handler);
+eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler);
 
 /**
  * @brief Get the last node.
  * @param handler	Pointer to list
  * @return			The first node
  */
-eaf_list_node_t* eaf_list_begin(const eaf_list_t* handler);
+eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler);
 
 /**
  * @brief Get the last node.
  * @param handler	The handler of list
  * @return			The last node
  */
-eaf_list_node_t* eaf_list_end(const eaf_list_t* handler);
+eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler);
 
 /**
 * @brief Get next node.
@@ -135,7 +141,8 @@ eaf_list_node_t* eaf_list_end(const eaf_list_t* handler);
 * @param node		Current node
 * @return			The next node
 */
-eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t* node);
+eaf_list_node_t* eaf_list_next(_In_ const eaf_list_t* handler,
+	_In_ const eaf_list_node_t* node);
 
 /**
  * @brief Get previous node.
@@ -143,7 +150,8 @@ eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t*
  * @param node		current node
  * @return			previous node
  */
-eaf_list_node_t* eaf_list_prev(const eaf_list_t* handler, const eaf_list_node_t* node);
+eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_t* handler,
+	_In_ const eaf_list_node_t* node);
 
 #ifdef __cplusplus
 }

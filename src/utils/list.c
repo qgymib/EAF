@@ -10,12 +10,12 @@ static void _list_lite_set_once(eaf_list_t* handler, eaf_list_node_t* node)
 	handler->size = 1;
 }
 
-void eaf_list_init(eaf_list_t* handler)
+void eaf_list_init(_Out_ eaf_list_t* handler)
 {
 	memset(handler, 0, sizeof(*handler));
 }
 
-void eaf_list_push_back(eaf_list_t* handler, eaf_list_node_t* node)
+void eaf_list_push_back(_Inout_ eaf_list_t* handler, _Inout_ eaf_list_node_t* node)
 {
 	if (handler->head == NULL)
 	{
@@ -30,7 +30,7 @@ void eaf_list_push_back(eaf_list_t* handler, eaf_list_node_t* node)
 	handler->size++;
 }
 
-void eaf_list_insert_before(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_node_t* node)
+void eaf_list_insert_before(_Inout_ eaf_list_t* handler, _Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
 {
 	if (handler->head == pos)
 	{
@@ -45,7 +45,7 @@ void eaf_list_insert_before(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_
 	handler->size++;
 }
 
-void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_node_t* node)
+void eaf_list_insert_after(_Inout_ eaf_list_t* handler, _Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
 {
 	if (handler->tail == pos)
 	{
@@ -60,7 +60,7 @@ void eaf_list_insert_after(eaf_list_t* handler, eaf_list_node_t* pos, eaf_list_n
 	handler->size++;
 }
 
-void eaf_list_push_front(eaf_list_t* handler, eaf_list_node_t* node)
+void eaf_list_push_front(_Inout_ eaf_list_t* handler, _Inout_ eaf_list_node_t* node)
 {
 	if (handler->head == NULL)
 	{
@@ -75,29 +75,29 @@ void eaf_list_push_front(eaf_list_t* handler, eaf_list_node_t* node)
 	handler->size++;
 }
 
-eaf_list_node_t* eaf_list_begin(const eaf_list_t* handler)
+eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler)
 {
 	return handler->head;
 }
 
-eaf_list_node_t* eaf_list_end(const eaf_list_t* handler)
+eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler)
 {
 	return handler->tail;
 }
 
-eaf_list_node_t* eaf_list_next(const eaf_list_t* handler, const eaf_list_node_t* node)
+eaf_list_node_t* eaf_list_next(_In_ const eaf_list_t* handler, _In_ const eaf_list_node_t* node)
 {
 	(void)handler;
 	return node->p_after;
 }
 
-eaf_list_node_t* eaf_list_prev(const eaf_list_t* handler, const eaf_list_node_t* node)
+eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_t* handler, _In_ const eaf_list_node_t* node)
 {
 	(void)handler;
 	return node->p_before;
 }
 
-void eaf_list_erase(eaf_list_t* handler, eaf_list_node_t* node)
+void eaf_list_erase(_Inout_ eaf_list_t* handler, _Inout_ eaf_list_node_t* node)
 {
 	handler->size--;
 
@@ -128,7 +128,7 @@ void eaf_list_erase(eaf_list_t* handler, eaf_list_node_t* node)
 	return;
 }
 
-eaf_list_node_t* eaf_list_pop_front(eaf_list_t* handler)
+eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler)
 {
 	eaf_list_node_t* node = handler->head;
 	if (node == NULL)
@@ -140,7 +140,7 @@ eaf_list_node_t* eaf_list_pop_front(eaf_list_t* handler)
 	return node;
 }
 
-eaf_list_node_t* eaf_list_pop_back(eaf_list_t* handler)
+eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler)
 {
 	eaf_list_node_t* node = handler->tail;
 	if (node == NULL)
@@ -152,7 +152,7 @@ eaf_list_node_t* eaf_list_pop_back(eaf_list_t* handler)
 	return node;
 }
 
-size_t eaf_list_size(const eaf_list_t* handler)
+size_t eaf_list_size(_In_ const eaf_list_t* handler)
 {
 	return handler->size;
 }
