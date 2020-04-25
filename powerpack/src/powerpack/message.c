@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 #include "powerpack.h"
 #include "message.h"
 

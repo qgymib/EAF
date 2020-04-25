@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "EAF/powerpack.h"
+#include "eaf/powerpack.h"
 #include "etest/etest.h"
 
 TEST_CLASS_SETUP(powerpack_ringbuffer)

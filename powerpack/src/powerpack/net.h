@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/powerpack/net.h"
+#include "eaf/powerpack/net.h"
 
 int eaf_powerpack_net_init(void);
 void eaf_powerpack_net_exit(void);

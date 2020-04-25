@@ -1,4 +1,4 @@
-#include "EAF/utils/errno.h"
+#include "eaf/utils/errno.h"
 #include "compat/lock.h"
 
 int eaf_compat_lock_init(eaf_compat_lock_t* handler, eaf_lock_attr_t attr)

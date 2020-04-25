@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "EAF/utils/map_low.h"
+#include "eaf/utils/map_low.h"
 
 /*
 * red-black trees properties:  http://en.wikipedia.org/wiki/Rbtree

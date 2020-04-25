@@ -9,7 +9,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
-#include "EAF/utils/annotations.h"
+#include "eaf/utils/annotations.h"
 
 struct eaf_msg;
 

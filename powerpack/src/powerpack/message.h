@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/powerpack/message.h"
+#include "eaf/powerpack/message.h"
 
 int eaf_powerpack_message_init(void);
 void eaf_powerpack_message_exit(void);

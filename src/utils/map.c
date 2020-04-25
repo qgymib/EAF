@@ -1,5 +1,5 @@
-#include "EAF/utils/errno.h"
-#include "EAF/utils/map.h"
+#include "eaf/utils/errno.h"
+#include "eaf/utils/map.h"
 
 void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp, _Inout_opt_ void* arg)
 {

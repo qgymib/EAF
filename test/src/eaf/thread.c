@@ -1,4 +1,4 @@
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 #include "etest/etest.h"
 
 static eaf_sem_t* s_eaf_thread_sem;

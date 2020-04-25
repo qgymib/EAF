@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-#include "EAF/core/message.h"
-#include "EAF/utils/annotations.h"
+#include "eaf/core/message.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief Service info

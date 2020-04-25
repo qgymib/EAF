@@ -9,8 +9,8 @@ extern "C" {
 #endif	/* __cplusplus */
 
 #include <stddef.h>
-#include "EAF/utils/map_low.h"
-#include "EAF/utils/annotations.h"
+#include "eaf/utils/map_low.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief The node for map

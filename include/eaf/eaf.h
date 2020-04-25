@@ -7,18 +7,18 @@
 extern "C" {
 #endif
 
-#include "EAF/core/message.h"
-#include "EAF/core/rpc.h"
-#include "EAF/core/service.h"
-#include "EAF/infra/lock.h"
-#include "EAF/infra/semaphore.h"
-#include "EAF/infra/thread.h"
-#include "EAF/utils/define.h"
-#include "EAF/utils/errno.h"
-#include "EAF/utils/list.h"
-#include "EAF/utils/log.h"
-#include "EAF/utils/map.h"
-#include "EAF/utils/map_low.h"
+#include "eaf/core/message.h"
+#include "eaf/core/rpc.h"
+#include "eaf/core/service.h"
+#include "eaf/infra/lock.h"
+#include "eaf/infra/semaphore.h"
+#include "eaf/infra/thread.h"
+#include "eaf/utils/define.h"
+#include "eaf/utils/errno.h"
+#include "eaf/utils/list.h"
+#include "eaf/utils/log.h"
+#include "eaf/utils/map.h"
+#include "eaf/utils/map_low.h"
 
 /** @mainpage EAF - Embedded Application Framework
  *

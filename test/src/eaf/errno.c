@@ -1,4 +1,4 @@
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 #include "etest/etest.h"
 
 TEST(eaf_errno, exist)

@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/core/service.h"
+#include "eaf/core/service.h"
 
 #if defined(_MSC_VER)
 #include <WinSock2.h>

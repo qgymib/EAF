@@ -8,8 +8,8 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-#include "EAF/utils/annotations.h"
-#include "EAF/utils/define.h"
+#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief switch-case label

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "EAF/infra/lock.h"
+#include "eaf/infra/lock.h"
 #include "utils/memory.h"
 #include "compat/lock.h"
 

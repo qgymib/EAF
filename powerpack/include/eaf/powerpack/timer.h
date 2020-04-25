@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/core/service.h"
+#include "eaf/core/service.h"
 
 #define eaf_sleep(ms)	\
 	do {\

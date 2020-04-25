@@ -1,5 +1,5 @@
 #include <errno.h>
-#include "EAF/utils/errno.h"
+#include "eaf/utils/errno.h"
 #include "compat/thread.h"
 #include "compat/semaphore.h"
 

@@ -1,4 +1,4 @@
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 #include "etest/etest.h"
 
 typedef struct test_eaf_list_node

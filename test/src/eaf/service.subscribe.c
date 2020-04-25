@@ -1,5 +1,5 @@
 #include "etest/etest.h"
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_EVT		(TEST_SERVICE_S1 + 0x0001)

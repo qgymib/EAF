@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-#include "EAF/utils/annotations.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief The list node.

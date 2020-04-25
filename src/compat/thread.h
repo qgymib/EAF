@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-#include "EAF/infra/thread.h"
-#include "EAF/core/service.h"
+#include "eaf/infra/thread.h"
+#include "eaf/core/service.h"
 #include "c_thread.h"
 
 struct eaf_compat_thread;

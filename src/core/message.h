@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-#include "EAF/core/message.h"
-#include "EAF/utils/define.h"
+#include "eaf/core/message.h"
+#include "eaf/utils/define.h"
 #include "compat/lock.h"
 
 /**

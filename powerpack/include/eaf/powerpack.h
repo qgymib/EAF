@@ -4,11 +4,11 @@
 extern "C" {
 #endif
 
-#include "EAF/eaf.h"
-#include "EAF/powerpack/message.h"
-#include "EAF/powerpack/net.h"
-#include "EAF/powerpack/ringbuffer.h"
-#include "EAF/powerpack/timer.h"
+#include "eaf/eaf.h"
+#include "eaf/powerpack/message.h"
+#include "eaf/powerpack/net.h"
+#include "eaf/powerpack/ringbuffer.h"
+#include "eaf/powerpack/timer.h"
 
 typedef struct eaf_powerpack_cfg
 {

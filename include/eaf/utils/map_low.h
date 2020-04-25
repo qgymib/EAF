@@ -12,7 +12,7 @@ extern "C" {
 #endif	/* __cplusplus */
 
 #include <stddef.h>
-#include "EAF/utils/annotations.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief eaf_map_low initializer.

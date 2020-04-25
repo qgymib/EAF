@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "EAF/infra/semaphore.h"
+#include "eaf/infra/semaphore.h"
 #include "utils/memory.h"
 #include "compat/semaphore.h"
 

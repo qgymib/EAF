@@ -4,7 +4,7 @@
 #include <sys/syscall.h>
 #define __USE_GNU
 #include <sched.h>
-#include "EAF/utils/errno.h"
+#include "eaf/utils/errno.h"
 #include "compat/thread.h"
 
 static void* _eaf_thread_linux_proxy(void* params)

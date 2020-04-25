@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "EAF/eaf.h"
+#include "eaf/eaf.h"
 #include "powerpack/message.h"
 #include "powerpack/net.h"
 #include "powerpack/timer.h"

@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/powerpack/timer.h"
+#include "eaf/powerpack/timer.h"
 
 /**
 * Initialize timer

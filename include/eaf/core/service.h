@@ -8,10 +8,10 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "EAF/core/internal/service.h"
-#include "EAF/core/message.h"
-#include "EAF/infra/thread.h"
-#include "EAF/utils/annotations.h"
+#include "eaf/core/internal/service.h"
+#include "eaf/core/message.h"
+#include "eaf/infra/thread.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief Coroutine body

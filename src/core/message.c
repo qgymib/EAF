@@ -1,4 +1,4 @@
-#include "EAF/utils/define.h"
+#include "eaf/utils/define.h"
 #include "utils/memory.h"
 #include "message.h"
 

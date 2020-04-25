@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "EAF/infra/thread.h"
+#include "eaf/infra/thread.h"
 #include "utils/memory.h"
 #include "compat/thread.h"
 

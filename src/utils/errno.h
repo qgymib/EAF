@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#include "EAF/utils/errno.h"
+#include "eaf/utils/errno.h"
 
 #ifndef EAF_DEFINE_ERRNO
 #	define EAF_DEFINE_ERRNO(err, describe)

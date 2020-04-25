@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-#include "EAF/core/service.h"
-#include "EAF/powerpack/define.h"
+#include "eaf/core/service.h"
+#include "eaf/powerpack/define.h"
 
 /**
 * Send request and wait for response.

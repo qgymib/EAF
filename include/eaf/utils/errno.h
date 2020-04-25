@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "EAF/utils/annotations.h"
+#include "eaf/utils/annotations.h"
 
 /**
  * @brief All known EAF error codes.

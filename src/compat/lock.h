@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "EAF/infra/lock.h"
+#include "eaf/infra/lock.h"
 #include "c_lock.h"
 
 struct eaf_compat_lock;

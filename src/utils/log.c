@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include "EAF/utils/log.h"
+#include "eaf/utils/log.h"
 
 static const char* _log_getfilename(const char* file)
 {

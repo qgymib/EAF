@@ -1,5 +1,5 @@
 #include <string.h>
-#include "EAF/utils/list.h"
+#include "eaf/utils/list.h"
 
 static void _list_lite_set_once(eaf_list_t* handler, eaf_list_node_t* node)
 {
