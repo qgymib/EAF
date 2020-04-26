@@ -1,3 +1,4 @@
+#include <string.h>
 #include "eaf/powerpack.h"
 #include "etest/etest.h"
 
@@ -11,8 +12,8 @@ TEST_CLASS_TEAREDOWN(powerpack_hash)
 
 TEST_F(powerpack_hash, bkdr_32)
 {
-	const char* str_a = __FILE__ __FUNCTION__;
-	const char* str_b = __FILE__ __FUNCTION__;
+	const char* str_a = __FUNCTION__;
+	const char* str_b = __FUNCTION__;
 	uint32_t seed = __LINE__;
 
 	uint32_t hval_a = eaf_hash32_bkdr(str_a, strlen(str_a), seed);
