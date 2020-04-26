@@ -315,7 +315,7 @@ static eaf_map_low_node_t* __rb_erase_augmented(eaf_map_low_node_t* node, eaf_ma
 * and eliminate the dummy_rotate callback there
 */
 static void
-____rb_erase_color(eaf_map_low_node_t* parent, eaf_map_low_t* root)
+____rb_erase_color(_In_ eaf_map_low_node_t* parent, _Inout_ eaf_map_low_t* root)
 {
 	eaf_map_low_node_t* node = NULL, *sibling, *tmp1, *tmp2;
 

@@ -14,34 +14,49 @@ extern "C" {
 #else
 
 /**
- * Data is passed to the called function, and is treated as read-only.
+ * Annotates input parameters that are scalars, structures, pointers to
+ * structures and the like. Explicitly may be used on simple scalars. The
+ * parameter must be valid in pre-state and will not be modified.
  */
 #define _In_
 
 /**
- * The caller only provides space for the called function to write to. The
- * called function writes data into that space.
+ * Annotates output parameters that are scalars, structures, pointers to
+ * structures and the like. Don't apply this annotation to an object that
+ * can't return a value—for example, a scalar that's passed by value. The
+ * parameter doesn't have to be valid in pre-state but must be valid in
+ * post-state.
  */
 #define _Out_
 
 /**
  * Like #_Out_, but parameters are optional.
+ * @see \_Out\_
  */
 #define _Out_opt_
 
 /**
- * Like #_Out_. The value that's returned by the called function is a pointer.
+ * Parameter can't be null, and in the post-state the pointed-to location can't
+ * be null and must be valid.
  */
 #define _Outptr_
 
 /**
- * like #_Outptr_, except param is reference-to-pointer type.
- * @see \_Outptr\_
+ * Parameter may be null, but in the post-state the pointed-to location can't
+ * be null and must be valid.
  */
-#define _Outref_
+#define _Outptr_opt_
 
 /**
- * Usable data is passed into the function and potentially is modified.
+ * Parameter may be null, and in the post-state the pointed-to location can be
+ * null.
+ */
+#define _Outptr_opt_result_maybenull_
+
+/**
+ * Annotates a parameter that will be changed by the function. It must be valid
+ * in both pre-state and post-state, but is assumed to have different values
+ * before and after the call. Must apply to a modifiable value.
  */
 #define _Inout_
 
@@ -52,14 +67,9 @@ extern "C" {
 #define _Inout_opt_
 
 /**
- * for return values
+ * Annotates a parameter that will be invalid when the function returns.
  */
-#define _Ret_
-
-/**
- * class/struct field invariants
- */
-#define _Field_
+#define _Post_invalid_
 
 #endif
 

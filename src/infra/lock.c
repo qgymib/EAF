@@ -25,7 +25,7 @@ eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr)
 	return handler;
 }
 
-void eaf_lock_destroy(_Inout_ eaf_lock_t* handler)
+void eaf_lock_destroy(_Post_invalid_ eaf_lock_t* handler)
 {
 	eaf_compat_lock_exit(&handler->objlock);
 	EAF_FREE(handler);

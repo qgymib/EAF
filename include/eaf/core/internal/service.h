@@ -42,9 +42,9 @@ extern "C" {
 /**
  * @brief Implementation for eaf_yield.
  * It use duff's device to generate a switch-based coroutine.
- * @param _fn	A hook function which will be called after service yield
- * @param _arg	A user defined argument which will passed to _fn
- * @param n		switch-case label
+ * @param[in] _fn	A hook function which will be called after service yield
+ * @param[in] _arg	A user defined argument which will passed to _fn
+ * @param[in] n		switch-case label
  */
 #define EAF_COROUTINE_YIELD(_fn, _arg, n)	\
 	for (_eaf_local->branch = (n), _eaf_glocal->cc[0] = EAF_SERVICE_CC0_YIELD,\
@@ -94,8 +94,8 @@ typedef struct eaf_service_local
 
 /**
  * @brief yield hook
- * @param local		service local storage
- * @param arg		user defined argument
+ * @param[in,out] local	Service local storage
+ * @param[in,out] arg	User defined argument
  */
 typedef void(*eaf_yield_hook_fn)(_Inout_ eaf_service_local_t* local, _Inout_ void* arg);
 
@@ -115,10 +115,10 @@ typedef struct eaf_group_local
 
 /**
  * @brief Get service local storage and group local storage.
- * @param local		A pointer to store group local storage
- * @return			service local storage
+ * @param[out] local	A pointer to store group local storage
+ * @return				Service local storage
  */
-eaf_service_local_t* eaf_service_get_local(_Outptr_ eaf_group_local_t** local);
+eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
 
 #ifdef __cplusplus
 }

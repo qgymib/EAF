@@ -25,26 +25,26 @@ typedef enum eaf_lock_attr
 
 /**
  * @brief Create a lock
- * @param attr	attribute
- * @return		lock handler
+ * @param[in] attr	Attribute
+ * @return			Lock handler
  */
 eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr);
 
 /**
  * @brief Destroy a lock
- * @param handler	the lock you want to destroy
+ * @param[in,out] handler	the lock you want to destroy
  */
-void eaf_lock_destroy(_Inout_ eaf_lock_t* handler);
+void eaf_lock_destroy(_Post_invalid_ eaf_lock_t* handler);
 
 /**
  * @brief Enter critical section
- * @param handler	the lock
+ * @param[in,out] handler	The lock
  */
 void eaf_lock_enter(_Inout_ eaf_lock_t* handler);
 
 /**
  * @brief Leave critical section
- * @param handler	the lock
+ * @param[in,out] handler	The lock
  */
 void eaf_lock_leave(_Inout_ eaf_lock_t* handler);
 

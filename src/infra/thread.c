@@ -25,7 +25,7 @@ eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg, _In_ eaf_thre
 	return handler;
 }
 
-void eaf_thread_destroy(_Inout_ eaf_thread_t* handler)
+void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler)
 {
 	eaf_compat_thread_exit(&handler->thr);
 	EAF_FREE(handler);

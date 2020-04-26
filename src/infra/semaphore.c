@@ -25,7 +25,7 @@ eaf_sem_t* eaf_sem_create(_In_ unsigned long count)
 	return handler;
 }
 
-void eaf_sem_destroy(_Inout_ eaf_sem_t* handler)
+void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler)
 {
 	eaf_compat_sem_exit(&handler->sem);
 	EAF_FREE(handler);

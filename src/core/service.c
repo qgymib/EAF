@@ -1249,18 +1249,18 @@ int eaf_resume(_In_ uint32_t srv_id)
 	return ret;
 }
 
-eaf_service_local_t* eaf_service_get_local(_Outptr_ eaf_group_local_t** local)
+eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_group_local_t** local)
 {
 	if (g_eaf_ctx == NULL)
 	{
-		return NULL;
+		goto err;
 	}
 
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_get_current_service(&group);
 	if (service == NULL)
 	{
-		return NULL;
+		goto err;
 	}
 
 	if (local != NULL)
@@ -1269,6 +1269,13 @@ eaf_service_local_t* eaf_service_get_local(_Outptr_ eaf_group_local_t** local)
 	}
 
 	return &service->coroutine.local;
+
+err:
+	if (local != NULL)
+	{
+		*local = NULL;
+	}
+	return NULL;
 }
 
 int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg)

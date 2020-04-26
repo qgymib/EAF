@@ -39,25 +39,25 @@ typedef struct eaf_thread_attr
 
 /**
  * @brief Thread body
- * @param arg		User defined argument
+ * @param[in,out] arg	User defined argument
  */
 typedef void(*eaf_thread_fn)(_Inout_opt_ void* arg);
 
 /**
  * @brief Create thread
- * @param cfg		thread configure
- * @param fn		thread body
- * @param arg		user defined arg
- * @return			thread handler
+ * @param[in] cfg		Thread configure
+ * @param[in] fn		Thread body
+ * @param[in,out] arg	User defined arg
+ * @return				Thread handler
  */
 eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
 	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg);
 
 /**
  * @brief Wait for thread exit and destroy it
- * @param handler	thread handler
+ * @param[in] handler	Thread handler
  */
-void eaf_thread_destroy(_Inout_ eaf_thread_t* handler);
+void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler);
 
 /**
  * @brief Get current thread id.
