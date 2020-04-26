@@ -1,3 +1,6 @@
+/** @file
+ * Hash algorithm
+ */
 #ifndef __EAF_POWERPACK_HASH_H__
 #define __EAF_POWERPACK_HASH_H__
 #ifdef __cplusplus
