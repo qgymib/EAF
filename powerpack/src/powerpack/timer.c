@@ -145,7 +145,7 @@ static void _powerpack_timer_on_timer(uv_timer_t* handle)
 	uv_close((uv_handle_t*)handle, _powerpack_timer_on_close);
 }
 
-void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg)
+void eaf_powerpack_sleep_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg)
 {
 	(void)arg;
 	powerpack_timer_record_t* record = NULL;
@@ -154,7 +154,7 @@ void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg)
 		goto err;
 	}
 
-	unsigned long sleep_timeout = local->unsafe.v_ulong;
+	unsigned sleep_timeout = (unsigned)(uintptr_t)arg;
 	if ((record = malloc(sizeof(powerpack_timer_record_t))) == NULL)
 	{
 		goto err;

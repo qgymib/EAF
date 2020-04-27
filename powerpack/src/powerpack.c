@@ -59,7 +59,7 @@ static void _powerpack_on_exit(void)
 	g_powerpack_ctx->working = NULL;
 }
 
-int eaf_powerpack_init(const eaf_powerpack_cfg_t* cfg)
+int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 {
 	int ret = eaf_errno_success;
 	if (g_powerpack_ctx != NULL)

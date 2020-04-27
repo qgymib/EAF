@@ -66,12 +66,11 @@ static void _powerpack_message_on_rsp_proxy(struct eaf_msg* rsp)
 	assert(rec != NULL);
 
 	/* restore information */
-	rsp->to = rec->data.from;
 	rsp->info.rr.orig = rec->data.orig;
 
 	/* resume */
 	eaf_msg_add_ref(rsp);
-	rec->data.local->unsafe.v_ptr = rsp;
+	rec->data.local->unsafe[0].v_ptr = rsp;
 	eaf_resume(rec->data.from);
 
 	_powerpack_message_decref(rec->data.req, rec->data.defcnt);
@@ -141,7 +140,7 @@ void eaf_powerpack_message_exit(void)
 	g_powerpack_message_ctx = NULL;
 }
 
-void eaf_powerpack_message_commit(eaf_service_local_t* local, void* arg)
+void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg)
 {
 	eaf_msg_t* req = (eaf_msg_t*)arg;
 	if (req->type != eaf_msg_type_req)
@@ -154,11 +153,11 @@ void eaf_powerpack_message_commit(eaf_service_local_t* local, void* arg)
 	{
 		goto err_malloc;
 	}
-	record->data.local = local;
 	record->data.from = req->from;
+	record->data.local = local;
 	record->data.req = req;
 	record->data.orig = req->info.rr.orig;
-	record->data.defcnt = local->unsafe.v_ulong;
+	record->data.defcnt = local->unsafe[0].ww.w2;
 
 	int ret;
 	eaf_lock_enter(g_powerpack_message_ctx->objlock);
@@ -177,7 +176,7 @@ void eaf_powerpack_message_commit(eaf_service_local_t* local, void* arg)
 	req->info.rr.orig = (uintptr_t)req;	/* in case of user modify it */
 
 	/* send request */
-	if (eaf_send_req(powerpack_get_service_id(), req->to, req) < 0)
+	if (eaf_send_req(powerpack_get_service_id(), local->unsafe[0].ww.w1, req) < 0)
 	{
 		goto err_send;
 	}
@@ -196,7 +195,7 @@ err_send:
 err_table:
 	free(record);
 err_malloc:
-	_powerpack_message_decref(req, local->unsafe.v_ulong);
-	local->unsafe.v_ptr = NULL;
+	_powerpack_message_decref(req, local->unsafe[0].ww.w2);
+	local->unsafe[0].v_ptr = NULL;
 	eaf_resume(local->id);
 }

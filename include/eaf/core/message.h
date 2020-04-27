@@ -21,37 +21,28 @@ typedef enum eaf_msg_type
 {
 	eaf_msg_type_req,					/**< Request */
 	eaf_msg_type_rsp,					/**< Response */
-	eaf_msg_type_evt,					/**< Event */
 }eaf_msg_type_t;
 
 /**
  * @brief Prototype for request handler
- * @param req		Request
+ * @param[in] req		Request
  */
 typedef void(*eaf_req_handle_fn)(_Inout_ struct eaf_msg* req);
 
 /**
  * @brief Prototype for response handler
- * @param rsp		Response
+ * @param[in] rsp		Response
  */
 typedef void(*eaf_rsp_handle_fn)(_Inout_ struct eaf_msg* rsp);
 
 /**
- * @brief Prototype for event handler
- * @param evt		Event
- * @param arg		User defined argument
- */
-typedef void(*eaf_evt_handle_fn)(_Inout_ struct eaf_msg* evt, void* arg);
-
-/**
- * @brief A communicate structure
+ * @brief Communicate structure
  */
 typedef struct eaf_msg
 {
 	eaf_msg_type_t				type;	/**< Message type */
 	uint32_t					id;		/**< Message ID */
 	uint32_t					from;	/**< The service ID of sender */
-	uint32_t					to;		/**< The service ID of receiver */
 
 	struct
 	{
@@ -66,10 +57,10 @@ typedef struct eaf_msg
 
 /**
  * @brief Create request.
- * @param msg_id	Message ID
- * @param size		The size of user structure
- * @param rsp_fn	The response handler for the response
- * @return			The pointer of the request
+ * @param[in] msg_id	Message ID
+ * @param[in] size		The size of user structure
+ * @param[in] rsp_fn	The response handler for the response
+ * @return				The pointer of the request
  */
 eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
 	_In_ eaf_rsp_handle_fn rsp_fn);
@@ -77,37 +68,29 @@ eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
 /**
  * @brief Create response.
  * @note This does not affect the reference count of original request.
- * @param req		The original request
- * @param size		The size of user structure
- * @return			The pointer of the response
+ * @param[in] req		The original request
+ * @param[in] size		The size of user structure
+ * @return				The pointer of the response
  */
 eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size);
 
 /**
- * @brief Create event.
- * @param evt_id	Event id
- * @param size		The size of user structure
- * @return			The pointer of the event
- */
-eaf_msg_t* eaf_msg_create_evt(_In_ uint32_t evt_id, _In_ size_t size);
-
-/**
  * @brief Add reference count
- * @param msg		The message you want to add reference
+ * @param[in,out] msg		The message you want to add reference
  */
 void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg);
 
 /**
  * @brief Reduce reference count
- * @param msg		The message you want to add reference
+ * @param[in,out] msg		The message you want to add reference
  */
 void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
 
 /**
  * @brief Get user structure address.
- * @param msg		The message
- * @param size		The size of user structure
- * @return			The address of user structure
+ * @param[in] msg		The message
+ * @param[in] size		The size of user structure
+ * @return				The address of user structure
  */
 void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size);
 

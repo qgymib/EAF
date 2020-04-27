@@ -74,22 +74,22 @@ typedef struct eaf_service_local
 
 	union
 	{
-		signed int				v_int;		/**< unsafe value: signed int */
-		unsigned int			v_uint;		/**< unsafe value: unsigned int */
-		signed long				v_long;		/**< unsafe value: signed long */
+		long					v_long;		/**< unsafe value: signed long */
 		unsigned long			v_ulong;	/**< unsafe value: unsigned long */
-		signed long long		v_llong;	/**< unsafe value: signed long long */
+		long long				v_llong;	/**< unsafe value: signed long long */
 		unsigned long long		v_ullong;	/**< unsafe value: unsigned long long */
 		float					v_float;	/**< unsafe value: float */
 		double					v_double;	/**< unsafe value: double */
-		int32_t					v_int32;	/**< unsafe value: int32_t */
-		uint32_t				v_uint32;	/**< unsafe value: uint32_t */
 		int64_t					v_int64;	/**< unsafe value: int64_t */
 		uint64_t				v_uint64;	/**< unsafe value: uint64_t */
-		intptr_t				v_intptr;	/**< unsafe value: intptr_t */
 		uintptr_t				v_uintptr;	/**< unsafe value: v_uintptr */
 		void*					v_ptr;		/**< unsafe value: void* */
-	}unsafe;								/**< The field `unsafe` is used to pass value cross yield. use with careful. */
+		struct
+		{
+			uint32_t			w1;			/**< unsafe value: w1 for ww */
+			uint32_t			w2;			/**< unsafe value: w2 for ww */
+		}ww;								/**< unsafe value: double DWORD */
+	}unsafe[1];								/**< The field `unsafe` is used to pass value cross yield. use with careful. */
 }eaf_service_local_t;
 
 /**

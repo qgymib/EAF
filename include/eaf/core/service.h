@@ -35,8 +35,10 @@ extern "C" {
  *
  * Like #eaf_yield, service will suspend until #eaf_resume is called,
  * and when service was suspended, `fn` will be called immediately.
- * `fn` is a function with proto #eaf_yield_hook_fn.
+ * `fn` is a function with protocol #eaf_yield_hook_fn.
  *
+ * @param[in] fn	Callback
+ * @param[in] arg	User defined argument passed to callback
  * @see eaf_yield_hook_fn
  * @see eaf_resume
  */
@@ -96,8 +98,8 @@ typedef struct eaf_group_table
 
 /**
  * @brief Resume service
- * @param srv_id	Service ID
- * @return			#eaf_errno
+ * @param[in] srv_id	Service ID
+ * @return				#eaf_errno
  */
 int eaf_resume(_In_ uint32_t srv_id);
 
@@ -111,8 +113,8 @@ int eaf_resume(_In_ uint32_t srv_id);
  * @warning The parameter `info` must be globally accessible.
  * @see eaf_load
  * @see eaf_register
- * @param info		Service group table. Must be globally accessible.
- * @param size		The size of service group table
+ * @param[in] info	Service group table. Must be globally accessible.
+ * @param[in] size	The size of service group table
  * @return			#eaf_errno
  */
 int eaf_setup(_In_ const eaf_group_table_t* info /*static*/, _In_ size_t size);
@@ -149,33 +151,11 @@ int eaf_cleanup(void);
  * @warning The parameter `info` must be globally accessible.
  * @see eaf_setup
  * @see eaf_load
- * @param srv_id	Service ID
- * @param entry		Service entrypoint. Must be globally accessible.
- * @return			#eaf_errno
+ * @param[in] srv_id	Service ID
+ * @param[in] entry		Service entrypoint. Must be globally accessible.
+ * @return				#eaf_errno
  */
 int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
-
-/**
- * @brief Subscribe event.
- * @param srv_id	Service ID
- * @param evt_id	Event ID
- * @param fn		Event handler
- * @param arg		User defined argument
- * @return			#eaf_errno
- */
-int eaf_subscribe(_In_ uint32_t srv_id, _In_ uint32_t evt_id,
-	_In_ eaf_evt_handle_fn fn, _In_ void* arg);
-
-/**
- * @brief Unsubscribe event.
- * @param srv_id	Service ID
- * @param evt_id	Event ID
- * @param fn		Event handler
- * @param arg		User defined argument
- * @return			#eaf_errno
- */
-int eaf_unsubscribe(_In_ uint32_t srv_id, _In_ uint32_t evt_id,
-	_In_ eaf_evt_handle_fn fn, _In_ void* arg);
 
 /**
  * @brief Send request
@@ -188,19 +168,11 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
 
 /**
  * @brief Send response
- * @param from		The service id of sender
- * @param rsp		The response
- * @return			#eaf_errno
+ * @param[in] from		The service id of sender
+ * @param[in,out] rsp	The response
+ * @return				#eaf_errno
  */
 int eaf_send_rsp(_In_ uint32_t from, _Inout_ eaf_msg_t* rsp);
-
-/**
- * @brief Send Event
- * @param from		The service id of sender
- * @param evt		The event
- * @return			#eaf_errno
- */
-int eaf_send_evt(_In_ uint32_t from, _Inout_ eaf_msg_t* evt);
 
 /**
  * @brief Get caller's service id

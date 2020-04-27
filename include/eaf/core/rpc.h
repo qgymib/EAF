@@ -35,7 +35,7 @@ typedef struct eaf_rpc_cfg
 
 	/**
 	 * @brief Service registered.
-	 * @param info	service info
+	 * @param[in] info	service info
 	 */
 	void(*on_service_register)(_In_ const eaf_rpc_service_info_t* info);
 
@@ -53,41 +53,27 @@ typedef struct eaf_rpc_cfg
 	void(*on_exit)(void);
 
 	/**
-	 * @brief Callback when service register a event.
-	 * @param service_id	service id
-	 * @param event_id		event id
-	 */
-	void(*on_event_subscribe)(_In_ uint32_t service_id, _In_ uint32_t event_id);
-
-	/**
-	 * @brief Callback when service unregister a event.
-	 * @param service_id	service id
-	 * @param event_id		event id
-	 */
-	void(*on_event_unsubscribe)(_In_ uint32_t service_id, _In_ uint32_t event_id);
-
-	/**
 	 * @brief Send message to remote
-	 * @param msg			message
-	 * @return				#eaf_errno
+	 * @param[in,out] msg		message
+	 * @return					#eaf_errno
 	 */
 	int(*send_msg)(_Inout_ eaf_msg_t* msg);
 }eaf_rpc_cfg_t;
 
 /**
  * @brief Initialize RPC support
- * @param cfg	RPC configuration. Must be a static variable.
- * @return		eaf_errno
- * @see			eaf_errno_t
+ * @param[in] cfg	RPC configuration. Must be a static variable.
+ * @return			#eaf_errno
  */
 int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg /*static*/);
 
 /**
  * @brief Handle incoming RPC message
- * @param msg	incoming message
- * @return		eaf_errno
+ * @param[in] to		The service's id which will receive message
+ * @param[in,out] msg	Incoming message
+ * @return				#eaf_errno
  */
-int eaf_rpc_income(_Inout_ eaf_msg_t* msg);
+int eaf_rpc_income(_In_ uint32_t to, _Inout_ eaf_msg_t* msg);
 
 #ifdef __cplusplus
 }

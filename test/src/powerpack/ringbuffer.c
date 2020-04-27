@@ -190,7 +190,8 @@ TEST_F(powerpack_ringbuffer, consume_after_reserve_10K)
 	eaf_ringbuffer_counter_t counter;
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &counter), 0);
 
-	for (size_t i = 0; i < 10000; i++)
+	size_t i;
+	for (i = 0; i < 10000; i++)
 	{
 		uint64_t data = i;
 		{
@@ -244,7 +245,8 @@ TEST_F(powerpack_ringbuffer, max_element_no_overwrite)
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &counter), 0);
 
 	/* full fill ring buffer */
-	for (size_t i = 0; i < number_of_elements; i++)
+	size_t i;
+	for (i = 0; i < number_of_elements; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, NULL);
@@ -309,7 +311,8 @@ TEST_F(powerpack_ringbuffer, reserve_consume_8bit_full)
 	}
 
 	/* data check */
-	for (uint64_t i = 0; i < token_counter; i++)
+	uint64_t i;
+	for (i = 0; i < token_counter; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_consume(rb);
 		ASSERT_PTR_NE(token, NULL);
@@ -345,7 +348,8 @@ TEST_F(powerpack_ringbuffer, overwrite_generic)
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &rb_counter), 0);
 
 	/* full fill ring buffer */
-	for (uint64_t i = 0; i < node_number; i++)
+	uint64_t i;
+	for (i = 0; i < node_number; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, NULL);
@@ -479,7 +483,8 @@ TEST_F(powerpack_ringbuffer, overwrite_non_reserve)
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &rb_counter), (size_t)0);
 
 	/* ensure all nodes is in writing state */
-	for (size_t i = 0; i < node_num; i++)
+	size_t i;
+	for (i = 0; i < node_num; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, NULL);
@@ -789,7 +794,8 @@ TEST_F(powerpack_ringbuffer, force_discard_older_consume)
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &rbc), (size_t)0);
 
 	/* full fill ring buffer */
-	for (uint32_t i = 0; i < number_of_elements; i++)
+	uint32_t i;
+	for (i = 0; i < number_of_elements; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(i), 0);
 		ASSERT_PTR_NE(token, NULL);
@@ -1018,7 +1024,8 @@ TEST_F(powerpack_ringbuffer, discard_newest)
 	ASSERT_NUM_EQ(eaf_ringbuffer_count(rb, &rbc), (size_t)0);
 
 	/* write to first n-1 elements */
-	for (uint64_t i = 0; i < number_of_elements - 1; i++)
+	uint64_t i;
+	for (i = 0; i < number_of_elements - 1; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, (void*)NULL);
@@ -1094,7 +1101,8 @@ TEST_F(powerpack_ringbuffer, counter_full)
 	ASSERT_PTR_NE(rb, (void*)NULL);
 
 	/* full fill ring buffer */
-	for (size_t i = 0; i < number_of_elements; i++)
+	size_t i;
+	for (i = 0; i < number_of_elements; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, (void*)NULL);
@@ -1144,7 +1152,8 @@ TEST_F(powerpack_ringbuffer, foreach)
 	ASSERT_PTR_NE(rb, (void*)NULL);
 
 	/* full fill ring buffer */
-	for (size_t i = 0; i < number_of_elements; i++)
+	size_t i;
+	for (i = 0; i < number_of_elements; i++)
 	{
 		eaf_ringbuffer_token_t* token = eaf_ringbuffer_reserve(rb, sizeof(uint64_t), 0);
 		ASSERT_PTR_NE(token, (void*)NULL);

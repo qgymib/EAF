@@ -1,21 +1,31 @@
+/** @file
+ * Enhance timer
+ */
 #ifndef __EAF_POWERPACK_TIMER_H__
 #define __EAF_POWERPACK_TIMER_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "eaf/core/service.h"
+#include "eaf/eaf.h"
 
+/**
+ * @brief Suspends execution of the calling service for (at least) ms milliseconds.
+ * @param[in] ms	Sleep timeout in milliseconds
+ */
 #define eaf_sleep(ms)	\
 	do {\
-		_eaf_local->unsafe.v_ulong = ms;\
-		eaf_yield_ext(eaf_powerpack_sleep_commit, NULL);\
+		eaf_yield_ext(eaf_powerpack_sleep_commit,\
+			(void*)(uintptr_t)(unsigned)(ms));\
 	} while (0)
 
 /**
-* sleep
-*/
-void eaf_powerpack_sleep_commit(eaf_service_local_t* local, void* arg);
+ * @brief (Internal) Make service sleep
+ * @note This function should only for internal usage.
+ * @param[in,out] local	Service local storage
+ * @param[in,out] arg	Sleep timeout
+ */
+void eaf_powerpack_sleep_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg);
 
 #ifdef __cplusplus
 }

@@ -122,7 +122,7 @@ static void _powerpack_net_on_uv_poll(uv_poll_t* handle, int status, int events)
 	ret |= (events & UV_WRITABLE) ? eaf_socket_event_out : 0;
 
 	/* resume */
-	rec->data.local->unsafe.v_int = ret;
+	rec->data.local->unsafe[0].v_long = ret;
 	eaf_resume(rec->data.id);
 
 	_powerpack_net_cleanup(rec);
@@ -132,7 +132,7 @@ static void _powerpack_net_on_timer(uv_timer_t* handle)
 {
 	powerpack_poll_record_t* rec = EAF_CONTAINER_OF(handle, powerpack_poll_record_t, uv.uv_timer);
 
-	rec->data.local->unsafe.v_int = eaf_socket_event_timeout;
+	rec->data.local->unsafe[0].v_long = eaf_socket_event_timeout;
 	eaf_resume(rec->data.id);
 
 	_powerpack_net_cleanup(rec);
@@ -179,7 +179,8 @@ void eaf_powerpack_net_exit(void)
 	g_powerpack_net_ctx = NULL;
 }
 
-int eaf_powerpack_net_socket_wait_setup(uint32_t id, eaf_socket_t sock, unsigned evts, unsigned timeout)
+int eaf_powerpack_net_socket_wait_setup(_In_ uint32_t id, _In_ eaf_socket_t sock,
+	_In_ unsigned evts, _In_ unsigned timeout)
 {
 	powerpack_poll_record_t* rec = malloc(sizeof(powerpack_poll_record_t));
 	if (rec == NULL)
@@ -231,7 +232,8 @@ err_table:
 	return eaf_errno_duplicate;
 }
 
-void eaf_powerpack_net_socket_wait_commit(eaf_service_local_t* local, void* arg)
+void eaf_powerpack_net_socket_wait_commit(_Inout_ eaf_service_local_t* local,
+	_Inout_opt_ void* arg)
 {
 	(void)arg;
 	powerpack_poll_record_t tmp_key;

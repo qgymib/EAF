@@ -118,6 +118,6 @@ TEST_CLASS_TEAREDOWN(powerpack_message)
 
 TEST_F(powerpack_message, send_req)
 {
-	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_message_sem, 8 * 1000), 0);
+	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_message_sem, (unsigned long)-1), 0);
 	ASSERT_NUM_EQ(s_powerpack_message_val_rsp_rel, s_powerpack_message_val_rsp_exp);
 }

@@ -1,36 +1,40 @@
+/** @file
+ * Enhance message operations
+ */
 #ifndef __EAF_POWERPACK_MESSAGE_H__
 #define __EAF_POWERPACK_MESSAGE_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "eaf/core/service.h"
+#include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 
 /**
-* Send request and wait for response.
-* @param _rsp	a pointer to store response. remember to destroy it
-* @param _from	the sender's service id
-* @param _to	the receiver's service id
-* @param _req	the request
-* @param _dec	the number of reference you want to decrease
+* @brief Send request and wait for response.
+* @param[out] _rsp	a pointer to store response. remember to destroy it
+* @param[in] _from	the sender's service id
+* @param[in] _to	the receiver's service id
+* @param[in] _req	the request
+* @param[in] _dec	the number of reference you want to decrease
 */
 #define eaf_send_req_sync(_rsp, _from, _to, _req, _dec)	\
 	do {\
-		(_req)->from = (_from); (_req)->to = (_to);\
-		_eaf_local->unsafe.v_ulong = _dec;\
+		(_req)->from = (_from);\
+		_eaf_local->unsafe[0].ww.w1 = _to;\
+		_eaf_local->unsafe[0].ww.w2 = _dec;\
 		eaf_yield_ext(eaf_powerpack_message_commit, _req);\
-		(_rsp) = (eaf_msg_t*)_eaf_local->unsafe.v_ptr;\
+		(_rsp) = (eaf_msg_t*)(_eaf_local->unsafe[0].v_ptr);\
 	} while (0)
 
 /**
-* Generate a request, send to peer, and parse into data
-* @param ret		operation result
-* @param p_dat		pointer to store response
-* @param to			the service which will receive the request
-* @param MSG_ID		message id
-* @param TYPE		message type
-* @param ...		message fields
+* @brief Generate a request, send to peer, and parse into data
+* @param[out] ret		Operation result
+* @param[in,out] p_dat	Pointer to store response
+* @param[in] to			The service which will receive the request
+* @param[in] MSG_ID		Message ID
+* @param[in] TYPE		Message type
+* @param[in] ...		Message fields
 */
 #define eaf_msg_call(ret, p_dat, to, MSG_ID, TYPE, ...)	\
 	do {\
@@ -60,11 +64,14 @@ extern "C" {
 	} while (0)
 
 /**
-* Internal operation for `eaf_send_req_sync`
-* @param local	service local storage
-* @param arg	eaf_msg_t*
-*/
-void eaf_powerpack_message_commit(eaf_service_local_t* local, void* arg);
+ * @brief Internal operation for #eaf_send_req_sync
+ * @note This function should only for internal usage.
+ * @see eaf_send_req_sync
+ * @param[in,out] local	service local storage
+ * @param[in,out] arg	eaf_msg_t*
+ */
+void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local,
+	_Inout_opt_ void* arg);
 
 #ifdef __cplusplus
 }
