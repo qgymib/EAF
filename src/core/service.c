@@ -5,7 +5,6 @@
 #include "eaf/utils/errno.h"
 #include "eaf/utils/define.h"
 #include "eaf/utils/map.h"
-#include "eaf/utils/log.h"
 #include "compat/lock.h"
 #include "compat/thread.h"
 #include "compat/semaphore.h"

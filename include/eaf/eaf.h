@@ -16,7 +16,6 @@ extern "C" {
 #include "eaf/utils/define.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/list.h"
-#include "eaf/utils/log.h"
 #include "eaf/utils/map.h"
 #include "eaf/utils/map_low.h"
 
