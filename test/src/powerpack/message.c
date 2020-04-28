@@ -37,17 +37,17 @@ static int _test_powerpack_message_s1_on_init(void)
 	return 0;
 }
 
-static void _test_powerpack_message_s2_on_req(struct eaf_msg* msg)
+static void _test_powerpack_message_s2_on_req(struct eaf_msg* req)
 {
-	int val_req = *(int*)eaf_msg_get_data(msg, NULL);
+	int val_req = *(int*)eaf_msg_get_data(req, NULL);
 	ASSERT(val_req == s_powerpack_message_val_req_exp);
 
-	eaf_msg_t* rsp = eaf_msg_create_rsp(msg, sizeof(int));
+	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));
 	ASSERT(rsp != NULL);
 
 	*(int*)eaf_msg_get_data(rsp, NULL) = s_powerpack_message_val_rsp_exp;
 
-	int ret = eaf_send_rsp(TEST_SERVICE_S2, rsp);
+	int ret = eaf_send_rsp(TEST_SERVICE_S2, req->from, rsp);
 	ASSERT(ret == 0);
 	eaf_msg_dec_ref(rsp);
 }

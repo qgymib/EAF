@@ -26,14 +26,6 @@ typedef struct eaf_rpc_service_info
 typedef struct eaf_rpc_cfg
 {
 	/**
-	 * @brief Initialize callback.
-	 *
-	 * During initialize progress, EAF will report service information by #on_service_register.
-	 * @see eaf_rpc_cfg_t::on_service_register
-	 */
-	void(*on_init)(void);
-
-	/**
 	 * @brief Service registered.
 	 * @param[in] info	service info
 	 */
@@ -53,12 +45,23 @@ typedef struct eaf_rpc_cfg
 	void(*on_exit)(void);
 
 	/**
-	 * @brief Send message to remote
-	 * @param[in,out] msg		message
+	 * @brief Send request to remote
+	 * @param[in] to			Who will receive this request
+	 * @param[in,out] req		Request
 	 * @return					#eaf_errno
 	 */
-	int(*send_msg)(_Inout_ eaf_msg_t* msg);
-}eaf_rpc_cfg_t;
+	int(*output_req)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
+
+	/**
+	 * @brief Send response to remote
+	 * @param[in] receipt		Receipt for request
+	 * @param[in] to			Who will receive this response
+	 * @param[in,out] rsp		Response
+	 * @return					#eaf_errno
+	 */
+	int(*output_rsp)(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
+		_In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
+} eaf_rpc_cfg_t;
 
 /**
  * @brief Initialize RPC support
@@ -68,12 +71,24 @@ typedef struct eaf_rpc_cfg
 int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg /*static*/);
 
 /**
- * @brief Handle incoming RPC message
- * @param[in] to		The service's id which will receive message
- * @param[in,out] msg	Incoming message
+ * @brief Handle incoming RPC request
+ * @param[in] from		Who send this request
+ * @param[in] to		Who will receive this request
+ * @param[in,out] req	Incoming request
  * @return				#eaf_errno
  */
-int eaf_rpc_income(_In_ uint32_t to, _Inout_ eaf_msg_t* msg);
+int eaf_rpc_input_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
+
+/**
+ * @brief Handle incoming RPC response
+ * @param[in] receipt	The receipt for request
+ * @param[in] from		Who send this response
+ * @param[in] to		Who will receive this response
+ * @param[in,out] rsp	Incoming response
+ * @return				#eaf_errno
+ */
+int eaf_rpc_input_rsp(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
+	_In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
 
 #ifdef __cplusplus
 }

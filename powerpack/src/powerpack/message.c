@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdlib.h>
-#include "eaf/eaf.h"
 #include "powerpack.h"
 #include "message.h"
 
@@ -14,37 +13,43 @@
 
 typedef struct powerpack_message_record
 {
-	eaf_map_node_t				node;		/** table node */
+	eaf_map_node_t				node;		/**< table node */
 
 	struct
 	{
-		eaf_msg_t*				req;		/** raw request */
-		eaf_service_local_t*	local;		/** service local storage */
-		uint32_t				from;		/** raw sender */
-		unsigned long			defcnt;		/** the number of defcnt */
-		uintptr_t				orig;		/** user's orig value */
+		eaf_msg_t*				req;		/**< raw request */
+		eaf_service_local_t*	local;		/**< service local storage */
+		uint32_t				from;		/**< raw sender */
+		unsigned long			defcnt;		/**< the number of defcnt */
+		uintptr_t				orig;		/**< user's orig value */
 	}data;
 }powerpack_message_record_t;
 
 typedef struct powerpack_message_ctx
 {
-	eaf_lock_t*				objlock;	/** global lock */
-	eaf_map_t				table;		/** global table */
+	eaf_lock_t*					objlock;	/**< global lock */
+	eaf_map_t					table;		/**< global table */
 }powerpack_message_ctx_t;
 
 static powerpack_message_ctx_t* g_powerpack_message_ctx = NULL;
 
-static void _powerpack_message_decref(eaf_msg_t* req, unsigned long cnt)
+/**
+ * Decrease reference count.
+ * @param[in] msg	Message
+ * @param[in] cnt	Count
+ */
+static void _powerpack_message_decref(eaf_msg_t* msg, unsigned cnt)
 {
 	size_t i;
 	for (i = 0; i < cnt; i++)
 	{
-		eaf_msg_dec_ref(req);
+		eaf_msg_dec_ref(msg);
 	}
 }
 
-static void _powerpack_message_on_rsp_proxy(struct eaf_msg* rsp)
+static void _powerpack_message_on_rsp_proxy(eaf_msg_receipt_t receipt, struct eaf_msg* rsp)
 {
+	(void)receipt;
 	powerpack_message_record_t tmp_key;
 	tmp_key.data.req = (eaf_msg_t*)rsp->info.rr.orig;
 

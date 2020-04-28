@@ -47,7 +47,7 @@ static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
 static void _test_powerpack_benchmark_message_s2_on_req(struct eaf_msg* req)
 {
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, 0);
-	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, rsp) == 0);
+	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, req->from, rsp) == 0);
 	eaf_msg_dec_ref(rsp);
 }
 

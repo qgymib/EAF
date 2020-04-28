@@ -54,7 +54,6 @@ eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size)
 		return NULL;
 	}
 
-	msg->msg.from = req->from;
 	msg->msg.info.rr = req->info.rr;
 
 	return EAF_MSG_C2I(msg);
@@ -98,5 +97,5 @@ void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size)
 	{
 		*size = real_req->data.size;
 	}
-	return real_req->data.data;
+	return real_req->data.size != 0 ? real_req->data.data : NULL;
 }

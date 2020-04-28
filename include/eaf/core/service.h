@@ -152,27 +152,28 @@ int eaf_cleanup(void);
  * @see eaf_setup
  * @see eaf_load
  * @param[in] srv_id	Service ID
- * @param[in] entry		Service entrypoint. Must be globally accessible.
+ * @param[in] entry		Service entry. Must be globally accessible.
  * @return				#eaf_errno
  */
 int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
 
 /**
  * @brief Send request
- * @param from		The service id of sender
- * @param to		The service id of receiver
- * @param req		The request
- * @return			#eaf_errno
+ * @param[in] from		Who send this request
+ * @param[in] to		Who will receive this request
+ * @param[in,out] req	The request
+ * @return				#eaf_errno
  */
 int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
 
 /**
  * @brief Send response
- * @param[in] from		The service id of sender
+ * @param[in] from		Who send this response
+ * @param[in] to		Who will receive this response
  * @param[in,out] rsp	The response
  * @return				#eaf_errno
  */
-int eaf_send_rsp(_In_ uint32_t from, _Inout_ eaf_msg_t* rsp);
+int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
 
 /**
  * @brief Get caller's service id

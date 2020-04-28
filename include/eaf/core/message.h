@@ -24,16 +24,38 @@ typedef enum eaf_msg_type
 }eaf_msg_type_t;
 
 /**
+ * @brief Request receipt
+ */
+typedef enum eaf_msg_receipt
+{
+	eaf_msg_receipt_success,			/**< Handle request success */
+	eaf_msg_receipt_noaddr,				/**< No such address */
+	eaf_msg_receipt_nomsgid,			/**< No such message id */
+}eaf_msg_receipt_t;
+
+/**
  * @brief Prototype for request handler
- * @param[in] req		Request
+ * @param[in,out] req		Request
  */
 typedef void(*eaf_req_handle_fn)(_Inout_ struct eaf_msg* req);
 
 /**
  * @brief Prototype for response handler
- * @param[in] rsp		Response
+ * @warning
+ * You have to treat receipt very carefully, a non-success receipt means your
+ * request was not delivered.
+ * If receipt is not #eaf_msg_receipt_success, `rsp` will be a empty message, which means:
+ *  + `rsp` is NOT NULL
+ *  + #eaf_msg_get_data for `rsp` will return NULL
+ *  + rsp->info.rr == req->info.rr
+ * @note
+ * If a request was sent successfully and no response received, it most likely
+ * receiver not response your request.
+ * @see eaf_msg_receipt
+ * @param[in] receipt		Receipt for request
+ * @param[in,out] rsp		Response
  */
-typedef void(*eaf_rsp_handle_fn)(_Inout_ struct eaf_msg* rsp);
+typedef void(*eaf_rsp_handle_fn)(_In_ eaf_msg_receipt_t receipt, _Inout_ struct eaf_msg* rsp);
 
 /**
  * @brief Communicate structure

@@ -10,8 +10,9 @@
 static int			_s_ret_val;
 static eaf_sem_t*	s_service_send_request_sem;
 
-static void _test_send_request_s1_on_rsp(eaf_msg_t* msg)
+static void _test_send_request_s1_on_rsp(eaf_msg_receipt_t receipt, eaf_msg_t* msg)
 {
+	ASSERT(receipt == eaf_msg_receipt_success);
 	_s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_sem_post(s_service_send_request_sem);
 }
@@ -54,7 +55,7 @@ static void _test_send_request_s2_on_req(eaf_msg_t* req)
 	ASSERT(rsp != NULL);
 
 	*(int*)eaf_msg_get_data(rsp, NULL) = (*(int*)eaf_msg_get_data(req, NULL)) * 2;
-	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, rsp) == 0);
+	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, req->from, rsp) == 0);
 	eaf_msg_dec_ref(rsp);
 }
 

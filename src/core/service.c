@@ -105,56 +105,60 @@
 */
 typedef enum eaf_service_state
 {
-	eaf_service_state_init0,					/** 初始态 */
-	eaf_service_state_init1,					/** 初始态 */
-	eaf_service_state_idle,						/** 空闲 */
-	eaf_service_state_busy,						/** 忙碌 */
-	eaf_service_state_pend,						/** 等待resume */
-	eaf_service_state_exit,						/** 退出 */
+	eaf_service_state_init0,					/**< 初始态 */
+	eaf_service_state_init1,					/**< 初始态 */
+	eaf_service_state_idle,						/**< 空闲 */
+	eaf_service_state_busy,						/**< 忙碌 */
+	eaf_service_state_pend,						/**< 等待resume */
+	eaf_service_state_exit,						/**< 退出 */
 }eaf_service_state_t;
 
 typedef enum eaf_ctx_state
 {
-	eaf_ctx_state_init,							/** 初始状态 */
-	eaf_ctx_state_busy,							/** 运行状态 */
-	eaf_ctx_state_exit,							/** 退出状态 */
+	eaf_ctx_state_init,							/**< 初始状态 */
+	eaf_ctx_state_busy,							/**< 运行状态 */
+	eaf_ctx_state_exit,							/**< 退出状态 */
 }eaf_ctx_state_t;
 
 typedef struct eaf_msgq_record
 {
-	eaf_list_node_t					node;		/** 侵入式节点 */
+	eaf_list_node_t					node;		/**< 侵入式节点 */
 
 	union
 	{
 		struct
 		{
-			eaf_req_handle_fn		req_fn;		/** 请求处理函数 */
+			eaf_req_handle_fn		req_fn;		/**< 请求处理函数 */
 		}req;
+		struct
+		{
+			eaf_msg_receipt_t		receipt;	/**< Receipt for request  */
+		}rsp;
 	}info;
 
 	struct
 	{
-		struct eaf_service*			service;	/** 服务句柄 */
-		eaf_msg_full_t*				msg;		/** 消息 */
+		struct eaf_service*			service;	/**< 服务句柄 */
+		eaf_msg_full_t*				msg;		/**< 消息 */
 	}data;
 }eaf_msgq_record_t;
 
 typedef struct eaf_service
 {
-	eaf_service_state_t				state;		/** 状态 */
-	const eaf_entrypoint_t*			entry;		/** 加载信息 */
+	eaf_service_state_t				state;		/**< 状态 */
+	const eaf_entrypoint_t*			entry;		/**< 加载信息 */
 
 	struct
 	{
-		eaf_service_local_t			local;		/** 本地存储 */
-		eaf_list_node_t				node;		/** 侵入式节点。在ready_list或wait_list中 */
+		eaf_service_local_t			local;		/**< 本地存储 */
+		eaf_list_node_t				node;		/**< 侵入式节点。在ready_list或wait_list中 */
 	}coroutine;
 
 	struct
 	{
-		eaf_msgq_record_t*			cur_msg;	/** 正在处理的消息 */
-		eaf_list_t					queue;		/** 缓存的消息 */
-		size_t						capacity;	/** 消息队列容量 */
+		eaf_msgq_record_t*			cur_msg;	/**< 正在处理的消息 */
+		eaf_list_t					queue;		/**< 缓存的消息 */
+		size_t						capacity;	/**< 消息队列容量 */
 	}msgq;
 }eaf_service_t;
 
@@ -164,26 +168,26 @@ typedef struct eaf_service
 #endif
 typedef struct eaf_group
 {
-	eaf_compat_lock_t				objlock;	/** 线程锁 */
-	eaf_compat_thread_t				working;	/** 承载线程 */
+	eaf_compat_lock_t				objlock;	/**< 线程锁 */
+	eaf_compat_thread_t				working;	/**< 承载线程 */
 
 	struct 
 	{
-		eaf_group_local_t			local;		/** local storage */
-		eaf_service_t*				cur_run;	/** 当前正在处理的服务 */
-		eaf_list_t					busy_list;	/** INIT0/BUSY */
-		eaf_list_t					wait_list;	/** INIT1/IDLE/PEND */
+		eaf_group_local_t			local;		/**< local storage */
+		eaf_service_t*				cur_run;	/**< 当前正在处理的服务 */
+		eaf_list_t					busy_list;	/**< INIT0/BUSY */
+		eaf_list_t					wait_list;	/**< INIT1/IDLE/PEND */
 	}coroutine;
 
 	struct
 	{
-		eaf_compat_sem_t			sem;		/** 信号量 */
+		eaf_compat_sem_t			sem;		/**< 信号量 */
 	}msgq;
 
 	struct
 	{
-		size_t						size;		/** 服务表长度 */
-		eaf_service_t				table[];	/** 服务表 */
+		size_t						size;		/**< 服务表长度 */
+		eaf_service_t				table[];	/**< 服务表 */
 	}service;
 }eaf_group_t;
 #if defined(_MSC_VER)
@@ -192,20 +196,20 @@ typedef struct eaf_group
 
 typedef struct eaf_ctx
 {
-	eaf_ctx_state_t					state;		/** 状态 */
-	eaf_compat_sem_t				ready;		/** 退出信号 */
-	eaf_thread_storage_t			tls;		/** 线程私有变量 */
+	eaf_ctx_state_t					state;		/**< 状态 */
+	eaf_compat_sem_t				ready;		/**< 退出信号 */
+	eaf_thread_storage_t			tls;		/**< 线程私有变量 */
 
 	struct
 	{
-		size_t						size;		/** 服务组长度 */
-		eaf_group_t**				table;		/** 服务组 */
+		size_t						size;		/**< 服务组长度 */
+		eaf_group_t**				table;		/**< 服务组 */
 	}group;
 
-	const eaf_rpc_cfg_t*			rpc;		/** RPC */
+	const eaf_rpc_cfg_t*			rpc;		/**< RPC */
 }eaf_ctx_t;
 
-static eaf_ctx_t* g_eaf_ctx			= NULL;		/** 全局运行环境 */
+static eaf_ctx_t* g_eaf_ctx			= NULL;		/**< Global runtime */
 
 static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
 {
@@ -311,11 +315,14 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 	switch (service->msgq.cur_msg->data.msg->msg.type)
 	{
 	case eaf_msg_type_req:
-		service->msgq.cur_msg->info.req.req_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		service->msgq.cur_msg->info.req.req_fn(
+			EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
 		goto fin;
 
 	case eaf_msg_type_rsp:
-		service->msgq.cur_msg->data.msg->msg.info.rr.rfn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		service->msgq.cur_msg->data.msg->msg.info.rr.rfn(
+			service->msgq.cur_msg->info.rsp.receipt,
+			EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
 		goto fin;
 	}
 
@@ -599,7 +606,7 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 	return eaf_errno_success;
 }
 
-static void _eaf_service_on_req_record_create(eaf_msgq_record_t* record, void* arg)
+static void _eaf_service_on_req_fix(eaf_msgq_record_t* record, void* arg)
 {
 #if defined(_MSC_VER)
 #	pragma warning(push)
@@ -640,7 +647,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	if (service == NULL)
 	{
 		return rpc && g_eaf_ctx->rpc != NULL ?
-			g_eaf_ctx->rpc->send_msg(req) : eaf_errno_notfound;
+			g_eaf_ctx->rpc->output_req(from, to, req) : eaf_errno_notfound;
 	}
 
 	/* 查找消息处理函数 */
@@ -666,13 +673,25 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 #endif
 	/* 推送消息 */
 	return _eaf_service_push_msg(group, service, real_msg,
-		_eaf_service_on_req_record_create, (void*)msg_proc, PUSH_FLAG_LOCK);
+		_eaf_service_on_req_fix, (void*)msg_proc, PUSH_FLAG_LOCK);
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
 }
 
-static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
+static void _eaf_service_on_rsp_fix(eaf_msgq_record_t* record, void* arg)
+{
+	eaf_msg_receipt_t receipt = (eaf_msg_receipt_t)(uintptr_t)arg;
+	record->info.rsp.receipt = receipt;
+}
+
+/**
+ * Send response
+ * @note rsp->from shows who send this response
+ * @param[in] to	Who will receive this response
+ * @param[in] rsp	Response message
+ */
+static int _eaf_send_rsp(eaf_msg_receipt_t receipt, uint32_t from, uint32_t to, eaf_msg_t* rsp, int rpc)
 {
 	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -680,22 +699,21 @@ static int _eaf_send_rsp(uint32_t from, eaf_msg_t* rsp, int rpc)
 	}
 
 	eaf_msg_full_t* real_msg = EAF_MSG_I2C(rsp);
-	uint32_t orig_from = rsp->from;
-	rsp->from = from;
 
 	/* 查询接收服务 */
 	eaf_group_t* group;
-	eaf_service_t* service = _eaf_service_find_service(orig_from, &group);
+	eaf_service_t* service = _eaf_service_find_service(to, &group);
 
 	/* if service not found, send to rpc */
 	if (service == NULL)
 	{
-		return rpc && g_eaf_ctx->rpc != NULL ?
-			g_eaf_ctx->rpc->send_msg(rsp) : eaf_errno_notfound;
+		return (rpc && g_eaf_ctx->rpc != NULL) ?
+			g_eaf_ctx->rpc->output_rsp(receipt, from, to, rsp) : eaf_errno_notfound;
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg, NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
+	return _eaf_service_push_msg(group, service, real_msg,
+		_eaf_service_on_rsp_fix, (void*)(uintptr_t)receipt, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
 
 int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
@@ -918,9 +936,10 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 	return _eaf_send_req(from, to, req, 1);
 }
 
-int eaf_send_rsp(_In_ uint32_t from, _Inout_ eaf_msg_t* rsp)
+int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 {
-	return _eaf_send_rsp(from, rsp, 1);
+	rsp->from = from;
+	return _eaf_send_rsp(eaf_msg_receipt_success, from, to, rsp, 1);
 }
 
 int eaf_resume(_In_ uint32_t srv_id)
@@ -994,28 +1013,20 @@ int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg)
 		return eaf_errno_duplicate;
 	}
 
-	/* init */
-	cfg->on_init();
-
 	g_eaf_ctx->rpc = cfg;
 	return eaf_errno_success;
 }
 
-int eaf_rpc_income(_In_ uint32_t to, _Inout_ eaf_msg_t* msg)
+int eaf_rpc_input_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 {
-	switch (msg->type)
-	{
-	case eaf_msg_type_req:
-		return _eaf_send_req(msg->from, to, msg, 0);
+	return _eaf_send_req(from, to, req, 0);
+}
 
-	case eaf_msg_type_rsp:
-		return _eaf_send_rsp(msg->from, msg, 0);
-
-	default:
-		break;
-	}
-
-	return eaf_errno_invalid;
+int eaf_rpc_input_rsp(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
+	_In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
+{
+	rsp->from = from;
+	return _eaf_send_rsp(receipt, from, to, rsp, 0);
 }
 
 uint32_t eaf_service_self(void)
