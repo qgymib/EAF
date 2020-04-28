@@ -104,7 +104,7 @@ void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg);
 
 /**
  * @brief Reduce reference count
- * @param[in,out] msg		The message you want to add reference
+ * @param[in,out] msg		The message you want to reduce reference
  */
 void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
 
