@@ -111,7 +111,7 @@ void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
 /**
  * @brief Get user structure address.
  * @param[in] msg		The message
- * @param[in] size		The size of user structure
+ * @param[out] size		The size of user structure
  * @return				The address of user structure
  */
 void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size);
