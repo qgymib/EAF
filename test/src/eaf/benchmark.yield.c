@@ -14,7 +14,7 @@ static size_t					s_benchmark_yield_count_s1;
 static size_t					s_benchmark_yield_count_s2;
 static size_t					s_benchmark_yield_total;
 
-static void _test_benchmark_yield_on_rsp(eaf_msg_receipt_t receipt, eaf_msg_t* msg)
+static void _test_benchmark_yield_on_rsp(int receipt, eaf_msg_t* msg)
 {
 	(void)receipt;
 	(void)msg;

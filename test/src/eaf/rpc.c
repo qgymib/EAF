@@ -20,7 +20,7 @@ typedef struct test_rpc_ctx
 
 	struct
 	{
-		eaf_msg_receipt_t	receipt;
+		int					receipt;
 		int					value;
 	}last_rsp;
 }test_rpc_ctx_t;
@@ -59,7 +59,7 @@ static int _test_rpc_output_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ ea
 	return 0;
 }
 
-static void _test_rpc_on_test1_rsp(_In_ eaf_msg_receipt_t receipt, _Inout_ struct eaf_msg* rsp)
+static void _test_rpc_on_test1_rsp(_In_ int receipt, _Inout_ struct eaf_msg* rsp)
 {
 	/**
 	 * Record necessary message
@@ -70,7 +70,7 @@ static void _test_rpc_on_test1_rsp(_In_ eaf_msg_receipt_t receipt, _Inout_ struc
 	eaf_sem_post(s_test_rpc_ctx.sem_ret);
 }
 
-static int _test_rpc_output_rsp(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
+static int _test_rpc_output_rsp(_In_ int receipt, _In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 {
 	(void)from;
 	(void)to;
@@ -141,14 +141,14 @@ TEST_F(eaf_rpc, output_req)
 		ASSERT_PTR_NE(rsp, NULL);
 		*(int*)eaf_msg_get_data(rsp, NULL) = rsp_val;
 
-		ASSERT_NUM_EQ(eaf_rpc_input_rsp(eaf_msg_receipt_success, TEST_SERIVCE_S1, TEST_QUICK_S1, rsp), 0);
+		ASSERT_NUM_EQ(eaf_rpc_input_rsp(eaf_errno_success, TEST_SERIVCE_S1, TEST_QUICK_S1, rsp), 0);
 		eaf_msg_dec_ref(rsp);
 	}
 	/* verify */
 	{
 		ASSERT_NUM_EQ(eaf_sem_pend(s_test_rpc_ctx.sem_ret, 8 * 1000), 0);
 		ASSERT_NUM_EQ(s_test_rpc_ctx.last_rsp.value, rsp_val);
-		ASSERT_NUM_EQ(s_test_rpc_ctx.last_rsp.receipt, eaf_msg_receipt_success);
+		ASSERT_NUM_EQ(s_test_rpc_ctx.last_rsp.receipt, eaf_errno_success);
 	}
 }
 

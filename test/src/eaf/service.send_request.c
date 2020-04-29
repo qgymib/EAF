@@ -10,9 +10,9 @@
 static int			_s_ret_val;
 static eaf_sem_t*	s_service_send_request_sem;
 
-static void _test_send_request_s1_on_rsp(eaf_msg_receipt_t receipt, eaf_msg_t* msg)
+static void _test_send_request_s1_on_rsp(int receipt, eaf_msg_t* msg)
 {
-	ASSERT(receipt == eaf_msg_receipt_success);
+	ASSERT(receipt == eaf_errno_success);
 	_s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_sem_post(s_service_send_request_sem);
 }

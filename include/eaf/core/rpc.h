@@ -59,8 +59,8 @@ typedef struct eaf_rpc_cfg
 	 * @param[in,out] rsp		Response
 	 * @return					#eaf_errno
 	 */
-	int(*output_rsp)(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
-		_In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
+	int(*output_rsp)(_In_ int receipt, _In_ uint32_t from, _In_ uint32_t to,
+		_Inout_ eaf_msg_t* rsp);
 } eaf_rpc_cfg_t;
 
 /**
@@ -87,8 +87,8 @@ int eaf_rpc_input_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* r
  * @param[in,out] rsp	Incoming response
  * @return				#eaf_errno
  */
-int eaf_rpc_input_rsp(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
-	_In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
+int eaf_rpc_input_rsp(_In_ int receipt, _In_ uint32_t from, _In_ uint32_t to,
+	_Inout_ eaf_msg_t* rsp);
 
 #ifdef __cplusplus
 }

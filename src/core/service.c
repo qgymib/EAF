@@ -131,7 +131,7 @@ typedef struct eaf_msgq_record
 		}req;
 		struct
 		{
-			eaf_msg_receipt_t		receipt;	/**< Receipt for request  */
+			int						receipt;	/**< Receipt for request  */
 		}rsp;
 	}info;
 
@@ -311,17 +311,16 @@ static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* servi
 
 static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
 {
-	switch (service->msgq.cur_msg->data.msg->msg.type)
+	eaf_rsp_handle_fn rsp_fn;
+	switch (eaf_msg_get_type(&service->msgq.cur_msg->data.msg->msg))
 	{
 	case eaf_msg_type_req:
-		service->msgq.cur_msg->info.req.req_fn(
-			EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		service->msgq.cur_msg->info.req.req_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
 		goto fin;
 
 	case eaf_msg_type_rsp:
-		service->msgq.cur_msg->data.msg->msg.info.rr.rfn(
-			service->msgq.cur_msg->info.rsp.receipt,
-			EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
+		rsp_fn = eaf_msg_get_rsp_fn(&service->msgq.cur_msg->data.msg->msg);
+		rsp_fn(service->msgq.cur_msg->info.rsp.receipt, EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
 		goto fin;
 	}
 
@@ -680,7 +679,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 
 static void _eaf_service_on_rsp_fix(eaf_msgq_record_t* record, void* arg)
 {
-	eaf_msg_receipt_t receipt = (eaf_msg_receipt_t)(uintptr_t)arg;
+	int receipt = (int)(uintptr_t)arg;
 	record->info.rsp.receipt = receipt;
 }
 
@@ -690,7 +689,7 @@ static void _eaf_service_on_rsp_fix(eaf_msgq_record_t* record, void* arg)
  * @param[in] to	Who will receive this response
  * @param[in] rsp	Response message
  */
-static int _eaf_send_rsp(eaf_msg_receipt_t receipt, uint32_t from, uint32_t to, eaf_msg_t* rsp, int rpc)
+static int _eaf_send_rsp(int receipt, uint32_t from, uint32_t to, eaf_msg_t* rsp, int rpc)
 {
 	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -833,7 +832,7 @@ int eaf_load(void)
 	/* initialize rpc */
 	if (g_eaf_ctx->rpc != NULL && g_eaf_ctx->rpc->on_init_done() != 0)
 	{
-		return eaf_errno_rpc_failure;
+		return eaf_errno_transfer;
 	}
 
 	/* 启动所有线程 */
@@ -938,7 +937,7 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 {
 	rsp->from = from;
-	return _eaf_send_rsp(eaf_msg_receipt_success, from, to, rsp, 1);
+	return _eaf_send_rsp(eaf_errno_success, from, to, rsp, 1);
 }
 
 int eaf_resume(_In_ uint32_t srv_id)
@@ -1021,8 +1020,7 @@ int eaf_rpc_input_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* r
 	return _eaf_send_req(from, to, req, 0);
 }
 
-int eaf_rpc_input_rsp(_In_ eaf_msg_receipt_t receipt, _In_ uint32_t from,
-	_In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
+int eaf_rpc_input_rsp(_In_ int receipt, _In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 {
 	rsp->from = from;
 	return _eaf_send_rsp(receipt, from, to, rsp, 0);

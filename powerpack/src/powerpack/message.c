@@ -17,11 +17,11 @@ typedef struct powerpack_message_record
 
 	struct
 	{
+		uint64_t				uuid;		/**< uuid */
 		eaf_msg_t*				req;		/**< raw request */
 		eaf_service_local_t*	local;		/**< service local storage */
 		uint32_t				from;		/**< raw sender */
 		unsigned long			defcnt;		/**< the number of defcnt */
-		uintptr_t				orig;		/**< user's orig value */
 	}data;
 }powerpack_message_record_t;
 
@@ -47,11 +47,11 @@ static void _powerpack_message_decref(eaf_msg_t* msg, unsigned cnt)
 	}
 }
 
-static void _powerpack_message_on_rsp_proxy(eaf_msg_receipt_t receipt, struct eaf_msg* rsp)
+static void _powerpack_message_on_rsp_proxy(int receipt, struct eaf_msg* rsp)
 {
 	(void)receipt;
 	powerpack_message_record_t tmp_key;
-	tmp_key.data.req = (eaf_msg_t*)rsp->info.rr.orig;
+	tmp_key.data.uuid = rsp->info.constant.uuid;
 
 	powerpack_message_record_t* rec = NULL;
 	eaf_lock_enter(g_powerpack_message_ctx->objlock);
@@ -70,9 +70,6 @@ static void _powerpack_message_on_rsp_proxy(eaf_msg_receipt_t receipt, struct ea
 	/* must found */
 	assert(rec != NULL);
 
-	/* restore information */
-	rsp->info.rr.orig = rec->data.orig;
-
 	/* resume */
 	eaf_msg_add_ref(rsp);
 	rec->data.local->unsafe[0].v_ptr = rsp;
@@ -88,11 +85,11 @@ static int _powerpack_message_on_cmp_record(const eaf_map_node_t* key1, const ea
 	powerpack_message_record_t* rec_1 = EAF_CONTAINER_OF(key1, powerpack_message_record_t, node);
 	powerpack_message_record_t* rec_2 = EAF_CONTAINER_OF(key2, powerpack_message_record_t, node);
 
-	if (rec_1->data.req == rec_2->data.req)
+	if (rec_1->data.uuid == rec_2->data.uuid)
 	{
 		return 0;
 	}
-	return rec_1->data.req < rec_2->data.req ? -1 : 1;
+	return rec_1->data.uuid < rec_2->data.uuid ? -1 : 1;
 }
 
 int eaf_powerpack_message_init(void)
@@ -148,20 +145,17 @@ void eaf_powerpack_message_exit(void)
 void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg)
 {
 	eaf_msg_t* req = (eaf_msg_t*)arg;
-	if (req->type != eaf_msg_type_req)
-	{
-		goto err_malloc;
-	}
+	assert(eaf_msg_get_type(req) == eaf_msg_type_req);
 
 	powerpack_message_record_t* record = malloc(sizeof(powerpack_message_record_t));
 	if (record == NULL)
 	{
 		goto err_malloc;
 	}
+	record->data.uuid = req->info.constant.uuid;
 	record->data.from = req->from;
 	record->data.local = local;
 	record->data.req = req;
-	record->data.orig = req->info.rr.orig;
 	record->data.defcnt = local->unsafe[0].ww.w2;
 
 	int ret;
@@ -177,8 +171,7 @@ void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt
 	}
 
 	/* replace response handler */
-	req->info.rr.rfn = _powerpack_message_on_rsp_proxy;
-	req->info.rr.orig = (uintptr_t)req;	/* in case of user modify it */
+	eaf_msg_set_rsp_fn(req, _powerpack_message_on_rsp_proxy);
 
 	/* send request */
 	if (eaf_send_req(powerpack_get_service_id(), local->unsafe[0].ww.w1, req) < 0)

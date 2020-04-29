@@ -24,16 +24,6 @@ typedef enum eaf_msg_type
 }eaf_msg_type_t;
 
 /**
- * @brief Request receipt
- */
-typedef enum eaf_msg_receipt
-{
-	eaf_msg_receipt_success,			/**< Handle request success */
-	eaf_msg_receipt_noaddr,				/**< No such address */
-	eaf_msg_receipt_nomsgid,			/**< No such message id */
-}eaf_msg_receipt_t;
-
-/**
  * @brief Prototype for request handler
  * @param[in,out] req		Request
  */
@@ -52,17 +42,16 @@ typedef void(*eaf_req_handle_fn)(_Inout_ struct eaf_msg* req);
  * If a request was sent successfully and no response received, it most likely
  * receiver not response your request.
  * @see eaf_msg_receipt
- * @param[in] receipt		Receipt for request
+ * @param[in] receipt		Receipt for request, see #eaf_errno
  * @param[in,out] rsp		Response
  */
-typedef void(*eaf_rsp_handle_fn)(_In_ eaf_msg_receipt_t receipt, _Inout_ struct eaf_msg* rsp);
+typedef void(*eaf_rsp_handle_fn)(_In_ int receipt, _Inout_ struct eaf_msg* rsp);
 
 /**
  * @brief Communicate structure
  */
 typedef struct eaf_msg
 {
-	eaf_msg_type_t				type;	/**< Message type */
 	uint32_t					id;		/**< Message ID */
 	uint32_t					from;	/**< The service ID of sender */
 
@@ -70,11 +59,14 @@ typedef struct eaf_msg
 	{
 		struct
 		{
-			eaf_rsp_handle_fn	rfn;	/**< response handle function, automatically filled by EAF. user should not modify this field. */
-			uintptr_t			orig;	/**< original request address, automatically filled by EAF. user should not modify this field. */
-			uintptr_t			uid;	/**< resource id, not initialized by default. use at your wish. */
-		}rr;							/**< information for request/response. */
-	}info;								/**< information collection */
+			uint64_t			encs;	/**< Encoded secret, automatically filled by EAF. User must NOT modify this field. */
+		}dynamics;						/**< Dynamics across request and response */
+		struct
+		{
+			uint64_t			uuid;	/**< Universally Unique Identifier, automatically filled by EAF. User should NOT modify this field. */
+			uint64_t			orig;	/**< Original Request Informations, automatically filled by EAF. User should NOT modify this field. */
+		}constant;						/**< Constant across request and response */
+	}info;								/**< Information collection */
 }eaf_msg_t;
 
 /**
@@ -115,6 +107,28 @@ void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
  * @return				The address of user structure
  */
 void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size);
+
+/**
+ * @brief Get message type
+ * @param[in] msg		Message
+ * @return				#eaf_msg_type
+ */
+eaf_msg_type_t eaf_msg_get_type(_In_ const eaf_msg_t* msg);
+
+/**
+ * @brief Replace exist response handler with given one.
+ * @warning Do NOT use this function unless you know why.
+ * @param[in,out] msg	The message
+ * @param[in] fn		Response handler
+ */
+void eaf_msg_set_rsp_fn(_Inout_ eaf_msg_t* msg, _In_ eaf_rsp_handle_fn fn);
+
+/**
+ * @brief Get response handler
+ * @param[in] msg	The message
+ * @return			The response handler
+ */
+eaf_rsp_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg);
 
 #ifdef __cplusplus
 }

@@ -23,7 +23,7 @@ EAF_DEFINE_ERRNO(eaf_errno_notfound,	"not found")
 EAF_DEFINE_ERRNO(eaf_errno_overflow,	"overflow")
 EAF_DEFINE_ERRNO(eaf_errno_timeout,		"timeout")
 EAF_DEFINE_ERRNO(eaf_errno_invalid,		"invalid parameters")
-EAF_DEFINE_ERRNO(eaf_errno_rpc_failure, "RPC operation failure")
+EAF_DEFINE_ERRNO(eaf_errno_transfer,	"transmission protocol error")
 
 #ifdef __cplusplus
 }

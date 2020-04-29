@@ -23,7 +23,7 @@ typedef enum eaf_errno
 	eaf_errno_overflow		= -0x06,		/**< Overflow */
 	eaf_errno_timeout		= -0x07,		/**< Operation timeout */
 	eaf_errno_invalid		= -0x08,		/**< Invalid Parameter */
-	eaf_errno_rpc_failure	= -0x09,		/**< RPC failure */
+	eaf_errno_transfer		= -0x09,		/**< Transmission protocol error */
 }eaf_errno_t;
 
 /**
