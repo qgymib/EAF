@@ -48,7 +48,7 @@ static void _powerpack_message_decref(eaf_msg_t* msg, unsigned cnt)
 		 * we decrease reference by user request, so it is user's
 		 * responsibility to make sure the count is right.
 		 */
-		/* coverity[double_free] : FALSE */
+		/* coverity[double_free : FALSE] */
 		eaf_msg_dec_ref(msg);
 	}
 }
