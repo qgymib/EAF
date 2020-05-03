@@ -10,9 +10,11 @@ extern "C" {
 #include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 #include "eaf/powerpack/hash.h"
+#include "eaf/powerpack/log.h"
 #include "eaf/powerpack/message.h"
 #include "eaf/powerpack/net.h"
 #include "eaf/powerpack/ringbuffer.h"
+#include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
 
 /**
