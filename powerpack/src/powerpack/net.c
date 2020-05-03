@@ -194,12 +194,12 @@ int eaf_powerpack_net_socket_wait_setup(_In_ uint32_t id, _In_ eaf_socket_t sock
 	rec->data.timeout = timeout;
 	rec->uv.refcnt = 2;
 
-	if (uv_timer_init(powerpack_get_uv(), &rec->uv.uv_timer) < 0)
+	if (uv_timer_init(eaf_uv_get(), &rec->uv.uv_timer) < 0)
 	{
 		free(rec);
 		return eaf_errno_unknown;
 	}
-	if (uv_poll_init_socket(powerpack_get_uv(), &rec->uv.uv_poll, sock) < 0)
+	if (uv_poll_init_socket(eaf_uv_get(), &rec->uv.uv_poll, sock) < 0)
 	{
 		rec->uv.refcnt = 1;	/* poll not success, so refnct should be 1 */
 		goto err_uv_poll;

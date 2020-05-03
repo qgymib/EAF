@@ -158,12 +158,12 @@ void eaf_powerpack_exit(void)
 	g_powerpack_ctx = NULL;
 }
 
-uv_loop_t* powerpack_get_uv(void)
+uv_loop_t* eaf_uv_get(void)
 {
 	return &g_powerpack_ctx->uv_loop;
 }
 
-void powerpack_notify(void)
+void eaf_uv_mod(void)
 {
 	eaf_sem_post(g_powerpack_ctx->sem_loop);
 }

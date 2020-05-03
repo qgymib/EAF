@@ -7,8 +7,8 @@ extern "C" {
 #include "eaf/powerpack.h"
 #include "uv.h"
 
-uv_loop_t* powerpack_get_uv(void);
-void powerpack_notify(void);
+uv_loop_t* eaf_uv_get(void);
+void eaf_uv_mod(void);
 
 uint32_t powerpack_get_service_id(void);
 

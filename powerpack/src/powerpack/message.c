@@ -186,7 +186,7 @@ void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt
 	}
 
 	/* here just wait for response */
-	powerpack_notify();
+	eaf_uv_mod();
 	return;
 
 err_send:

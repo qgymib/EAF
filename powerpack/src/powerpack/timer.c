@@ -162,7 +162,7 @@ void eaf_powerpack_sleep_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ 
 	record->data.service_id = local->id;
 
 	/* initialize timer */
-	if (uv_timer_init(powerpack_get_uv(), &record->data.uv_timer) < 0)
+	if (uv_timer_init(eaf_uv_get(), &record->data.uv_timer) < 0)
 	{
 		goto err;
 	}
@@ -186,7 +186,7 @@ void eaf_powerpack_sleep_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ 
 		goto err_erase_record;
 	}
 
-	powerpack_notify();
+	eaf_uv_mod();
 	return;
 
 err_erase_record:
