@@ -1,4 +1,5 @@
 #include "eaf/utils/errno.h"
+#define _GNU_SOURCE
 #include "compat/lock.h"
 
 int eaf_compat_lock_init(eaf_compat_lock_t* handler, eaf_lock_attr_t attr)
@@ -11,7 +12,7 @@ int eaf_compat_lock_init(eaf_compat_lock_t* handler, eaf_lock_attr_t attr)
 
 	if (attr == eaf_lock_attr_recursive)
 	{
-		pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+		pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	}
 
 	int ret = eaf_errno_success;

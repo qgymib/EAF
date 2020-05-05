@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/syscall.h>
+#define _GNU_SOURCE
 #define __USE_GNU
+#include <pthread.h>
+#include <sys/syscall.h>
 #include <sched.h>
 #include "eaf/utils/errno.h"
 #include "compat/thread.h"
@@ -18,7 +20,6 @@ static void* _eaf_thread_linux_proxy(void* params)
 int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t* cfg, eaf_thread_fn fn, void* arg)
 {
 	int ret = eaf_errno_success;
-	cpu_set_t* c_set = NULL;
 
 	pthread_attr_t thr_attr;
 	if (pthread_attr_init(&thr_attr) < 0)
@@ -48,6 +49,7 @@ int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t
 
 	if (cfg != NULL && (cfg->valid & EAF_THREAD_VALID_AFFINITY))
 	{
+        cpu_set_t* c_set;
 		if ((c_set = malloc(sizeof(cpu_set_t))) == NULL)
 		{
 			goto fin;
@@ -55,13 +57,10 @@ int eaf_compat_thread_init(eaf_compat_thread_t* handler, const eaf_thread_attr_t
 		CPU_ZERO(c_set);
 		CPU_SET(cfg->field.affinity, c_set);
 		pthread_setaffinity_np(handler->thr, sizeof(*c_set), c_set);
+        free(c_set);
 	}
 
 fin:
-	if (c_set != NULL)
-	{
-		free(c_set);
-	}
 	pthread_attr_destroy(&thr_attr);
 	return ret;
 }
