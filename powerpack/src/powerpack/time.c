@@ -1,15 +1,20 @@
 #include "eaf/eaf.h"
-#include "uv.h"
 #include "time.h"
 
 #if defined(_MSC_VER)
-#include <minwinbase.h>
+#include <Windows.h>
 #else
 #include <time.h>
 #endif
 
 int eaf_gettimeofday(_Inout_ eaf_clock_time_t* tv)
 {
+	/**
+	 * uv_gettimeofday() was added in libuv-1.28.0, which was release in
+	 * 2019/04/15.
+	 * As this version is not old enough, we copy implement from libuv.
+	 */
+#if 0
 	uv_timeval64_t uv_tv;
 	if (uv_gettimeofday(&uv_tv) < 0)
 	{
@@ -20,6 +25,31 @@ int eaf_gettimeofday(_Inout_ eaf_clock_time_t* tv)
 	tv->tv_usec = uv_tv.tv_usec;
 
 	return eaf_errno_success;
+#endif
+
+#if defined(_MSC_VER)
+	/* Based on https://doxygen.postgresql.org/gettimeofday_8c_source.html */
+	const uint64_t epoch = (uint64_t)116444736000000000ULL;
+	FILETIME file_time;
+	ULARGE_INTEGER ularge;
+
+	GetSystemTimeAsFileTime(&file_time);
+	ularge.LowPart = file_time.dwLowDateTime;
+	ularge.HighPart = file_time.dwHighDateTime;
+	tv->tv_sec = (int64_t)((ularge.QuadPart - epoch) / 10000000L);
+	tv->tv_usec = (int32_t)(((ularge.QuadPart - epoch) % 10000000L) / 10);
+	return 0;
+#else
+	struct timeval time;
+	if (gettimeofday(&time, NULL) != 0)
+	{
+		return eaf_errno_unknown;
+	}
+
+	tv->tv_sec = (uint64_t)time.tv_sec;
+	tv->tv_usec = (uint32_t)time.tv_usec;
+	return 0;
+#endif
 }
 
 int eaf_getsystemtime(_Inout_ eaf_calendar_time_t* tv)
