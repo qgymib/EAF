@@ -4,6 +4,7 @@
 #if defined(_MSC_VER)
 #include <Windows.h>
 #else
+#include <sys/time.h>
 #include <time.h>
 #endif
 
