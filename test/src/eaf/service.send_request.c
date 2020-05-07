@@ -10,9 +10,10 @@
 static int			_s_ret_val;
 static eaf_sem_t*	s_service_send_request_sem;
 
-static void _test_send_request_s1_on_rsp(int receipt, eaf_msg_t* msg)
+static void _test_send_request_s1_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	ASSERT(receipt == eaf_errno_success);
+	(void)from; (void)to;
+	ASSERT(eaf_msg_get_receipt(msg) == eaf_errno_success);
 	_s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_sem_post(s_service_send_request_sem);
 }
@@ -44,13 +45,14 @@ static void _test_send_request_s2_on_exit(void)
 	// do nothing
 }
 
-static void _test_send_request_s1_on_req(eaf_msg_t* msg)
+static void _test_send_request_s1_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
 {
-	(void)msg;
+	(void)from; (void)to; (void)msg;
 }
 
-static void _test_send_request_s2_on_req(eaf_msg_t* req)
+static void _test_send_request_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {
+	(void)from; (void)to;
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));
 	ASSERT(rsp != NULL);
 

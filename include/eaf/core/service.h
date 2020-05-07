@@ -50,7 +50,7 @@ extern "C" {
 typedef struct eaf_message_table
 {
 	uint32_t						msg_id;			/**< Request ID */
-	eaf_req_handle_fn				fn;				/**< The handler of request */
+	eaf_msg_handle_fn				fn;				/**< The handler of request */
 }eaf_message_table_t;
 
 /**
@@ -95,6 +95,72 @@ typedef struct eaf_group_table
 		eaf_service_table_t*		table;			/**< The pointer of configure table */
 	}service;										/**< Configure table */
 }eaf_group_table_t;
+
+/**
+ * @brief Hook
+ */
+typedef struct eaf_hook
+{
+	/**
+	 * @brief Hook when a message is going to be send.
+	 *
+	 * This hook is called when user want to send a request/response.
+	 * If a non-zero code is returned, the message will not be send, and the code
+	 * will be returned to user.
+	 *
+	 * @param[in] from		Who send this message
+	 * @param[in] to		Who will receive this message
+	 * @param[in,out] msg	The message
+	 * @return				#eaf_errno
+	 */
+	int(*on_msg_send)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+
+	/**
+	 * @brief Hook when destination cannot found.
+	 * @param[in] from		Who send this message
+	 * @param[in] to		Who will receive this message
+	 * @param[in,out] msg	The message
+	 * @return				#eaf_errno
+	 */
+	int(*on_dst_not_found)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+
+	/**
+	 * @brief Hook a service is going to handle message.
+	 *
+	 * This hook is called when a service is going to handle a
+	 * request/response.
+	 * If a non-zero code is returned, the service will not handle this message.
+	 *
+	 * @warning EAF do NOT automatically generate a response for any return code.
+	 * @param[in] from		Who send this message
+	 * @param[in] to		Who will receive this message
+	 * @param[in,out] msg	The message
+	 * @return				#eaf_errno
+	 */
+	int(*on_pre_msg_process)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+
+	/**
+	 * @brief Hook a service is just handle message.
+	 *
+	 * This hook is called when a service just handle a request/response.
+	 * @param[in] from		Who send this message
+	 * @param[in] to		Who will receive this message
+	 * @param[in,out] msg	The message
+	 */
+	void(*on_post_msg_process)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+
+	/**
+	 * @brief Hook a service just enter yield state.
+	 * @param[in] srv_id	Service ID
+	 */
+	void(*on_post_yield)(_In_ uint32_t srv_id);
+
+	/**
+	 * @brief Hook a service will leave yield state.
+	 * @param[in] srv_id	Service ID
+	 */
+	void(*on_post_resume)(_In_ uint32_t srv_id);
+}eaf_hook_t;
 
 /**
  * @brief Resume service
@@ -180,6 +246,14 @@ int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
  * @return			service id
  */
 uint32_t eaf_service_self(void);
+
+/**
+ * @brief Inject a system wide hook
+ * @param[in] hook	Hook, must be a global resource
+ * @param[in] size	sizeof(*hook)
+ * @return			#eaf_errno
+ */
+int eaf_inject(const eaf_hook_t* hook, size_t size);
 
 #ifdef __cplusplus
 }

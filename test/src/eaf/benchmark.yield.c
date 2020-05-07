@@ -14,10 +14,9 @@ static size_t					s_benchmark_yield_count_s1;
 static size_t					s_benchmark_yield_count_s2;
 static size_t					s_benchmark_yield_total;
 
-static void _test_benchmark_yield_on_rsp(int receipt, eaf_msg_t* msg)
+static void _test_benchmark_yield_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)receipt;
-	(void)msg;
+	(void)from; (void)to; (void)msg;
 }
 
 static int _test_benchmark_yield_on_init(void)
@@ -29,9 +28,9 @@ static void _test_benchmark_yield_on_exit(void)
 {
 }
 
-static void _test_benchmark_yield_s1_on_req(struct eaf_msg* msg)
+static void _test_benchmark_yield_s1_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)msg;
+	(void)from; (void)to; (void)msg;
 	eaf_reenter
 	{
 		/* first we need s2 continue run */
@@ -47,9 +46,9 @@ static void _test_benchmark_yield_s1_on_req(struct eaf_msg* msg)
 	};
 }
 
-static void _test_benchmark_yield_s2_on_req(struct eaf_msg* msg)
+static void _test_benchmark_yield_s2_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)msg;
+	(void)from; (void)to; (void)msg;
 	eaf_reenter
 	{
 		/* first we need s1 continue run */

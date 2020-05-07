@@ -22,9 +22,9 @@ static size_t		s_powerpack_benchmark_message_count;
 static size_t		s_powerpack_benchmark_message_total;
 static eaf_sem_t*	s_powerpack_benchmark_message_sem;
 
-static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
+static void _test_powerpack_benchmark_message_s1_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {
-	(void)req;
+	(void)from; (void)to; (void)req;
 	eaf_reenter
 	{
 		for (;s_powerpack_benchmark_message_count < s_powerpack_benchmark_message_total;
@@ -44,8 +44,9 @@ static void _test_powerpack_benchmark_message_s1_on_req(struct eaf_msg* req)
 	};
 }
 
-static void _test_powerpack_benchmark_message_s2_on_req(struct eaf_msg* req)
+static void _test_powerpack_benchmark_message_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {
+	(void)from; (void)to;
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, 0);
 	ASSERT(eaf_send_rsp(TEST_SERVICE_S2, req->from, rsp) == 0);
 	eaf_msg_dec_ref(rsp);

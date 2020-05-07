@@ -45,14 +45,14 @@ typedef struct test_quick_cfg
 }test_quick_cfg_t;
 
 /**
- * Setup EAF
+ * @brief Setup EAF
  * @param[in] cfg	Configure
  * @return			#eaf_errno
  */
 int test_eaf_quick_setup(const test_quick_cfg_t* cfg);
 
 /**
- * Exit EAF
+ * @brief Exit EAF
  */
 void test_eaf_quick_cleanup(void);
 

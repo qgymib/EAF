@@ -53,9 +53,9 @@ static void _powerpack_message_decref(eaf_msg_t* msg, unsigned cnt)
 	}
 }
 
-static void _powerpack_message_on_rsp_proxy(int receipt, struct eaf_msg* rsp)
+static void _powerpack_message_on_rsp_proxy(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* rsp)
 {
-	(void)receipt;
+	(void)from; (void)to;
 	powerpack_message_record_t tmp_key;
 	tmp_key.data.uuid = rsp->info.constant.uuid;
 

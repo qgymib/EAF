@@ -1,6 +1,5 @@
 #include <assert.h>
 #include "eaf/core/service.h"
-#include "eaf/core/rpc.h"
 #include "eaf/utils/list.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/define.h"
@@ -127,16 +126,14 @@ typedef struct eaf_msgq_record
 	{
 		struct
 		{
-			eaf_req_handle_fn		req_fn;		/**< 请求处理函数 */
+			eaf_msg_handle_fn		req_fn;		/**< 请求处理函数 */
 		}req;
-		struct
-		{
-			int						receipt;	/**< Receipt for request  */
-		}rsp;
 	}info;
 
 	struct
 	{
+		uint32_t					from;
+		uint32_t					to;
 		struct eaf_service*			service;	/**< 服务句柄 */
 		eaf_msg_full_t*				msg;		/**< 消息 */
 	}data;
@@ -205,7 +202,7 @@ typedef struct eaf_ctx
 		eaf_group_t**				table;		/**< 服务组 */
 	}group;
 
-	const eaf_rpc_cfg_t*			rpc;		/**< RPC */
+	const eaf_hook_t*				hook;		/**< Hook */
 }eaf_ctx_t;
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/**< Global runtime */
@@ -255,13 +252,13 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 }
 
 /**
-* 设置服务状态
-* @param group		组
-* @param service	服务
-* @param state		状态
+* @brief Set service state
+* @param[in,out] group		Service group
+* @param[in,out] service	Service
+* @param[in] state		State
 */
-static void _eaf_service_set_state_nolock(eaf_group_t* group, eaf_service_t* service,
-	eaf_service_state_t state)
+static void _eaf_service_set_state_nolock(eaf_group_t* group,
+	eaf_service_t* service, eaf_service_state_t state)
 {
 	if (service->state == state)
 	{
@@ -309,42 +306,99 @@ static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* servi
 	eaf_compat_lock_leave(&group->objlock);
 }
 
-static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
+static int _eaf_hook_pre_msg_process(eaf_msgq_record_t* msg)
 {
-	eaf_rsp_handle_fn rsp_fn;
-	switch (eaf_msg_get_type(&service->msgq.cur_msg->data.msg->msg))
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_msg_process == NULL)
 	{
-	case eaf_msg_type_req:
-		service->msgq.cur_msg->info.req.req_fn(EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
-		goto fin;
-
-	case eaf_msg_type_rsp:
-		rsp_fn = eaf_msg_get_rsp_fn(&service->msgq.cur_msg->data.msg->msg);
-		rsp_fn(service->msgq.cur_msg->info.rsp.receipt, EAF_MSG_C2I(service->msgq.cur_msg->data.msg));
-		goto fin;
+		return 0;
 	}
 
-fin:
-	/* 发生yield */
-	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+	int ret;
+	if ((ret = g_eaf_ctx->hook->on_pre_msg_process(msg->data.from,
+		msg->data.to, &msg->data.msg->msg)) == 0)
 	{
-		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
-		CALL_YIELD_HOOK(group);
+		return 0;
+	}
+
+	return ret;
+}
+
+static void _eaf_hook_post_msg_process(eaf_msgq_record_t* msg)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_msg_process == NULL)
+	{
 		return;
 	}
 
-	/* 正常结束，重置分支 */
+	g_eaf_ctx->hook->on_post_msg_process(msg->data.from, msg->data.to, &msg->data.msg->msg);
+}
+
+static void _eaf_hook_post_yield(uint32_t service)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_yield == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_post_yield(service);
+}
+
+static void _eaf_hook_post_resume(uint32_t service)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_resume == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_post_resume(service);
+}
+
+static void _eaf_service_reset(eaf_service_t* service)
+{
 	RESET_BRANCH(service);
 	_eaf_service_destroy_msg_record(service->msgq.cur_msg);
 	service->msgq.cur_msg = NULL;
 }
 
+static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
+{
+	eaf_msg_handle_fn rsp_fn;
+	eaf_msgq_record_t* msg = service->msgq.cur_msg;
+
+	switch (eaf_msg_get_type(&msg->data.msg->msg))
+	{
+	case eaf_msg_type_req:
+		msg->info.req.req_fn(msg->data.from, msg->data.to, EAF_MSG_C2I(msg->data.msg));
+		break;
+
+	case eaf_msg_type_rsp:
+		rsp_fn = eaf_msg_get_rsp_fn(&msg->data.msg->msg);
+		if (rsp_fn != NULL)
+		{
+			rsp_fn(msg->data.from, msg->data.to, EAF_MSG_C2I(msg->data.msg));
+		}
+		break;
+	}
+
+	/* yield */
+	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+	{
+		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
+		CALL_YIELD_HOOK(group);
+		_eaf_hook_post_yield(service->coroutine.local.id);
+		return;
+	}
+
+	_eaf_hook_post_msg_process(msg);
+
+	/* normal end, reset branch */
+	_eaf_service_reset(service);
+}
+
 static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 {
-	/* 现在service的状态只可能是BUSY */
+	/* the state of service must be BUSY */
 	assert(service->state == eaf_service_state_busy);
 
-	/* 当前消息不为NULL时，说明需要恢复上下文 */
+	/* If cur_msg is not NULL, context need to be restore */
 	if (service->msgq.cur_msg != NULL)
 	{
 		_eaf_service_resume_message(group, service);
@@ -367,6 +421,13 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 
 	if (service->msgq.cur_msg == NULL)
 	{
+		return;
+	}
+
+	/* hook: on_pre_msg_process */
+	if (_eaf_hook_pre_msg_process(service->msgq.cur_msg) < 0)
+	{
+		_eaf_service_reset(service);
 		return;
 	}
 
@@ -564,7 +625,7 @@ static void _eaf_service_cleanup_group(eaf_group_t* group)
 	eaf_compat_sem_exit(&group->msgq.sem);
 }
 
-static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg,
+static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg, uint32_t from, uint32_t to,
 	void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg, int flag)
 {
 	/* 检查消息队列容量 */
@@ -580,6 +641,8 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 		return eaf_errno_memory;
 	}
 
+	record->data.from = from;
+	record->data.to = to;
 	record->data.service = service;
 	record->data.msg = msg;
 	eaf_msg_add_ref(EAF_MSG_C2I(msg));
@@ -610,7 +673,7 @@ static void _eaf_service_on_req_fix(eaf_msgq_record_t* record, void* arg)
 #	pragma warning(push)
 #	pragma warning(disable : 4055)
 #endif
-	record->info.req.req_fn = (eaf_req_handle_fn)arg;
+	record->info.req.req_fn = (eaf_msg_handle_fn)arg;
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
@@ -627,13 +690,18 @@ static eaf_service_t* _eaf_get_current_service(eaf_group_t** group)
 	return ret != NULL ? CUR_RUN(ret) : NULL;
 }
 
-static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
+static int _eaf_hook_dst_not_found(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
-	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_dst_not_found == NULL)
 	{
-		return eaf_errno_state;
+		return eaf_errno_notfound;
 	}
 
+	return g_eaf_ctx->hook->on_dst_not_found(from, to, msg);
+}
+
+static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
+{
 	eaf_msg_full_t* real_msg = EAF_MSG_I2C(req);
 	req->from = from;
 
@@ -644,13 +712,12 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 	/* if service not found, send to rpc */
 	if (service == NULL)
 	{
-		return rpc && g_eaf_ctx->rpc != NULL ?
-			g_eaf_ctx->rpc->output_req(from, to, req) : eaf_errno_notfound;
+		return _eaf_hook_dst_not_found(from, to, req);
 	}
 
 	/* 查找消息处理函数 */
 	size_t i;
-	eaf_req_handle_fn msg_proc = NULL;
+	eaf_msg_handle_fn msg_proc = NULL;
 	for (i = 0; i < service->entry->msg_table_size; i++)
 	{
 		if (service->entry->msg_table[i].msg_id == req->id)
@@ -670,17 +737,11 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req, int rpc)
 #	pragma warning(disable : 4054)
 #endif
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg,
+	return _eaf_service_push_msg(group, service, real_msg, from, to,
 		_eaf_service_on_req_fix, (void*)msg_proc, PUSH_FLAG_LOCK);
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
-}
-
-static void _eaf_service_on_rsp_fix(eaf_msgq_record_t* record, void* arg)
-{
-	int receipt = (int)(uintptr_t)arg;
-	record->info.rsp.receipt = receipt;
 }
 
 /**
@@ -689,29 +750,23 @@ static void _eaf_service_on_rsp_fix(eaf_msgq_record_t* record, void* arg)
  * @param[in] to	Who will receive this response
  * @param[in] rsp	Response message
  */
-static int _eaf_send_rsp(int receipt, uint32_t from, uint32_t to, eaf_msg_t* rsp, int rpc)
+static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 {
-	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
-	{
-		return eaf_errno_state;
-	}
-
 	eaf_msg_full_t* real_msg = EAF_MSG_I2C(rsp);
 
-	/* 查询接收服务 */
+	/* find service */
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(to, &group);
 
-	/* if service not found, send to rpc */
+	/* report dst_not_found */
 	if (service == NULL)
 	{
-		return (rpc && g_eaf_ctx->rpc != NULL) ?
-			g_eaf_ctx->rpc->output_rsp(receipt, from, to, rsp) : eaf_errno_notfound;
+		return _eaf_hook_dst_not_found(from, to, rsp);
 	}
 
 	/* 推送消息 */
-	return _eaf_service_push_msg(group, service, real_msg,
-		_eaf_service_on_rsp_fix, (void*)(uintptr_t)receipt, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
+	return _eaf_service_push_msg(group, service, real_msg, from, to,
+		NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
 
 int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
@@ -722,7 +777,7 @@ int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
 		return eaf_errno_duplicate;
 	}
 
-	/* 计算所需内存 */
+	/* calculate memory size */
 	size_t malloc_size = sizeof(eaf_ctx_t) + sizeof(eaf_group_t*) * size;
 	for (i = 0; i < size; i++)
 	{
@@ -749,7 +804,7 @@ int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
 		return eaf_errno_unknown;
 	}
 
-	/* 修复数组地址 */
+	/* fix address */
 	g_eaf_ctx->group.size = size;
 	g_eaf_ctx->group.table = (eaf_group_t**)(g_eaf_ctx + 1);
 	g_eaf_ctx->group.table[0] = (eaf_group_t*)((char*)g_eaf_ctx->group.table + sizeof(eaf_group_t*) * size);
@@ -759,7 +814,7 @@ int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
 			((char*)g_eaf_ctx->group.table[i - 1] + sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i - 1].service.size);
 	}
 
-	/* 资源初始化 */
+	/* initialize resource */
 	size_t init_idx;
 	for (init_idx = 0; init_idx < size; init_idx++)
 	{
@@ -793,7 +848,7 @@ int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
 				info[init_idx].service.table[idx].msgq_size;
 			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.queue);
 
-			/* 默认情况下加入wait表 */
+			/* by default, service should in init0 state */
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].state = eaf_service_state_init0;
 			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list,
 				&g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.node);
@@ -829,23 +884,17 @@ int eaf_load(void)
 		return eaf_errno_state;
 	}
 
-	/* initialize rpc */
-	if (g_eaf_ctx->rpc != NULL && g_eaf_ctx->rpc->on_init_done() != 0)
-	{
-		return eaf_errno_transfer;
-	}
-
-	/* 启动所有线程 */
+	/* start all thread */
 	g_eaf_ctx->state = eaf_ctx_state_busy;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
 		eaf_compat_sem_post(&g_eaf_ctx->group.table[i]->msgq.sem);
 	}
 
-	/* 等待所有服务就绪 */
+	/* wait for all thread to be ready */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_compat_sem_pend(&g_eaf_ctx->ready, (unsigned)-1);
+		eaf_compat_sem_pend(&g_eaf_ctx->ready, (unsigned long)-1);
 	}
 
 	return eaf_errno_success;
@@ -861,12 +910,6 @@ int eaf_cleanup(void)
 
 	/* change state */
 	g_eaf_ctx->state = eaf_ctx_state_exit;
-
-	/* exit rpc */
-	if (g_eaf_ctx->rpc != NULL)
-	{
-		g_eaf_ctx->rpc->on_exit();
-	}
 
 	/* exit thread */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
@@ -916,28 +959,48 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 		return eaf_errno_duplicate;
 	}
 
-	/* report to rpc */
-	if (g_eaf_ctx->rpc != NULL)
-	{
-		eaf_rpc_service_info_t service_info;
-		service_info.service_id = id;
-		service_info.capacity = (uint32_t)service->msgq.capacity;
-		g_eaf_ctx->rpc->on_service_register(&service_info);
-	}
-
 	service->entry = entry;
 	return eaf_errno_success;
 }
 
 int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 {
-	return _eaf_send_req(from, to, req, 1);
+	int ret;
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	{
+		return eaf_errno_state;
+	}
+
+	/* hook callback */
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_msg_send != NULL)
+	{
+		if ((ret = g_eaf_ctx->hook->on_msg_send(from, to, req)) != 0)
+		{
+			return ret;
+		}
+	}
+
+	return _eaf_send_req(from, to, req);
 }
 
 int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 {
-	rsp->from = from;
-	return _eaf_send_rsp(eaf_errno_success, from, to, rsp, 1);
+	int ret;
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state != eaf_ctx_state_busy)
+	{
+		return eaf_errno_state;
+	}
+
+	/* hook callback */
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_msg_send != NULL)
+	{
+		if ((ret = g_eaf_ctx->hook->on_msg_send(from, to, rsp)) != 0)
+		{
+			return ret;
+		}
+	}
+
+	return _eaf_send_rsp(from, to, rsp);
 }
 
 int eaf_resume(_In_ uint32_t srv_id)
@@ -948,6 +1011,8 @@ int eaf_resume(_In_ uint32_t srv_id)
 	{
 		return eaf_errno_notfound;
 	}
+
+	_eaf_hook_post_resume(srv_id);
 
 	int ret = eaf_errno_success;
 	eaf_compat_lock_enter(&group->objlock);
@@ -1004,30 +1069,18 @@ err:
 	return NULL;
 }
 
-int eaf_rpc_init(_In_ const eaf_rpc_cfg_t* cfg)
-{
-	if (g_eaf_ctx->rpc != NULL)
-	{
-		return eaf_errno_duplicate;
-	}
-
-	g_eaf_ctx->rpc = cfg;
-	return eaf_errno_success;
-}
-
-int eaf_rpc_input_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
-{
-	return _eaf_send_req(from, to, req, 0);
-}
-
-int eaf_rpc_input_rsp(_In_ int receipt, _In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
-{
-	rsp->from = from;
-	return _eaf_send_rsp(receipt, from, to, rsp, 0);
-}
-
 uint32_t eaf_service_self(void)
 {
 	eaf_service_local_t* local = eaf_service_get_local(NULL);
 	return local != NULL ? local->id : (uint32_t)-1;
+}
+
+int eaf_inject(const eaf_hook_t* hook, size_t size)
+{
+	if (g_eaf_ctx == NULL || size != sizeof(*hook))
+	{
+		return eaf_errno_state;
+	}
+	g_eaf_ctx->hook = hook;
+	return eaf_errno_success;
 }

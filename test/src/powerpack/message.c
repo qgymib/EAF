@@ -37,8 +37,9 @@ static int _test_powerpack_message_s1_on_init(void)
 	return 0;
 }
 
-static void _test_powerpack_message_s2_on_req(struct eaf_msg* req)
+static void _test_powerpack_message_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {
+	(void)from; (void)to;
 	int val_req = *(int*)eaf_msg_get_data(req, NULL);
 	ASSERT(val_req == s_powerpack_message_val_req_exp);
 

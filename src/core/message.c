@@ -31,7 +31,7 @@ static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 	EAF_FREE(msg);
 }
 
-eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size, _In_ eaf_rsp_handle_fn rsp_fn)
+eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size, _In_ eaf_msg_handle_fn rsp_fn)
 {
 	eaf_msg_full_t* msg = _eaf_msg_create(msg_id, size);
 	if (msg == NULL)
@@ -106,12 +106,24 @@ eaf_msg_type_t eaf_msg_get_type(_In_ const eaf_msg_t* msg)
 	return EAF_MSG_IS_REQ(msg) ? eaf_msg_type_req : eaf_msg_type_rsp;
 }
 
-void eaf_msg_set_rsp_fn(_Inout_ eaf_msg_t* msg, _In_ eaf_rsp_handle_fn fn)
+void eaf_msg_set_rsp_fn(_Inout_ eaf_msg_t* msg, _In_ eaf_msg_handle_fn fn)
 {
 	msg->info.constant.orig = (uint64_t)(uintptr_t)fn;
 }
 
-eaf_rsp_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg)
+eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg)
 {
-	return (eaf_rsp_handle_fn)(uintptr_t)msg->info.constant.orig;
+	return (eaf_msg_handle_fn)(uintptr_t)msg->info.constant.orig;
+}
+
+void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt)
+{
+	msg->info.dynamics.encs &= 0xFFFFFFFF;	// clear previous receipt
+	msg->info.dynamics.encs |= ((uint64_t)receipt) << 32;
+}
+
+int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg)
+{
+	uint32_t receipt = msg->info.dynamics.encs >> 32;
+	return (int)receipt;
 }

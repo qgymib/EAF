@@ -18,8 +18,9 @@ static eaf_sem_t*			_s_ret_sem;
 static test_filber_record_t	_s_nodes[4];
 static eaf_list_t			_s_ret_list;
 
-static void _test_filber_s1_on_evt(eaf_msg_t* msg)
+static void _test_filber_s1_on_evt(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
+	(void)from; (void)to;
 	eaf_reenter
 	{
 		_s_nodes[0].ret = *(int*)eaf_msg_get_data(msg, NULL);
@@ -34,8 +35,9 @@ static void _test_filber_s1_on_evt(eaf_msg_t* msg)
 	};
 }
 
-static void _test_filber_s2_on_evt(eaf_msg_t* msg)
+static void _test_filber_s2_on_evt(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
+	(void)from; (void)to;
 	_s_nodes[2].ret = *(int*)eaf_msg_get_data(msg, NULL);
 	eaf_list_push_back(&_s_ret_list, &_s_nodes[2].node);
 

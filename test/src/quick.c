@@ -20,8 +20,9 @@ static uint32_t				g_msgid_list[][4] = {
 	{ TEST_QUICK_S3_REQ1, TEST_QUICK_S3_REQ2, TEST_QUICK_S3_REQ3, TEST_QUICK_S3_REQ4 },
 };
 
-static void _test_template_default_request(_Inout_ struct eaf_msg* req)
+static void _test_template_default_request(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {
+	(void)from; (void)to;
 	int value = *(int*)eaf_msg_get_data(req, NULL);
 
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));

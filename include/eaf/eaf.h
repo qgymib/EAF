@@ -8,7 +8,6 @@ extern "C" {
 #endif
 
 #include "eaf/core/message.h"
-#include "eaf/core/rpc.h"
 #include "eaf/core/service.h"
 #include "eaf/infra/lock.h"
 #include "eaf/infra/semaphore.h"
