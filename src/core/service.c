@@ -23,10 +23,10 @@
 #define HAS_FLAG(flag, bit)		((flag) & (bit))
 
 /**
-* 对比模板
-* @param a		值a
-* @param b		值b
-*/
+ * @brief Compare template
+ * @param[in] a		value a
+ * @param[in] b		value b
+ */
 #define COMPARE_TEMPLATE(a, b)	\
 	do {\
 		if ((a) < (b)) {\
@@ -37,16 +37,16 @@
 	} while (0)
 
 /**
-* 清除控制位
-*/
+ * @brief Clear control bits
+ */
 #define CLEAR_CC0(group)	\
 	do {\
 		(group)->coroutine.local.cc[0] = 0;\
 	} while (0)
 
 /**
-* 检查控制位
-*/
+ * @brief Check control bit
+ */
 #define CHECK_CC0(group, bmask)	\
 	((group)->coroutine.local.cc[0] & (bmask))
 
@@ -66,22 +66,22 @@
 	} while (0)
 
 /**
-* 重置分支
-*/
+ * @brief Reset branch
+ */
 #define RESET_BRANCH(service)	\
 	do {\
 		(service)->coroutine.local.branch = 0;\
 	} while (0)
 
 /**
-* 重置分支
-*/
+ * @brief Reset branch
+ */
 #define CUR_RUN_RESET_BRANCH(group)	\
 	RESET_BRANCH(CUR_RUN(group))
 
 /**
-* call user defined yield hook
-*/
+ * @brief Call user defined yield hook
+ */
 #define CALL_YIELD_HOOK(group)	\
 	do {\
 		eaf_group_t* _group = group;\
@@ -92,23 +92,23 @@
 	} while (0)
 
 /**
-* 服务状态
-*
-* INIT1
-*  /|\       |--------|
-*  \|/      \|/       |
-* INIT0 --> IDLE --> BUSY --> PEND
-*   |       \|/      /|\       |
-*   | ----> EXIT      |--------|
-*/
+ * @brief Service states
+ *
+ * INIT1
+ *  /|\       |--------|
+ *  \|/      \|/       |
+ * INIT0 --> IDLE --> BUSY --> PEND
+ *   |       \|/      /|\       |
+ *   | ----> EXIT      |--------|
+ */
 typedef enum eaf_service_state
 {
-	eaf_service_state_init0,					/**< 初始态 */
-	eaf_service_state_init1,					/**< 初始态 */
-	eaf_service_state_idle,						/**< 空闲 */
-	eaf_service_state_busy,						/**< 忙碌 */
-	eaf_service_state_pend,						/**< 等待resume */
-	eaf_service_state_exit,						/**< 退出 */
+	eaf_service_state_init0,					/**< Init0 */
+	eaf_service_state_init1,					/**< Init1 */
+	eaf_service_state_idle,						/**< No pending work */
+	eaf_service_state_busy,						/**< Busy */
+	eaf_service_state_pend,						/**< Wait for resume */
+	eaf_service_state_exit,						/**< Exit */
 }eaf_service_state_t;
 
 typedef enum eaf_ctx_state
@@ -612,13 +612,35 @@ cleanup:
 	}
 }
 
-static void _eaf_service_cleanup_group(eaf_group_t* group)
+static void _eaf_cleanup_service(eaf_service_t* service)
+{
+	eaf_list_node_t* it;
+	while ((it = eaf_list_pop_front(&service->msgq.queue)) != NULL)
+	{
+		eaf_msgq_record_t* msg = EAF_CONTAINER_OF(it, eaf_msgq_record_t, node);
+		_eaf_service_destroy_msg_record(msg);
+	}
+
+	if (service->msgq.cur_msg != NULL)
+	{
+		_eaf_service_destroy_msg_record(service->msgq.cur_msg);
+		service->msgq.cur_msg = NULL;
+	}
+}
+
+static void _eaf_cleanup_group(eaf_group_t* group)
 {
 	/* 向队列推送以保证线程感知到状态改变 */
 	eaf_compat_sem_post(&group->msgq.sem);
 
 	/* 等待线程退出 */
 	eaf_compat_thread_exit(&group->working);
+
+	size_t i;
+	for (i = 0; i < group->service.size; i++)
+	{
+		_eaf_cleanup_service(&group->service.table[i]);
+	}
 
 	/* 清理资源 */
 	eaf_compat_lock_exit(&group->objlock);
@@ -914,7 +936,7 @@ int eaf_cleanup(void)
 	/* exit thread */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		_eaf_service_cleanup_group(g_eaf_ctx->group.table[i]);
+		_eaf_cleanup_group(g_eaf_ctx->group.table[i]);
 	}
 
 	eaf_compat_sem_exit(&g_eaf_ctx->ready);
