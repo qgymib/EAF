@@ -140,6 +140,23 @@ static void _test_eaf_hook_on_post_resume(_In_ uint32_t srv_id)
 	eaf_sem_post(s_eaf_hook.sem);
 }
 
+static int _test_eaf_hook_on_pre_register(_In_ uint32_t srv_id)
+{
+	s_eaf_hook.info[0].last_from = srv_id;
+	return 0;
+}
+
+static int _test_eaf_hook_on_pre_cleanup(void)
+{
+	s_eaf_hook.info[0].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_pre_cleanup;
+	return eaf_errno_success;
+}
+
+static void _test_eaf_hook_on_post_cleanup(void)
+{
+	s_eaf_hook.info[1].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_post_cleanup;
+}
+
 static void _on_pre_msg_process_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
 	s_eaf_hook.info[1].last_hook = (void*)(uintptr_t)_on_pre_msg_process_on_rsp;
@@ -164,6 +181,9 @@ static void _test_eaf_hook_before_load(void* arg)
 	hook.on_post_msg_process = _test_eaf_hook_on_post_msg_process;
 	hook.on_post_yield = _test_eaf_hook_on_post_yield;
 	hook.on_post_resume = _test_eaf_hook_on_post_resume;
+	hook.on_pre_register = _test_eaf_hook_on_pre_register;
+	hook.on_pre_cleanup = _test_eaf_hook_on_pre_cleanup;
+	hook.on_post_cleanup = _test_eaf_hook_on_post_cleanup;
 
 	ASSERT_NUM_EQ(eaf_inject(&hook, sizeof(hook)), 0);
 }
@@ -199,6 +219,9 @@ TEST_CLASS_TEAREDOWN(eaf_hook)
 {
 	test_eaf_quick_cleanup();
 	eaf_sem_destroy(s_eaf_hook.sem);
+
+	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_pre_cleanup);
+	ASSERT_PTR_EQ(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_post_cleanup);
 }
 
 TEST_F(eaf_hook, on_msg_send)
@@ -309,4 +332,9 @@ TEST_F(eaf_hook, on_post_yield)
 	ASSERT_NUM_EQ(s_eaf_hook.info[1].last_from, TEST_QUICK_S3);
 
 	eaf_msg_dec_ref(msg);
+}
+
+TEST_F(eaf_hook, on_pre_register)
+{
+	ASSERT_NUM_NE(s_eaf_hook.info[0].last_from, 0);
 }

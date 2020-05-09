@@ -108,6 +108,8 @@ typedef struct eaf_hook
 	 * If a non-zero code is returned, the message will not be send, and the code
 	 * will be returned to user.
 	 *
+	 * @see eaf_send_req()
+	 * @see eaf_send_rsp()
 	 * @param[in] from		Who send this message
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
@@ -117,6 +119,8 @@ typedef struct eaf_hook
 
 	/**
 	 * @brief Hook when destination cannot found.
+	 * @see eaf_send_req()
+	 * @see eaf_send_rsp()
 	 * @param[in] from		Who send this message
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
@@ -151,15 +155,39 @@ typedef struct eaf_hook
 
 	/**
 	 * @brief Hook a service just enter yield state.
+	 * @see eaf_yield
+	 * @see eaf_yield_ext()
 	 * @param[in] srv_id	Service ID
 	 */
 	void(*on_post_yield)(_In_ uint32_t srv_id);
 
 	/**
 	 * @brief Hook a service will leave yield state.
+	 * @see eaf_resume()
 	 * @param[in] srv_id	Service ID
 	 */
 	void(*on_post_resume)(_In_ uint32_t srv_id);
+
+	/**
+	 * @brief Hook a service is going to register
+	 * @see eaf_register()
+	 * @param[in] srv_id	Service ID
+	 * @return				#eaf_errno
+	 */
+	int(*on_pre_register)(_In_ uint32_t srv_id);
+
+	/**
+	 * @brief Hook before #eaf_cleanup() take effect
+	 * @see eaf_cleanup()
+	 * @return				#eaf_errno
+	 */
+	int(*on_pre_cleanup)(void);
+
+	/**
+	 * @brief Hook after #eaf_cleanup() take effect
+	 * @see eaf_cleanup()
+	 */
+	void(*on_post_cleanup)(void);
 }eaf_hook_t;
 
 /**
@@ -253,7 +281,7 @@ uint32_t eaf_service_self(void);
  * @param[in] size	sizeof(*hook)
  * @return			#eaf_errno
  */
-int eaf_inject(const eaf_hook_t* hook, size_t size);
+int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size);
 
 #ifdef __cplusplus
 }

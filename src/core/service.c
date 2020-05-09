@@ -351,6 +351,34 @@ static void _eaf_hook_post_resume(uint32_t service)
 	g_eaf_ctx->hook->on_post_resume(service);
 }
 
+static int _eaf_hook_pre_register(uint32_t id)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_register == NULL)
+	{
+		return 0;
+	}
+
+	return g_eaf_ctx->hook->on_pre_register(id);
+}
+
+static int _eaf_hook_on_pre_cleanup(void)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_cleanup == NULL)
+	{
+		return 0;
+	}
+	return g_eaf_ctx->hook->on_pre_cleanup();
+}
+
+static void _eaf_hook_on_post_cleanup(const eaf_hook_t* hook)
+{
+	if (hook == NULL || hook->on_post_cleanup == NULL)
+	{
+		return;
+	}
+	hook->on_post_cleanup();
+}
+
 static void _eaf_service_reset(eaf_service_t* service)
 {
 	RESET_BRANCH(service);
@@ -930,6 +958,12 @@ int eaf_cleanup(void)
 		return eaf_errno_state;
 	}
 
+	int ret;
+	if ((ret = _eaf_hook_on_pre_cleanup()) < 0)
+	{
+		return ret;
+	}
+
 	/* change state */
 	g_eaf_ctx->state = eaf_ctx_state_exit;
 
@@ -942,10 +976,13 @@ int eaf_cleanup(void)
 	eaf_compat_sem_exit(&g_eaf_ctx->ready);
 	eaf_thread_storage_exit(&g_eaf_ctx->tls);
 
+	const eaf_hook_t* hook = g_eaf_ctx->hook;
+
 	/* resource cleanup */
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
 
+	_eaf_hook_on_post_cleanup(hook);
 	return eaf_errno_success;
 }
 
@@ -979,6 +1016,12 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 	if (service->entry != NULL)
 	{
 		return eaf_errno_duplicate;
+	}
+
+	int ret;
+	if ((ret = _eaf_hook_pre_register(id)) < 0)
+	{
+		return ret;
 	}
 
 	service->entry = entry;
@@ -1097,7 +1140,7 @@ uint32_t eaf_service_self(void)
 	return local != NULL ? local->id : (uint32_t)-1;
 }
 
-int eaf_inject(const eaf_hook_t* hook, size_t size)
+int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size)
 {
 	if (g_eaf_ctx == NULL || size != sizeof(*hook))
 	{

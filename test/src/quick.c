@@ -121,15 +121,15 @@ int test_eaf_quick_setup(const test_quick_cfg_t* cfg)
 		return ret;
 	}
 
-	SETUP_SERVICE_ENTRY(0);
-	SETUP_SERVICE_ENTRY(1);
-	SETUP_SERVICE_ENTRY(2);
-	SETUP_SERVICE_ENTRY(3);
-
 	if (g_test_template_ctx->cfg.before_load.fn != NULL)
 	{
 		g_test_template_ctx->cfg.before_load.fn(g_test_template_ctx->cfg.before_load.arg);
 	}
+
+	SETUP_SERVICE_ENTRY(0);
+	SETUP_SERVICE_ENTRY(1);
+	SETUP_SERVICE_ENTRY(2);
+	SETUP_SERVICE_ENTRY(3);
 
 	return eaf_load();
 
