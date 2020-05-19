@@ -203,20 +203,41 @@ typedef struct etest_timestamp
 }etest_timestamp_t;
 
 /**
-* monotonic time since some unspecified starting point
-* @param ts		etest_timestamp_t*
-* @return		0 if success, otherwise failure
-*/
+ * monotonic time since some unspecified starting point
+ * @param ts		etest_timestamp_t*
+ * @return		0 if success, otherwise failure
+ */
 int etest_timestamp_get(etest_timestamp_t* ts);
 
 /**
-* compare timestamp
-* @param t1		timestamp t1
-* @param t2		timestamp t2
-* @param dif	diff
-* @return		-1 if t1 < t2; 1 if t1 > t2; 0 if t1 == t2
-*/
+ * compare timestamp
+ * @param t1		timestamp t1
+ * @param t2		timestamp t2
+ * @param dif	diff
+ * @return		-1 if t1 < t2; 1 if t1 > t2; 0 if t1 == t2
+ */
 int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2, etest_timestamp_t* dif);
+
+/************************************************************************/
+/* inline hook                                                          */
+/************************************************************************/
+struct etest_stub;
+typedef struct etest_stub etest_stub_t;
+
+/**
+ * 进行函数patch
+ * @param fn_orig	原函数
+ * @param fn_stub	替换函数
+ * @return			替换句柄，可随后用于取消patch
+ */
+etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub);
+
+/**
+ * 取消函数替换
+ * @param handler	替换句柄
+ */
+void etest_unpatch(etest_stub_t* handler);
+
 
 #ifdef __cplusplus
 }

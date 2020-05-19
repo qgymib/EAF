@@ -674,6 +674,207 @@ static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
 }
 
 /************************************************************************/
+/* inline hook                                                          */
+/************************************************************************/
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <stdint.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#endif
+
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
+struct etest_stub
+{
+	uint8_t*			orig;						/** 原始地址 */
+	uint8_t*			stub;						/** 替换地址 */
+	size_t				page_size;					/** 页大小 */
+	size_t				code_size;					/** 补丁大小 */
+	uint8_t				opcode[];					/** 跳转地址 */
+};
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
+
+/**
+* 获取指定地址所在的页地址
+* @param addr		地址
+* @param page_size	页大小
+* @return			页地址
+*/
+static void* _fmock_page_of(void* addr, size_t page_size)
+{
+	return (char *)((uintptr_t)addr & ~(page_size - 1));
+}
+
+/**
+* 获取当前系统页大小
+*/
+static size_t _fmock_get_page_size(void)
+{
+#if defined(_WIN32)
+	SYSTEM_INFO sys_info;
+	GetSystemInfo(&sys_info);
+	unsigned long page_size = sys_info.dwPageSize;
+#elif defined(__linux__)
+	long page_size = sysconf(_SC_PAGE_SIZE);
+#else
+	long page_size = 0;
+#endif
+
+	return page_size <= 0 ? 4096 : page_size;
+}
+
+static int _fstub_exchange_opcode(etest_stub_t* handler)
+{
+	void* page_addr = _fmock_page_of(handler->orig, handler->page_size);
+
+	/* remove page protect */
+#if defined(_WIN32)
+	DWORD lpflOldProtect;
+	if (0 == VirtualProtect(page_addr, handler->page_size * 2, PAGE_EXECUTE_READWRITE, &lpflOldProtect))
+	{
+		return -1;
+	}
+#elif defined(__linux__)
+	if (-1 == mprotect(page_addr, handler->page_size * 2, PROT_READ | PROT_WRITE | PROT_EXEC))
+	{
+		return -1;
+	}
+#endif
+
+	/* exchange opcode */
+	size_t i;
+	for (i = 0; i < handler->code_size; i++)
+	{
+		uint8_t tmp = handler->opcode[i];
+		handler->opcode[i] = handler->orig[i];
+		handler->orig[i] = tmp;
+	}
+
+	/* add page protect */
+#if defined(_WIN32)
+	ASSERT(VirtualProtect(page_addr, handler->page_size * 2, PAGE_EXECUTE_READ, &lpflOldProtect));
+#elif defined(__linux__)
+	ASSERT(-1 != mprotect(page_addr, handler->page_size * 2, PROT_READ | PROT_EXEC));
+#endif
+
+	/* Refresh ICache and BTB */
+#if defined(__GNUC__) || defined(__clang__) || defined(__llvm__)
+	__builtin___clear_cache((void*)handler->orig, (void*)(handler->orig + handler->code_size));
+#endif
+
+	return 0;
+}
+
+static etest_stub_t* _fstub_alloc_patch(uintptr_t fn_orig, uintptr_t fn_stub, size_t code_size)
+{
+	etest_stub_t* patch = calloc(1, sizeof(etest_stub_t) + code_size);
+	if (patch == NULL)
+	{
+		return NULL;
+	}
+
+	patch->orig = (uint8_t*)fn_orig;
+	patch->stub = (uint8_t*)fn_stub;
+	patch->page_size = _fmock_get_page_size();
+	patch->code_size = code_size;
+
+	return patch;
+}
+
+etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub)
+{
+	etest_stub_t* patch = NULL;
+	const intptr_t addr_diff = (char*)fn_stub - (char*)fn_orig;
+	const uintptr_t abs_addr_diff = addr_diff > 0 ? addr_diff : (-addr_diff);
+
+#if defined(__i386__) || defined(__amd64__) || defined(_M_IX86) || defined(_M_AMD64)
+	if (abs_addr_diff < 0x80000000)
+	{
+		/*
+		 * 4GB地址空间范围内可以直接跳转
+		 * 5 byte(jmp rel32)
+		 */
+		patch = _fstub_alloc_patch(fn_orig, fn_stub, 5);
+
+		patch->opcode[0] = 0xE9;
+		*(uint32_t*)&patch->opcode[1] = (uint32_t)(addr_diff - 5);
+	}
+	else
+	{
+		/*
+		 * 13 byte(jmp m16:64)
+		 * movabs $0x102030405060708,%r11
+		 * jmpq   *%r11
+		 */
+		patch = _fstub_alloc_patch(fn_orig, fn_stub, 13);
+
+		patch->opcode[0] = 0x49;
+		patch->opcode[1] = 0xbb;
+		*(uint64_t*)(&patch->opcode[2]) = (uint64_t)fn_stub;
+		patch->opcode[10] = 0x41;
+		patch->opcode[11] = 0xff;
+		patch->opcode[12] = 0xe3;
+	}
+#elif defined(__ARM_ARCH_6T2__)\
+	|| defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)\
+	|| defined(__aarch64__)
+	if (abs_addr_diff < 0x2000000)
+	{
+		/*
+		 * 32MB地址空间范围内可以直接跳转
+		 * 4 byte.
+		 * b addr_diff
+		 */
+		patch = _fstub_alloc_patch(fn_orig, fn_stub, 4);
+
+		*(uint32_t*)patch->opcode = (((addr_diff - 8) >> 2) & 0x00FFFFFF) | 0xea000000;
+	}
+	else
+	{
+		/*
+		 * 12 byte.
+		 * movw	r0, #(低16位地址)
+		 * movt	r0, #(高16位地址)
+		 * bx	r0
+		 */
+		patch = _fstub_alloc_patch(fn_orig, fn_stub, 12);
+
+		uint32_t _fn_stub_l = fn_stub & 0x0000FFFF;
+		uint32_t _fn_stub_h = (fn_stub >> 16) & 0x0000FFFF;
+		*((uint32_t*)patch->opcode + 0) =
+			(_fn_stub_l & 0x00000FFF) | ((_fn_stub_l & 0x0000F000) << 4) | 0xe3000000;
+		*((uint32_t*)patch->opcode + 1) =
+			(_fn_stub_h & 0x00000FFF) | ((_fn_stub_h & 0x0000F000) << 4) | 0xe3400000;
+		*((uint32_t*)patch->opcode + 2) = 0xe12fff10;
+	}
+
+#else
+#	error "unsupport hardware platform"
+#endif
+
+	/* patch function */
+	if (_fstub_exchange_opcode(patch) < 0)
+	{
+		free(patch);
+		return NULL;
+	}
+
+	return patch;
+}
+
+void etest_unpatch(etest_stub_t* handler)
+{
+	ASSERT(_fstub_exchange_opcode(handler) == 0);
+	free(handler);
+}
+
+/************************************************************************/
 /* test                                                                 */
 /************************************************************************/
 
