@@ -41,7 +41,7 @@ static void _test_powerpack_timer_on_exit(void)
 TEST_CLASS_SETUP(powerpack_timer)
 {
 	s_sleep_time = 50;
-	ASSERT_PTR_NE(s_powerpack_timer_sem = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_powerpack_timer_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -51,7 +51,7 @@ TEST_CLASS_SETUP(powerpack_timer)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_entrypoint_t s1_info = {
@@ -59,21 +59,21 @@ TEST_CLASS_SETUP(powerpack_timer)
 		_test_powerpack_timer_on_init,
 		_test_powerpack_timer_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	eaf_powerpack_cfg_t powerpack_cfg;
 	memset(&powerpack_cfg, 0, sizeof(powerpack_cfg));
 	powerpack_cfg.service_id = TEST_SERVICE_SS;
-	ASSERT_NUM_EQ(eaf_powerpack_init(&powerpack_cfg), 0);
+	ASSERT_EQ_D32(eaf_powerpack_init(&powerpack_cfg), 0);
 
 	/* 加载EAF */
-	ASSERT_NUM_EQ(eaf_load(), 0);
+	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
 TEST_CLASS_TEAREDOWN(powerpack_timer)
 {
 	/* 退出并清理 */
-	ASSERT_NUM_EQ(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_cleanup(), 0);
 	eaf_powerpack_exit();
 
 	eaf_sem_destroy(s_powerpack_timer_sem);
@@ -81,11 +81,11 @@ TEST_CLASS_TEAREDOWN(powerpack_timer)
 
 TEST_F(powerpack_timer, sleep)
 {
-	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_timer_sem, (unsigned long)-1), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_powerpack_timer_sem, (unsigned long)-1), 0);
 
 	etest_timestamp_t dif;
-	ASSERT_NUM_LT(etest_timestamp_dif(&s_powerpack_timer_start, &s_powerpack_timer_end, &dif), 0);
+	ASSERT_LT_D32(etest_timestamp_dif(&s_powerpack_timer_start, &s_powerpack_timer_end, &dif), 0);
 
 	uint64_t diff_time = dif.sec * 1000 + dif.usec / 1000;
-	ASSERT_NUM_GE(diff_time, (long long)(s_sleep_time * 0.8));
+	ASSERT_GE_U64(diff_time, (long long)(s_sleep_time * 0.8));
 }

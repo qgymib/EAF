@@ -64,7 +64,7 @@ static void _test_send_request_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _
 TEST_CLASS_SETUP(eaf_service)
 {
 	_s_ret_val = 0;
-	ASSERT_PTR_NE(s_service_send_request_sem = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_service_send_request_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -74,7 +74,7 @@ TEST_CLASS_SETUP(eaf_service)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_message_table_t s1_msg_table[] = {
@@ -85,7 +85,7 @@ TEST_CLASS_SETUP(eaf_service)
 		_test_send_request_s1_on_init,
 		_test_send_request_s1_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_message_table_t s2_msg_table[] = {
@@ -96,16 +96,16 @@ TEST_CLASS_SETUP(eaf_service)
 		_test_send_request_s2_on_init,
 		_test_send_request_s2_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
-	ASSERT_NUM_EQ(eaf_load(), 0);
+	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
 TEST_CLASS_TEAREDOWN(eaf_service)
 {
 	/* 退出并清理 */
-	ASSERT_NUM_EQ(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_cleanup(), 0);
 
 	eaf_sem_destroy(s_service_send_request_sem);
 }
@@ -113,8 +113,8 @@ TEST_CLASS_TEAREDOWN(eaf_service)
 TEST_F(eaf_service, send_request)
 {
 	/* 等待结果 */
-	ASSERT_NUM_EQ(eaf_sem_pend(s_service_send_request_sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_service_send_request_sem, 8 * 1000), 0);
 
 	/* 检查结果 */
-	ASSERT_NUM_EQ(_s_ret_val, 99 * 2);
+	ASSERT_EQ_D32(_s_ret_val, 99 * 2);
 }

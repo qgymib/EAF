@@ -66,8 +66,8 @@ static void _test_benchmark_yield_s2_on_req(uint32_t from, uint32_t to, struct e
 
 static void _benchmark_yield_setup(size_t count)
 {
-	ASSERT_PTR_NE(s_benchmark_yield_sem_s1 = eaf_sem_create(0), NULL);
-	ASSERT_PTR_NE(s_benchmark_yield_sem_s2 = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_benchmark_yield_sem_s1 = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_benchmark_yield_sem_s2 = eaf_sem_create(0), NULL);
 
 	s_benchmark_yield_total = count;
 	s_benchmark_yield_count_s1 = 0;
@@ -81,7 +81,7 @@ static void _benchmark_yield_setup(size_t count)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_message_table_t s1_msg_table[] = {
@@ -92,7 +92,7 @@ static void _benchmark_yield_setup(size_t count)
 		_test_benchmark_yield_on_init,
 		_test_benchmark_yield_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_message_table_t s2_msg_table[] = {
@@ -103,16 +103,16 @@ static void _benchmark_yield_setup(size_t count)
 		_test_benchmark_yield_on_init,
 		_test_benchmark_yield_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
-	ASSERT_NUM_EQ(eaf_load(), 0);
+	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
 static void _benchmark_yield_teardown(void)
 {
 	/* 退出并清理 */
-	ASSERT_NUM_EQ(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_cleanup(), 0);
 	eaf_sem_destroy(s_benchmark_yield_sem_s1);
 	eaf_sem_destroy(s_benchmark_yield_sem_s2);
 }
@@ -132,15 +132,15 @@ TEST_F(benchmark, DISABLED_yield_1000000)
 	/* send to s1 */
 	{
 		eaf_msg_t* msg = eaf_msg_create_req(TEST_SERVICE_S1_REQ, sizeof(int), _test_benchmark_yield_on_rsp);
-		ASSERT_PTR_NE(msg, NULL);
-		ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S1, msg), 0);
+		ASSERT_NE_PTR(msg, NULL);
+		ASSERT_EQ_D32(eaf_send_req((uint32_t)-1, TEST_SERVICE_S1, msg), 0);
 		eaf_msg_dec_ref(msg);
 	}
 	/* send to s2 */
 	{
 		eaf_msg_t* msg = eaf_msg_create_req(TEST_SERVICE_S2_REQ, sizeof(int), _test_benchmark_yield_on_rsp);
-		ASSERT_PTR_NE(msg, NULL);
-		ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S2, msg), 0);
+		ASSERT_NE_PTR(msg, NULL);
+		ASSERT_EQ_D32(eaf_send_req((uint32_t)-1, TEST_SERVICE_S2, msg), 0);
 		eaf_msg_dec_ref(msg);
 	}
 	/* wait for test complete */

@@ -69,7 +69,7 @@ TEST_CLASS_SETUP(eaf_filber)
 {
 	memset(_s_nodes, 0, sizeof(_s_nodes));
 	eaf_list_init(&_s_ret_list);
-	ASSERT_PTR_NE(_s_ret_sem = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(_s_ret_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -79,7 +79,7 @@ TEST_CLASS_SETUP(eaf_filber)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_message_table_t s1_msg[] = {
@@ -90,7 +90,7 @@ TEST_CLASS_SETUP(eaf_filber)
 		_test_filber_s1_on_init,
 		_test_filber_s1_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2*/
 	static eaf_message_table_t s2_msg[] = {
@@ -101,16 +101,16 @@ TEST_CLASS_SETUP(eaf_filber)
 		_test_filber_s2_on_init,
 		_test_filber_s2_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	/* 加载EAF */
-	ASSERT_NUM_EQ(eaf_load(), 0);
+	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
 TEST_CLASS_TEAREDOWN(eaf_filber)
 {
 	/* 退出并清理 */
-	ASSERT_NUM_EQ(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_cleanup(), 0);
 
 	eaf_sem_destroy(_s_ret_sem);
 }
@@ -120,33 +120,33 @@ TEST_F(eaf_filber, yield_in_event)
 	/* 发送EVT_1 */
 	{
 		eaf_msg_t* s1_evt = eaf_msg_create_req(TEST_SERVICE_S1_EVT, sizeof(int), NULL);
-		ASSERT_PTR_NE(s1_evt, NULL);
+		ASSERT_NE_PTR(s1_evt, NULL);
 		*(int*)eaf_msg_get_data(s1_evt, NULL) = 99;
 
-		ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S1, s1_evt), 0);
+		ASSERT_EQ_D32(eaf_send_req((uint32_t)-1, TEST_SERVICE_S1, s1_evt), 0);
 		eaf_msg_dec_ref(s1_evt);
 	}
 	/* 发送EVT_2 */
 	{
 		eaf_msg_t* s2_evt = eaf_msg_create_req(TEST_SERVICE_S2_EVT, sizeof(int), NULL);
-		ASSERT_PTR_NE(s2_evt, NULL);
+		ASSERT_NE_PTR(s2_evt, NULL);
 		*(int*)eaf_msg_get_data(s2_evt, NULL) = 88;
-		ASSERT_NUM_EQ(eaf_send_req((uint32_t)-1, TEST_SERVICE_S2, s2_evt), 0);
+		ASSERT_EQ_D32(eaf_send_req((uint32_t)-1, TEST_SERVICE_S2, s2_evt), 0);
 		eaf_msg_dec_ref(s2_evt);
 	}
 
 	/* 等待处理完成 */
-	ASSERT_NUM_EQ(eaf_sem_pend(_s_ret_sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(_s_ret_sem, 8 * 1000), 0);
 
-	ASSERT_PTR_EQ(eaf_list_pop_front(&_s_ret_list), &_s_nodes[0].node);
-	ASSERT_NUM_EQ(_s_nodes[0].ret, 99);
+	ASSERT_EQ_PTR(eaf_list_pop_front(&_s_ret_list), &_s_nodes[0].node);
+	ASSERT_EQ_D32(_s_nodes[0].ret, 99);
 
-	ASSERT_PTR_EQ(eaf_list_pop_front(&_s_ret_list), &_s_nodes[2].node);
-	ASSERT_NUM_EQ(_s_nodes[2].ret, 88);
+	ASSERT_EQ_PTR(eaf_list_pop_front(&_s_ret_list), &_s_nodes[2].node);
+	ASSERT_EQ_D32(_s_nodes[2].ret, 88);
 
-	ASSERT_PTR_EQ(eaf_list_pop_front(&_s_ret_list), &_s_nodes[3].node);
-	ASSERT_NUM_EQ(_s_nodes[3].ret, -2);
+	ASSERT_EQ_PTR(eaf_list_pop_front(&_s_ret_list), &_s_nodes[3].node);
+	ASSERT_EQ_D32(_s_nodes[3].ret, -2);
 
-	ASSERT_PTR_EQ(eaf_list_pop_front(&_s_ret_list), &_s_nodes[1].node);
-	ASSERT_NUM_EQ(_s_nodes[1].ret, -1);
+	ASSERT_EQ_PTR(eaf_list_pop_front(&_s_ret_list), &_s_nodes[1].node);
+	ASSERT_EQ_D32(_s_nodes[1].ret, -1);
 }

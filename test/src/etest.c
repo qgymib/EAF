@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <float.h>
 #include "etest/etest.h"
 
 /*
@@ -919,30 +920,15 @@ void etest_unpatch(etest_stub_t* handler)
 #define CONTAINER_OF(ptr, TYPE, member)	\
 	((TYPE*)((char*)(ptr) - (size_t)&((TYPE*)0)->member))
 
-#define JUDGE_GENERIC_TEMPLATE(_cmp, _op, _fmt, _l, _a, _r, _b, _file, _line)	\
-	do {\
-		if (GET_TID() != g_test_ctx.info.tid) {\
-			printf("%s:%d: excepton\n"\
-					"\tyou are not allowed to call assert functions outside test thread.\n",\
-					_file, _line);\
-			ASSERT(0);\
-		}\
-		if (_cmp) {\
-			break;\
-		}\
-		printf("%s:%d: failure\n"\
-			"            expected:    `%s` " _op " `%s`\n"\
-			"              actual:    " _fmt " vs " _fmt "\n",\
-			_file, _line, _l, _r, _a, _b);\
-		if (g_test_ctx.mask.break_on_failure) {\
-			*(volatile int*)NULL = 1;\
-		}\
-		longjmp(g_test_ctx2.jmpbuf, 1);\
-	} while (0)
-
 typedef int test_bool;
 #define test_true		1
 #define test_false		0
+
+typedef union double_point
+{
+	double					value_;
+	uint64_t				bits_;
+}double_point_t;
 
 typedef struct test_ctx
 {
@@ -1004,6 +990,17 @@ typedef struct test_ctx
 		size_t				n_negative;						/** 正向数量 */
 		size_t				n_postive;						/** 反向数量 */
 	}filter;
+
+	struct
+	{
+		size_t				kMaxUlps;
+		size_t				kBitCount;
+		size_t				kFractionBitCount;
+		size_t				kExponentBitCount;
+		uint64_t			kSignBitMask;
+		uint64_t			kFractionBitMask;
+		uint64_t			kExponentBitMask;
+	}float_helper;
 }test_ctx_t;
 
 typedef struct test_ctx2
@@ -1021,6 +1018,7 @@ static test_ctx_t			g_test_ctx = {
 	{ { 0, 0, 0, 0 }, { 1, 0 } },							// .counter
 	{ 0, 1, 0, 0 },											// .mask
 	{ NULL, NULL, 0, 0 },									// .filter
+	{ 0, 0, 0, 0, 0, 0, 0 },								// .float_helper
 };
 
 static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg)
@@ -1494,7 +1492,20 @@ static void _etest_setup_arg_random_seed(const char* str)
 	_test_srand(val);
 }
 
-static int _test_setup_args(int argc, char* argv[])
+static void _etest_setup_double(void)
+{
+	assert(sizeof(((double_point_t*)NULL)->bits_) == sizeof(((double_point_t*)NULL)->value_));
+
+	g_test_ctx.float_helper.kBitCount = 8 * sizeof(((double_point_t*)0)->value_);
+	g_test_ctx.float_helper.kSignBitMask = (uint64_t)1 << (g_test_ctx.float_helper.kBitCount - 1);
+	g_test_ctx.float_helper.kFractionBitCount = DBL_MANT_DIG - 1;
+	g_test_ctx.float_helper.kExponentBitCount = g_test_ctx.float_helper.kBitCount - 1 - g_test_ctx.float_helper.kFractionBitCount;
+	g_test_ctx.float_helper.kFractionBitMask = (~(uint64_t)0) >> (g_test_ctx.float_helper.kExponentBitCount + 1);
+	g_test_ctx.float_helper.kExponentBitMask = ~(g_test_ctx.float_helper.kSignBitMask | g_test_ctx.float_helper.kFractionBitMask);
+	g_test_ctx.float_helper.kMaxUlps = 4;
+}
+
+static int _test_setup(int argc, char* argv[])
 {
 	(void)argc;
 	enum test_opt
@@ -1592,6 +1603,7 @@ static int _test_setup_args(int argc, char* argv[])
 		}
 	}
 
+	_etest_setup_double();
 	return 0;
 }
 
@@ -1654,7 +1666,7 @@ int etest_run_tests(int argc, char* argv[])
 	_test_srand(time(NULL));
 
 	/* 解析参数 */
-	if (_test_setup_args(argc, argv) < 0)
+	if (_test_setup(argc, argv) < 0)
 	{
 		goto fin;
 	}
@@ -1709,84 +1721,81 @@ void etest_assert_fail(const char *expr, const char *file, int line, const char 
 	abort();
 }
 
-void etest_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_assert_helper_str_eq(const char* a, const char* b)
 {
-	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%lld", s_a, a, s_b, b, file, line);
+	return strcmp(a, b) == 0;
 }
 
-void etest_assert_num_ne(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+static uint64_t _double_point_exponent_bits(const double_point_t* p)
 {
-	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%lld", s_a, a, s_b, b, file, line);
+	return g_test_ctx.float_helper.kExponentBitMask & p->bits_;
 }
 
-void etest_assert_num_lt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+static uint64_t _double_point_fraction_bits(const double_point_t* p)
 {
-	JUDGE_GENERIC_TEMPLATE(a < b, "<", "%lld", s_a, a, s_b, b, file, line);
+	return g_test_ctx.float_helper.kFractionBitMask & p->bits_;
 }
 
-void etest_assert_num_le(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+static int _double_point_is_nan(const double_point_t* p)
 {
-	JUDGE_GENERIC_TEMPLATE(a <= b, "<=", "%lld", s_a, a, s_b, b, file, line);
+	return (_double_point_exponent_bits(p) == g_test_ctx.float_helper.kExponentBitMask) && (_double_point_fraction_bits(p) != 0);
 }
 
-void etest_assert_num_gt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+static uint64_t _double_point_sign_and_magnitude_to_biased(const uint64_t sam)
 {
-	JUDGE_GENERIC_TEMPLATE(a > b, ">", "%lld", s_a, a, s_b, b, file, line);
+	if (g_test_ctx.float_helper.kSignBitMask & sam) {
+		// sam represents a negative number.
+		return ~sam + 1;
+	}
+
+	// sam represents a positive number.
+	return g_test_ctx.float_helper.kSignBitMask | sam;
 }
 
-void etest_assert_num_ge(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line)
+static uint64_t _double_point_distance_between_sign_and_magnitude_numbers(uint64_t sam1, uint64_t sam2)
 {
-	JUDGE_GENERIC_TEMPLATE(a >= b, ">=", "%lld", s_a, a, s_b, b, file, line);
+	const uint64_t biased1 = _double_point_sign_and_magnitude_to_biased(sam1);
+	const uint64_t biased2 = _double_point_sign_and_magnitude_to_biased(sam2);
+
+	return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
 }
 
-void etest_assert_ptr_eq(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_assert_helper_double_eq(double a, double b)
 {
-	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%p", s_a, a, s_b, b, file, line);
+	double_point_t v_a; v_a.value_ = a;
+	double_point_t v_b; v_b.value_ = b;
+
+	if (_double_point_is_nan(&v_a) || _double_point_is_nan(&v_b))
+	{
+		return 0;
+	}
+
+	return _double_point_distance_between_sign_and_magnitude_numbers(v_a.bits_, v_b.bits_) <= g_test_ctx.float_helper.kMaxUlps;
 }
 
-void etest_assert_ptr_ne(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_assert_helper_double_le(double a, double b)
 {
-	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%p", s_a, a, s_b, b, file, line);
+	return (a < b) || etest_assert_helper_double_eq(a, b);
 }
 
-void etest_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_assert_helper_double_ge(double a, double b)
 {
-	JUDGE_GENERIC_TEMPLATE(strcmp(a, b) == 0, "!=", "%p", s_a, a, s_b, b, file, line);
+	return (a > b) || etest_assert_helper_double_eq(a, b);
 }
 
-void etest_assert_str_ne(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_always_zero(void)
 {
-	JUDGE_GENERIC_TEMPLATE(strcmp(a, b) != 0, "!=", "%p", s_a, a, s_b, b, file, line);
+	return 0;
 }
 
-void etest_assert_flt_eq(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+void etest_set_as_failure(void)
 {
-	JUDGE_GENERIC_TEMPLATE(a == b, "==", "%f", s_a, a, s_b, b, file, line);
+	longjmp(g_test_ctx2.jmpbuf, 1);
 }
 
-void etest_assert_flt_ne(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
+int etest_break_on_failure(void)
 {
-	JUDGE_GENERIC_TEMPLATE(a != b, "!=", "%f", s_a, a, s_b, b, file, line);
-}
-
-void etest_assert_flt_lt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
-{
-	JUDGE_GENERIC_TEMPLATE(a < b, "<", "%f", s_a, a, s_b, b, file, line);
-}
-
-void etest_assert_flt_le(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
-{
-	JUDGE_GENERIC_TEMPLATE(a <= b, "<=", "%f", s_a, a, s_b, b, file, line);
-}
-
-void etest_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
-{
-	JUDGE_GENERIC_TEMPLATE(a > b, ">", "%f", s_a, a, s_b, b, file, line);
-}
-
-void etest_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line)
-{
-	JUDGE_GENERIC_TEMPLATE(a >= b, ">=", "%f", s_a, a, s_b, b, file, line);
+	return g_test_ctx.mask.break_on_failure;
 }
 
 /************************************************************************/

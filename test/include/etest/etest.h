@@ -7,6 +7,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#include <inttypes.h>
 
 /************************************************************************/
 /* TEST                                                                 */
@@ -101,34 +102,98 @@ extern "C" {
 #define ASSERT(x)	\
 	((void)((x) || (etest_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
 
-#define ASSERT_PTR_EQ(a, b)		etest_assert_ptr_eq(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_PTR_NE(a, b)		etest_assert_ptr_ne(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_STR_EQ(a, b)		etest_assert_str_eq(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_STR_NE(a, b)		etest_assert_str_ne(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_EQ(a, b)		etest_assert_num_eq(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_NE(a, b)		etest_assert_num_ne(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_LT(a, b)		etest_assert_num_lt(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_LE(a, b)		etest_assert_num_le(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_GT(a, b)		etest_assert_num_gt(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_NUM_GE(a, b)		etest_assert_num_ge(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_EQ(a, b)		etest_assert_flt_eq(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_NE(a, b)		etest_assert_flt_ne(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_LT(a, b)		etest_assert_flt_lt(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_LE(a, b)		etest_assert_flt_le(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_GT(a, b)		etest_assert_flt_gt(a, b, #a, #b, __FILE__, __LINE__)
-#define ASSERT_FLT_GE(a, b)		etest_assert_flt_ge(a, b, #a, #b, __FILE__, __LINE__)
+#define ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b)	\
+	do {\
+		TYPE _a = a; TYPE _b = b;\
+		if (CMP(_a, _b)) {\
+			break;\
+		}\
+		printf("%s:%d: failure\n"\
+			"            expected:    `%s' %s `%s'\n"\
+			"              actual:    " FMT " vs " FMT "\n", __FILE__, __LINE__, #a, #OP, #b, _a, _b);\
+		if (etest_break_on_failure()) {\
+			*(volatile int*)NULL = 1;\
+		}\
+		etest_set_as_failure();\
+	} while (etest_always_zero())
+
+#define _ASSERT_HELPER_EQ(a, b)		((a) == (b))
+#define _ASSERT_HELPER_NE(a, b)		((a) != (b))
+#define _ASSERT_HELPER_LT(a, b)		((a) < (b))
+#define _ASSERT_HELPER_LE(a, b)		((a) <= (b))
+#define _ASSERT_HELPER_GT(a, b)		((a) > (b))
+#define _ASSERT_HELPER_GE(a, b)		((a) >= (b))
+
+#define ASSERT_EQ_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_PTR(a, b)			ASSERT_TEMPLATE(const void*, "%p", >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_D32(a, b)			ASSERT_TEMPLATE(int32_t, "%"PRId32, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_U32(a, b)			ASSERT_TEMPLATE(uint32_t, "%"PRIu32, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_X32(a, b)			ASSERT_TEMPLATE(uint32_t, "%#010"PRIx32, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_D64(a, b)			ASSERT_TEMPLATE(int64_t, "%"PRId64, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_U64(a, b)			ASSERT_TEMPLATE(uint64_t, "%"PRIu64, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_X64(a, b)			ASSERT_TEMPLATE(uint64_t, "%#018"PRIx64, >=, _ASSERT_HELPER_GE, a, b)
+
+#define ASSERT_EQ_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", ==, etest_assert_helper_double_eq, a, b)
+#define ASSERT_NE_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", !=, !etest_assert_helper_double_eq, a, b)
+#define ASSERT_LT_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", <, !etest_assert_helper_double_ge, a, b)
+#define ASSERT_LE_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", <=, etest_assert_helper_double_le, a, b)
+#define ASSERT_GT_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", >, !etest_assert_helper_double_le, a, b)
+#define ASSERT_GE_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", >=, etest_assert_helper_double_ge, a, b)
+
+#define ASSERT_EQ_STR(a, b)			ASSERT_TEMPLATE(const char*, "%s", ==, etest_assert_helper_str_eq, a, b)
+#define ASSERT_NE_STR(a, b)			ASSERT_TEMPLATE(const char*, "%s", !=, !etest_assert_helper_str_eq, a, b)
 
 typedef struct etest_list_node
 {
-	struct etest_list_node*	p_after;				/** 下一节点 */
-	struct etest_list_node*	p_before;				/** 上一节点 */
+	struct etest_list_node*		p_after;				/** 下一节点 */
+	struct etest_list_node*		p_before;				/** 上一节点 */
 }etest_list_node_t;
 
 typedef struct etest_map_node
 {
-	struct etest_map_node*	__rb_parent_color;	/** 父节点|颜色 */
-	struct etest_map_node*	rb_right;			/** 右子节点 */
-	struct etest_map_node*	rb_left;			/** 左子节点 */
+	struct etest_map_node*		__rb_parent_color;		/** 父节点|颜色 */
+	struct etest_map_node*		rb_right;				/** 右子节点 */
+	struct etest_map_node*		rb_left;				/** 左子节点 */
 }etest_map_node_t;
 
 typedef void(*etest_procedure_fn)(void);
@@ -163,22 +228,14 @@ void etest_register_case(etest_case_t* data);
 int etest_run_tests(int argc, char* argv[]);
 
 void etest_assert_fail(const char *expr, const char *file, int line, const char *func);
-void etest_assert_ptr_eq(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_ptr_ne(const void* a, const void* b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_str_eq(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_str_ne(const char* a, const char* b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_eq(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_ne(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_lt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_le(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_gt(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_num_ge(long long a, long long b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_eq(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_ne(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_lt(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_le(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_gt(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
-void etest_assert_flt_ge(double a, double b, const char* s_a, const char* s_b, const char* file, int line);
+void etest_set_as_failure(void);
+int etest_break_on_failure(void);
+
+int etest_assert_helper_str_eq(const char* a, const char* b);
+int etest_assert_helper_double_eq(double a, double b);
+int etest_assert_helper_double_le(double a, double b);
+int etest_assert_helper_double_ge(double a, double b);
+int etest_always_zero(void);
 
 /************************************************************************/
 /* LOG                                                                  */

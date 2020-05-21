@@ -185,7 +185,7 @@ static void _test_eaf_hook_before_load(void* arg)
 	hook.on_pre_cleanup = _test_eaf_hook_on_pre_cleanup;
 	hook.on_post_cleanup = _test_eaf_hook_on_post_cleanup;
 
-	ASSERT_NUM_EQ(eaf_inject(&hook, sizeof(hook)), 0);
+	ASSERT_EQ_D32(eaf_inject(&hook, sizeof(hook)), 0);
 }
 
 static void _test_eaf_hook_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
@@ -212,7 +212,7 @@ TEST_CLASS_SETUP(eaf_hook)
 
 	quick_cfg.before_load.fn = _test_eaf_hook_before_load;
 	quick_cfg.entry[3].msg_map[0].fn = _test_eaf_hook_on_req;
-	ASSERT_NUM_EQ(test_eaf_quick_setup(&quick_cfg), 0);
+	ASSERT_EQ_D32(test_eaf_quick_setup(&quick_cfg), 0);
 }
 
 TEST_CLASS_TEAREDOWN(eaf_hook)
@@ -220,8 +220,8 @@ TEST_CLASS_TEAREDOWN(eaf_hook)
 	test_eaf_quick_cleanup();
 	eaf_sem_destroy(s_eaf_hook.sem);
 
-	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_pre_cleanup);
-	ASSERT_PTR_EQ(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_post_cleanup);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_pre_cleanup);
+	ASSERT_EQ_PTR(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_post_cleanup);
 }
 
 TEST_F(eaf_hook, on_msg_send)
@@ -229,15 +229,15 @@ TEST_F(eaf_hook, on_msg_send)
 	s_eaf_hook.mask.on_msg_send = 1;
 
 	eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S1_REQ1, 0, NULL);
-	ASSERT_PTR_NE(msg, NULL);
+	ASSERT_NE_PTR(msg, NULL);
 
-	ASSERT_NUM_EQ(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_transfer);
+	ASSERT_EQ_D32(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_transfer);
 
-	ASSERT_NUM_EQ(s_eaf_hook.counter, 1);
-	ASSERT_NUM_EQ(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
-	ASSERT_NUM_EQ(s_eaf_hook.info[0].last_to, TEST_QUICK_S1);
-	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_msg, msg);
-	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_msg_send);
+	ASSERT_EQ_D32(s_eaf_hook.counter, 1);
+	ASSERT_EQ_D32(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
+	ASSERT_EQ_D32(s_eaf_hook.info[0].last_to, TEST_QUICK_S1);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_msg, msg);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_msg_send);
 
 	eaf_msg_dec_ref(msg);
 }
@@ -247,15 +247,15 @@ TEST_F(eaf_hook, on_dst_not_found)
 	s_eaf_hook.mask.on_dst_not_found = 1;
 
 	eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S4_REQ1, 0, NULL);
-	ASSERT_PTR_NE(msg, NULL);
+	ASSERT_NE_PTR(msg, NULL);
 
-	ASSERT_NUM_EQ(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S4, msg), eaf_errno_success);
+	ASSERT_EQ_D32(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S4, msg), eaf_errno_success);
 
-	ASSERT_NUM_EQ(s_eaf_hook.counter, 1);
-	ASSERT_NUM_EQ(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
-	ASSERT_NUM_EQ(s_eaf_hook.info[0].last_to, TEST_QUICK_S4);
-	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_msg, msg);
-	ASSERT_PTR_EQ(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_dst_not_found);
+	ASSERT_EQ_D32(s_eaf_hook.counter, 1);
+	ASSERT_EQ_D32(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
+	ASSERT_EQ_D32(s_eaf_hook.info[0].last_to, TEST_QUICK_S4);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_msg, msg);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_dst_not_found);
 
 	eaf_msg_dec_ref(msg);
 }
@@ -267,18 +267,18 @@ TEST_F(eaf_hook, on_pre_msg_process)
 	const int val = 100;
 
 	eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S1_REQ1, sizeof(int), _on_pre_msg_process_on_rsp);
-	ASSERT_PTR_NE(msg, NULL);
+	ASSERT_NE_PTR(msg, NULL);
 
 	*(int*)eaf_msg_get_data(msg, NULL) = val;
-	ASSERT_NUM_EQ(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_success);
+	ASSERT_EQ_D32(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_success);
 
 	/* wait for response */
-	ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
-	ASSERT_NUM_EQ(s_eaf_hook.counter, 2);
-	ASSERT_NUM_EQ(s_eaf_hook.info[1].last_val, val + 1);
-	ASSERT_NUM_EQ(s_eaf_hook.info[1].last_from, TEST_QUICK_S1);
-	ASSERT_NUM_EQ(s_eaf_hook.info[1].last_to, TEST_QUICK_S0);
-	ASSERT_PTR_EQ(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_on_pre_msg_process_on_rsp);
+	ASSERT_EQ_D32(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(s_eaf_hook.counter, 2);
+	ASSERT_EQ_D32(s_eaf_hook.info[1].last_val, val + 1);
+	ASSERT_EQ_D32(s_eaf_hook.info[1].last_from, TEST_QUICK_S1);
+	ASSERT_EQ_D32(s_eaf_hook.info[1].last_to, TEST_QUICK_S0);
+	ASSERT_EQ_PTR(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_on_pre_msg_process_on_rsp);
 
 	eaf_msg_dec_ref(msg);
 }
@@ -289,25 +289,25 @@ TEST_F(eaf_hook, on_post_msg_process)
 
 	const int val = 200;
 	eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S1_REQ1, sizeof(int), NULL);
-	ASSERT_PTR_NE(msg, NULL);
+	ASSERT_NE_PTR(msg, NULL);
 
 	*(int*)eaf_msg_get_data(msg, NULL) = val;
-	ASSERT_NUM_EQ(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_success);
+	ASSERT_EQ_D32(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S1, msg), eaf_errno_success);
 
 	/* verify request */
 	{
-		ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
-		ASSERT_NUM_EQ(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
-		ASSERT_NUM_EQ(s_eaf_hook.info[0].last_to, TEST_QUICK_S1);
-		ASSERT_NUM_EQ(s_eaf_hook.info[0].last_val, val);
+		ASSERT_EQ_D32(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
+		ASSERT_EQ_D32(s_eaf_hook.info[0].last_from, TEST_QUICK_S0);
+		ASSERT_EQ_D32(s_eaf_hook.info[0].last_to, TEST_QUICK_S1);
+		ASSERT_EQ_D32(s_eaf_hook.info[0].last_val, val);
 	}
 
 	/* verify response */
 	{
-		ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
-		ASSERT_NUM_EQ(s_eaf_hook.info[1].last_from, TEST_QUICK_S1);
-		ASSERT_NUM_EQ(s_eaf_hook.info[1].last_to, TEST_QUICK_S0);
-		ASSERT_NUM_EQ(s_eaf_hook.info[1].last_val, ~val);
+		ASSERT_EQ_D32(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
+		ASSERT_EQ_D32(s_eaf_hook.info[1].last_from, TEST_QUICK_S1);
+		ASSERT_EQ_D32(s_eaf_hook.info[1].last_to, TEST_QUICK_S0);
+		ASSERT_EQ_D32(s_eaf_hook.info[1].last_val, ~val);
 	}
 
 	eaf_msg_dec_ref(msg);
@@ -319,22 +319,22 @@ TEST_F(eaf_hook, on_post_yield)
 	s_eaf_hook.mask.on_post_resume = 1;
 
 	eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S3_REQ1, 0, NULL);
-	ASSERT_PTR_NE(msg, NULL);
+	ASSERT_NE_PTR(msg, NULL);
 
-	ASSERT_NUM_EQ(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S3, msg), eaf_errno_success);
+	ASSERT_EQ_D32(eaf_send_req(TEST_QUICK_S0, TEST_QUICK_S3, msg), eaf_errno_success);
 
-	ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
-	ASSERT_NUM_EQ(s_eaf_hook.info[0].last_from, TEST_QUICK_S3);
-	ASSERT_NUM_EQ(s_eaf_hook.counter, 1);
+	ASSERT_EQ_D32(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(s_eaf_hook.info[0].last_from, TEST_QUICK_S3);
+	ASSERT_EQ_D32(s_eaf_hook.counter, 1);
 
-	ASSERT_NUM_EQ(eaf_resume(TEST_QUICK_S3), 0);
-	ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
-	ASSERT_NUM_EQ(s_eaf_hook.info[1].last_from, TEST_QUICK_S3);
+	ASSERT_EQ_D32(eaf_resume(TEST_QUICK_S3), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_eaf_hook.sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(s_eaf_hook.info[1].last_from, TEST_QUICK_S3);
 
 	eaf_msg_dec_ref(msg);
 }
 
 TEST_F(eaf_hook, on_pre_register)
 {
-	ASSERT_NUM_NE(s_eaf_hook.info[0].last_from, 0);
+	ASSERT_NE_D32(s_eaf_hook.info[0].last_from, 0);
 }

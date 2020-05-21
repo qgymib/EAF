@@ -14,7 +14,7 @@ static void _test_eaf_thread(void* arg)
 TEST_CLASS_SETUP(eaf_thread)
 {
 	s_eaf_thread_sem = eaf_sem_create(0);
-	ASSERT_PTR_NE(s_eaf_thread_sem, NULL);
+	ASSERT_NE_PTR(s_eaf_thread_sem, NULL);
 }
 
 TEST_CLASS_TEAREDOWN(eaf_thread)
@@ -26,10 +26,10 @@ TEST_F(eaf_thread, thread)
 {
 	unsigned long tid = (unsigned long)-1;
 	eaf_thread_t* thr = eaf_thread_create(NULL, _test_eaf_thread, &tid);
-	ASSERT_PTR_NE(thr, NULL);
+	ASSERT_NE_PTR(thr, NULL);
 
-	ASSERT_NUM_EQ(eaf_sem_pend(s_eaf_thread_sem, 8000), 0);
-	ASSERT_NUM_NE(tid, eaf_thread_id());
+	ASSERT_EQ_D32(eaf_sem_pend(s_eaf_thread_sem, 8000), 0);
+	ASSERT_NE_U64(tid, eaf_thread_id());
 
 	eaf_thread_destroy(thr);
 }

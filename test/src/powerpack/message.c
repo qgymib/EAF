@@ -67,7 +67,7 @@ TEST_CLASS_SETUP(powerpack_message)
 	s_powerpack_message_val_req_exp = 33;
 	s_powerpack_message_val_rsp_exp = 66;
 	s_powerpack_message_val_rsp_rel = 99;
-	ASSERT_PTR_NE(s_powerpack_message_sem = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_powerpack_message_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
@@ -78,7 +78,7 @@ TEST_CLASS_SETUP(powerpack_message)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_NUM_EQ(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_entrypoint_t s1_info = {
@@ -86,7 +86,7 @@ TEST_CLASS_SETUP(powerpack_message)
 		_test_powerpack_message_s1_on_init,
 		_test_powerpack_message_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
 	/* 部署服务S2 */
 	static eaf_message_table_t s2_msg[] = {
@@ -97,21 +97,21 @@ TEST_CLASS_SETUP(powerpack_message)
 		_test_powerpack_message_s2_on_init,
 		_test_powerpack_message_on_exit,
 	};
-	ASSERT_NUM_EQ(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
+	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
 	eaf_powerpack_cfg_t powerpack_cfg;
 	memset(&powerpack_cfg, 0, sizeof(powerpack_cfg));
 	powerpack_cfg.service_id = TEST_SERVICE_SS;
-	ASSERT_NUM_EQ(eaf_powerpack_init(&powerpack_cfg), 0);
+	ASSERT_EQ_D32(eaf_powerpack_init(&powerpack_cfg), 0);
 
 	/* 加载EAF */
-	ASSERT_NUM_EQ(eaf_load(), 0);
+	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
 TEST_CLASS_TEAREDOWN(powerpack_message)
 {
 	/* 退出并清理 */
-	ASSERT_NUM_EQ(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_cleanup(), 0);
 	eaf_powerpack_exit();
 
 	eaf_sem_destroy(s_powerpack_message_sem);
@@ -119,6 +119,6 @@ TEST_CLASS_TEAREDOWN(powerpack_message)
 
 TEST_F(powerpack_message, send_req)
 {
-	ASSERT_NUM_EQ(eaf_sem_pend(s_powerpack_message_sem, (unsigned long)-1), 0);
-	ASSERT_NUM_EQ(s_powerpack_message_val_rsp_rel, s_powerpack_message_val_rsp_exp);
+	ASSERT_EQ_D32(eaf_sem_pend(s_powerpack_message_sem, (unsigned long)-1), 0);
+	ASSERT_EQ_D32(s_powerpack_message_val_rsp_rel, s_powerpack_message_val_rsp_exp);
 }
