@@ -73,6 +73,8 @@ if(WIN32)
   list(APPEND LIBUV_LIBRARIES psapi)
   list(APPEND LIBUV_LIBRARIES userenv)
   list(APPEND LIBUV_LIBRARIES ws2_32)
+else ()
+  list(APPEND LIBUV_LIBRARIES pthread)
 endif()
 
 include(FindPackageHandleStandardArgs)
