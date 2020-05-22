@@ -1714,6 +1714,7 @@ fin:
 	return (int)g_test_ctx.counter.result.failed;
 }
 
+TEST_NORETURN
 void etest_assert_fail(const char *expr, const char *file, int line, const char *func)
 {
 	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
@@ -1783,11 +1784,7 @@ int etest_assert_helper_double_ge(double a, double b)
 	return (a > b) || etest_assert_helper_double_eq(a, b);
 }
 
-int etest_always_zero(void)
-{
-	return 0;
-}
-
+TEST_NORETURN
 void etest_set_as_failure(void)
 {
 	longjmp(g_test_ctx2.jmpbuf, 1);

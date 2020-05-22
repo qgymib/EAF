@@ -40,10 +40,27 @@ extern "C" {
 
 #if defined(__GNUC__) || defined(__clang__)
 #	define TEST_NOINLINE	__attribute__((noinline))
+#	define TEST_NORETURN	__attribute__((noreturn))
+#	define TEST_UNREACHABLE	__builtin_unreachable()
 #elif defined(_MSC_VER)
 #	define TEST_NOINLINE	__declspec(noinline)
+#	define TEST_NORETURN	__declspec(noreturn)
+#	define TEST_UNREACHABLE	__assume(0)
 #else
 #	define TEST_NOINLINE
+#	define TEST_NORETURN
+#	define TEST_UNREACHABLE
+#endif
+
+#if defined(_MSC_VER)
+#	define TEST_MSVC_WARNNING_GUARD(exp, code)	\
+		__pragma(warning(push))\
+		__pragma(warning(disable : code))\
+		exp\
+		__pragma(warning(pop))
+#else
+#	define TEST_MSVC_WARNNING_GUARD(exp, code) \
+		exp
 #endif
 
 /**
@@ -110,13 +127,13 @@ extern "C" {
 		}\
 		printf("%s:%d: failure\n"\
 			"            expected:    `%s' %s `%s'\n"\
-			"              actual:    " FMT " vs " FMT "\n", __FILE__, __LINE__, #a, #OP, #b, _a, _b);\
+			"              actual:    " FMT " vs " FMT "\n",\
+			__FILE__, __LINE__, #a, #OP, #b, _a, _b);\
 		if (etest_break_on_failure()) {\
 			*(volatile int*)NULL = 1;\
-		} else {\
-			etest_set_as_failure();\
 		}\
-	} while (etest_always_zero())
+		etest_set_as_failure();\
+	} TEST_MSVC_WARNNING_GUARD(while (0), 4127)
 
 #define _ASSERT_HELPER_EQ(a, b)		((a) == (b))
 #define _ASSERT_HELPER_NE(a, b)		((a) != (b))
@@ -235,15 +252,14 @@ void etest_register_case(etest_case_t* data);
 */
 int etest_run_tests(int argc, char* argv[]);
 
-void etest_assert_fail(const char *expr, const char *file, int line, const char *func);
-void etest_set_as_failure(void);
-int etest_break_on_failure(void);
+TEST_NORETURN void etest_assert_fail(const char *expr, const char *file, int line, const char *func);
+TEST_NORETURN void etest_set_as_failure(void);
 
+int etest_break_on_failure(void);
 int etest_assert_helper_str_eq(const char* a, const char* b);
 int etest_assert_helper_double_eq(double a, double b);
 int etest_assert_helper_double_le(double a, double b);
 int etest_assert_helper_double_ge(double a, double b);
-int etest_always_zero(void);
 
 /************************************************************************/
 /* LOG                                                                  */

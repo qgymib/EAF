@@ -3,10 +3,6 @@
 #include "eaf/powerpack.h"
 #include "etest/etest.h"
 
-#if defined(_MSC_VER)
-#	pragma warning(disable : 28182)
-#endif
-
 TEST_CLASS_SETUP(powerpack_ringbuffer)
 {
 }
@@ -805,13 +801,13 @@ TEST_F(powerpack_ringbuffer, force_discard_older_consume)
 		ASSERT_NE_PTR(token, NULL);
 		memcpy(token->data, &i, sizeof(i));
 
-		ASSERT_EQ_SIZE(eaf_ringbuffer_count(rb, &rbc), i + 1);
+		ASSERT_EQ_SIZE(eaf_ringbuffer_count(rb, &rbc), i + (size_t)1);
 		ASSERT_EQ_SIZE(rbc.committed, i);
 		ASSERT_EQ_SIZE(rbc.writing, 1);
 
 		ASSERT_EQ_D32(eaf_ringbuffer_commit(rb, token, 0), 0);
-		ASSERT_EQ_SIZE(eaf_ringbuffer_count(rb, &rbc), i + 1);
-		ASSERT_EQ_SIZE(rbc.committed, i + 1);
+		ASSERT_EQ_SIZE(eaf_ringbuffer_count(rb, &rbc), i + (size_t)1);
+		ASSERT_EQ_SIZE(rbc.committed, i + (size_t)1);
 	}
 
 	/* acquire consume token */
