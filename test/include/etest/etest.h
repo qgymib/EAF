@@ -113,8 +113,9 @@ extern "C" {
 			"              actual:    " FMT " vs " FMT "\n", __FILE__, __LINE__, #a, #OP, #b, _a, _b);\
 		if (etest_break_on_failure()) {\
 			*(volatile int*)NULL = 1;\
+		} else {\
+			etest_set_as_failure();\
 		}\
-		etest_set_as_failure();\
 	} while (etest_always_zero())
 
 #define _ASSERT_HELPER_EQ(a, b)		((a) == (b))
@@ -179,6 +180,13 @@ extern "C" {
 #define ASSERT_LE_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", <=, etest_assert_helper_double_le, a, b)
 #define ASSERT_GT_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", >, !etest_assert_helper_double_le, a, b)
 #define ASSERT_GE_DBL(a, b)			ASSERT_TEMPLATE(double, "%f", >=, etest_assert_helper_double_ge, a, b)
+
+#define ASSERT_EQ_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", ==, _ASSERT_HELPER_EQ, a, b)
+#define ASSERT_NE_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", !=, _ASSERT_HELPER_NE, a, b)
+#define ASSERT_LT_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", <, _ASSERT_HELPER_LT, a, b)
+#define ASSERT_LE_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", <=, _ASSERT_HELPER_LE, a, b)
+#define ASSERT_GT_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", >, _ASSERT_HELPER_GT, a, b)
+#define ASSERT_GE_SIZE(a, b)		ASSERT_TEMPLATE(size_t, "%zu", >=, _ASSERT_HELPER_GE, a, b)
 
 #define ASSERT_EQ_STR(a, b)			ASSERT_TEMPLATE(const char*, "%s", ==, etest_assert_helper_str_eq, a, b)
 #define ASSERT_NE_STR(a, b)			ASSERT_TEMPLATE(const char*, "%s", !=, !etest_assert_helper_str_eq, a, b)
@@ -294,7 +302,6 @@ etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub);
  * @param handler	Ìæ»»¾ä±ú
  */
 void etest_unpatch(etest_stub_t* handler);
-
 
 #ifdef __cplusplus
 }

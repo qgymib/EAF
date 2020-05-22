@@ -22,7 +22,7 @@ TEST_CLASS_SETUP(eaf_list)
 	{
 		eaf_list_push_back(&s_eaf_list_queue, &s_eaf_list_node[i].node);
 	}
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node));
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node));
 }
 
 TEST_CLASS_TEAREDOWN(eaf_list)
@@ -38,7 +38,7 @@ TEST_F(eaf_list, push_front)
 	eaf_list_push_front(&s_eaf_list_queue, &tmp_node.node);
 
 	/* check size */
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
 
 	/* check front node */
 	{
@@ -55,7 +55,7 @@ TEST_F(eaf_list, empty_push_front)
 	eaf_list_init(&s_eaf_list_queue);
 	eaf_list_push_front(&s_eaf_list_queue, &s_eaf_list_node[0].node);
 
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), 1);
 	ASSERT_EQ_PTR(EAF_CONTAINER_OF(eaf_list_begin(&s_eaf_list_queue), test_eaf_list_node_t, node), &s_eaf_list_node[0]);
 	ASSERT_EQ_PTR(EAF_CONTAINER_OF(eaf_list_end(&s_eaf_list_queue), test_eaf_list_node_t, node), &s_eaf_list_node[0]);
 }
@@ -68,7 +68,7 @@ TEST_F(eaf_list, push_back)
 	eaf_list_push_back(&s_eaf_list_queue, &tmp_node.node);
 
 	/* check size */
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
 
 	/* check back node */
 	{
@@ -93,7 +93,7 @@ TEST_F(eaf_list, insert_before)
 	/* insert before HEAD */
 	{
 		eaf_list_insert_before(&s_eaf_list_queue, &s_eaf_list_node[0].node, &tmp_node_1.node);
-		ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
+		ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
 
 		it = eaf_list_begin(&s_eaf_list_queue);
 		ASSERT_NE_PTR(it, NULL);
@@ -105,7 +105,7 @@ TEST_F(eaf_list, insert_before)
 	/* insert before TAIL */
 	{
 		eaf_list_insert_before(&s_eaf_list_queue, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1].node, &tmp_node_2.node);
-		ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 2);
+		ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 2);
 
 		it = eaf_list_end(&s_eaf_list_queue);
 		ASSERT_NE_PTR(it, NULL);
@@ -132,7 +132,7 @@ TEST_F(eaf_list, insert_after)
 	/* insert after HEAD */
 	{
 		eaf_list_insert_after(&s_eaf_list_queue, &s_eaf_list_node[0].node, &tmp_node_1.node);
-		ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
+		ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 1);
 
 		it = eaf_list_begin(&s_eaf_list_queue);
 		ASSERT_NE_PTR(it, NULL);
@@ -148,7 +148,7 @@ TEST_F(eaf_list, insert_after)
 	/* insert after TAIL */
 	{
 		eaf_list_insert_after(&s_eaf_list_queue, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1].node, &tmp_node_2.node);
-		ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 2);
+		ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) + 2);
 
 		it = eaf_list_end(&s_eaf_list_queue);
 		ASSERT_NE_PTR(it, NULL);
@@ -160,7 +160,7 @@ TEST_F(eaf_list, insert_after)
 TEST_F(eaf_list, erase)
 {
 	eaf_list_erase(&s_eaf_list_queue, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) / 2].node);
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
 
 	eaf_list_node_t* it = eaf_list_begin(&s_eaf_list_queue);
 	for (; it != NULL; it = eaf_list_next(&s_eaf_list_queue, it))
@@ -174,7 +174,7 @@ TEST_F(eaf_list, pop_front)
 {
 	eaf_list_node_t* node = eaf_list_pop_front(&s_eaf_list_queue);
 	ASSERT_NE_PTR(node, NULL);
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
 
 	test_eaf_list_node_t* data = EAF_CONTAINER_OF(node, test_eaf_list_node_t, node);
 	ASSERT_EQ_PTR(data, &s_eaf_list_node[0]);
@@ -197,7 +197,7 @@ TEST_F(eaf_list, pop_back)
 {
 	eaf_list_node_t* node = eaf_list_pop_back(&s_eaf_list_queue);
 	ASSERT_NE_PTR(node, NULL);
-	ASSERT_EQ_D32(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
+	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
 
 	test_eaf_list_node_t* data = EAF_CONTAINER_OF(node, test_eaf_list_node_t, node);
 	ASSERT_EQ_PTR(data, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1]);
@@ -225,7 +225,7 @@ TEST_F(eaf_list, next)
 		test_eaf_list_node_t* data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &s_eaf_list_node[i]);
 	}
-	ASSERT_EQ_D32(i, EAF_ARRAY_SIZE(s_eaf_list_node));
+	ASSERT_EQ_SIZE(i, EAF_ARRAY_SIZE(s_eaf_list_node));
 }
 
 TEST_F(eaf_list, prev)

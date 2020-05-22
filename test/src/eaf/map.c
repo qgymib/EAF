@@ -37,7 +37,7 @@ TEST_CLASS_SETUP(eaf_map)
 		ASSERT_EQ_D32(eaf_map_insert(&s_eaf_map_table, &s_eaf_map_node[i].node), 0);
 	}
 
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
 }
 
 TEST_CLASS_TEAREDOWN(eaf_map)
@@ -56,7 +56,7 @@ TEST_F(eaf_map, insert_r)
 		ASSERT_EQ_D32(eaf_map_insert(&s_eaf_map_table, &s_eaf_map_node[i].node), 0);
 	}
 
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
 }
 
 TEST_F(eaf_map, insert_duplicate)
@@ -64,14 +64,14 @@ TEST_F(eaf_map, insert_duplicate)
 	test_eaf_map_node_t tmp_node = s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2];
 	ASSERT_LT_D32(eaf_map_insert(&s_eaf_map_table, &tmp_node.node), 0);
 
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
 }
 
 TEST_F(eaf_map, erase)
 {
 	eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[EAF_ARRAY_SIZE(s_eaf_map_node) / 2].node);
 
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node) - 1);
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node) - 1);
 
 	eaf_map_node_t* it = eaf_map_begin(&s_eaf_map_table);
 	for (; it != NULL; it = eaf_map_next(&s_eaf_map_table, it))
@@ -88,7 +88,7 @@ TEST_F(eaf_map, erase_l)
 	{
 		eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[i].node);
 	}
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), 0);
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), 0);
 }
 
 TEST_F(eaf_map, erase_r)
@@ -98,7 +98,7 @@ TEST_F(eaf_map, erase_r)
 	{
 		eaf_map_erase(&s_eaf_map_table, &s_eaf_map_node[i].node);
 	}
-	ASSERT_EQ_D32(eaf_map_size(&s_eaf_map_table), 0);
+	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), 0);
 }
 
 TEST_F(eaf_map, find)
@@ -155,7 +155,7 @@ TEST_F(eaf_map, find_lower)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, target_value);
+		ASSERT_EQ_SIZE(rec->data.value, target_value);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[0]);
 	}
 
@@ -169,7 +169,7 @@ TEST_F(eaf_map, find_lower)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, target_value);
+		ASSERT_EQ_SIZE(rec->data.value, target_value);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[3]);
 	}
 
@@ -183,7 +183,7 @@ TEST_F(eaf_map, find_lower)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, target_value - 1);
+		ASSERT_EQ_SIZE(rec->data.value, target_value - 1);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[4]);
 	}
 
@@ -197,7 +197,7 @@ TEST_F(eaf_map, find_lower)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, target_value);
+		ASSERT_EQ_SIZE(rec->data.value, target_value);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[7]);
 	}
 
@@ -211,7 +211,7 @@ TEST_F(eaf_map, find_lower)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, 16);
+		ASSERT_EQ_SIZE(rec->data.value, 16);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[7]);
 	}
 }
@@ -239,7 +239,7 @@ TEST_F(eaf_map, find_upper)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, 2);
+		ASSERT_EQ_SIZE(rec->data.value, 2);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[0]);
 	}
 
@@ -253,7 +253,7 @@ TEST_F(eaf_map, find_upper)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, 4);
+		ASSERT_EQ_SIZE(rec->data.value, 4);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[1]);
 	}
 
@@ -267,7 +267,7 @@ TEST_F(eaf_map, find_upper)
 		ASSERT_NE_PTR(it, NULL);
 
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
-		ASSERT_EQ_D32(rec->data.value, 4);
+		ASSERT_EQ_SIZE(rec->data.value, 4);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[1]);
 	}
 
@@ -317,7 +317,7 @@ TEST_F(eaf_map, next)
 		test_eaf_map_node_t* rec = EAF_CONTAINER_OF(it, test_eaf_map_node_t, node);
 		ASSERT_EQ_PTR(rec, &s_eaf_map_node[i]);
 	}
-	ASSERT_EQ_D32(i, EAF_ARRAY_SIZE(s_eaf_map_node));
+	ASSERT_EQ_SIZE(i, EAF_ARRAY_SIZE(s_eaf_map_node));
 }
 
 TEST_F(eaf_map, prev)
