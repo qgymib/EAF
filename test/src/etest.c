@@ -1790,6 +1790,11 @@ void etest_set_as_failure(void)
 	longjmp(g_test_ctx2.jmpbuf, 1);
 }
 
+void etest_flush(void)
+{
+	fflush(NULL);
+}
+
 int etest_break_on_failure(void)
 {
 	return g_test_ctx.mask.break_on_failure;
