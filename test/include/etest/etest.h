@@ -135,6 +135,14 @@ extern "C" {
 #define ASSERT(x)	\
 	((void)((x) || (etest_internal_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
 
+#if defined(_MSC_VER)
+#	define TEST_DEBUGBREAK		__debugbreak()
+#elif !defined(__native_client__) && (defined(__clang__) || defined(__GNUC__)) && (defined(__x86_64__) || defined(__i386__))
+#	define TEST_DEBUGBREAK		asm("int3")
+#else
+#	define TEST_DEBUGBREAK		*(volatile int*)NULL = 1
+#endif
+
 #define ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, u_fmt, ...)	\
 	do {\
 		TYPE _a = a; TYPE _b = b;\
@@ -147,7 +155,7 @@ extern "C" {
 			__FILE__, __LINE__, ##__VA_ARGS__, #a, #OP, #b, _a, _b);\
 		etest_internal_flush();\
 		if (etest_internal_break_on_failure()) {\
-			*(volatile int*)NULL = 1;\
+			TEST_DEBUGBREAK;\
 		}\
 		etest_internal_set_as_failure();\
 	} TEST_MSVC_WARNNING_GUARD(while (0), 4127)
