@@ -925,6 +925,14 @@ typedef int test_bool;
 #define test_true		1
 #define test_false		0
 
+typedef enum print_color
+{
+	print_default,
+	print_red,
+	print_green,
+	print_yellow,
+}print_color_t;
+
 typedef union double_point
 {
 	double					value_;
@@ -1148,6 +1156,121 @@ static test_bool _test_check_disable(const char* name)
 	return !g_test_ctx.mask.also_run_disabled_tests && (strncmp("DISABLED_", name, 9) == 0);
 }
 
+static const char* _test_get_ansi_color_code(print_color_t color)
+{
+	switch (color)
+	{
+	case print_red:
+		return "1";
+
+	case print_green:
+		return "2";
+
+	case print_yellow:
+		return "3";
+
+	default:
+		break;
+	}
+
+	return NULL;
+}
+
+#if defined(_MSC_VER)
+
+// Returns the character attribute for the given color.
+static WORD GetColorAttribute(print_color_t color)
+{
+	switch (color)
+	{
+	case print_red:
+		return FOREGROUND_RED;
+	case print_green:
+		return FOREGROUND_GREEN;
+	case print_yellow:
+		return FOREGROUND_RED | FOREGROUND_GREEN;
+	default:
+		return 0;
+	}
+}
+
+static int GetBitOffset(WORD color_mask)
+{
+	if (color_mask == 0) return 0;
+
+	int bitOffset = 0;
+	while ((color_mask & 1) == 0)
+	{
+		color_mask >>= 1;
+		++bitOffset;
+	}
+	return bitOffset;
+}
+
+static WORD GetNewColor(print_color_t color, WORD old_color_attrs)
+{
+	// Let's reuse the BG
+	static const WORD background_mask = BACKGROUND_BLUE | BACKGROUND_GREEN |
+		BACKGROUND_RED | BACKGROUND_INTENSITY;
+	static const WORD foreground_mask = FOREGROUND_BLUE | FOREGROUND_GREEN |
+		FOREGROUND_RED | FOREGROUND_INTENSITY;
+	const WORD existing_bg = old_color_attrs & background_mask;
+
+	WORD new_color =
+		GetColorAttribute(color) | existing_bg | FOREGROUND_INTENSITY;
+	const int bg_bitOffset = GetBitOffset(background_mask);
+	const int fg_bitOffset = GetBitOffset(foreground_mask);
+
+	if (((new_color & background_mask) >> bg_bitOffset) ==
+		((new_color & foreground_mask) >> fg_bitOffset))
+	{
+		new_color ^= FOREGROUND_INTENSITY;  // invert intensity
+	}
+	return new_color;
+}
+#endif
+
+static void _test_print_colorful(print_color_t color, const char* fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+	if (color == print_default)
+	{
+		vprintf(fmt, args);
+		goto fin;
+	}
+
+#if defined(_MSC_VER)
+	const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	// Gets the current text color.
+	CONSOLE_SCREEN_BUFFER_INFO buffer_info;
+	GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
+	const WORD old_color_attrs = buffer_info.wAttributes;
+	const WORD new_color = GetNewColor(color, old_color_attrs);
+
+	// We need to flush the stream buffers into the console before each
+	// SetConsoleTextAttribute call lest it affect the text that is already
+	// printed but has not yet reached the console.
+	fflush(stdout);
+	SetConsoleTextAttribute(stdout_handle, new_color);
+
+	vprintf(fmt, args);
+
+	fflush(stdout);
+	// Restores the text color.
+	SetConsoleTextAttribute(stdout_handle, old_color_attrs);
+#else
+	printf("\033[0;3%sm", _test_get_ansi_color_code(color));
+	vprintf(fmt, args);
+	printf("\033[m");
+#endif
+
+fin:
+	va_end(args);
+}
+
 /**
 * run test case.
 * the target case was set to `g_test_ctx.runtime.cur_case`
@@ -1172,7 +1295,9 @@ static void _test_run_case(void)
 		return;
 	}
 
-	printf(COLOR_GREEN("[ RUN      ]") " %s\n", g_test_ctx2.strbuf);
+	_test_print_colorful(print_green, "[ RUN      ]");
+	_test_print_colorful(print_default, " %s\n", g_test_ctx2.strbuf);
+
 	g_test_ctx.runtime.cur_idx = 0;
 
 	int ret;
@@ -1181,8 +1306,6 @@ static void _test_run_case(void)
 		SET_MASK(g_test_ctx.runtime.cur_case->data.mask, ret);
 		goto procedure_teardown;
 	}
-
-
 
 	/* setup */
 	g_test_ctx.runtime.cur_stage = stage_setup;
@@ -1220,26 +1343,26 @@ procedure_teardown:
 procedure_teardown_fin:
 	etest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
 
-	const char* prefix_str = COLOR_GREEN("[       OK ]");
 	if (HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILURE))
 	{
-		prefix_str = COLOR_RED("[  FAILED  ]");
 		g_test_ctx.counter.result.failed++;
+		_test_print_colorful(print_red, "[  FAILED  ]");
 	}
 	else if (HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_SKIPPED))
 	{
-		prefix_str = COLOR_GREEN("[      SKIP]");
 		g_test_ctx.counter.result.skipped++;
+		_test_print_colorful(print_green, "[      SKIP]");
 	}
 	else
 	{
 		g_test_ctx.counter.result.success++;
+		_test_print_colorful(print_green, "[       OK ]");
 	}
 
-	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
+	printf(" %s", g_test_ctx2.strbuf);
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%llu ms)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+		printf(" (%lu ms)", (unsigned long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
 	}
 	printf("\n");
 }
@@ -1272,7 +1395,9 @@ static void _test_show_report_failed(void)
 
 		snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
 			case_data->data.suit_name, case_data->data.case_name);
-		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_test_ctx2.strbuf);
+
+		_test_print_colorful(print_red, "[  FAILED  ]");
+		printf(" %s\n", g_test_ctx2.strbuf);
 	}
 }
 
@@ -1280,31 +1405,35 @@ static void _test_show_report(void)
 {
 	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start, &g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
 
-	printf(COLOR_GREEN("[==========]") " %u/%u test case%s ran.",
+	_test_print_colorful(print_green, "[==========]");
+	printf(" %u/%u test case%s ran.",
 		g_test_ctx.counter.result.total,
 		_test_list_size(&g_test_ctx.info.case_list),
 		g_test_ctx.counter.result.total > 1 ? "s" : "");
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%llu ms total)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+		printf(" (%lu ms total)", (unsigned long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
 	}
 	printf("\n");
 
 	if (g_test_ctx.counter.result.disabled != 0)
 	{
-		printf(COLOR_GREEN("[ DISABLED ]") " %u test%s.\n",
+		_test_print_colorful(print_green, "[ DISABLED ]");
+		printf(" %u test%s.\n",
 			g_test_ctx.counter.result.disabled,
 			g_test_ctx.counter.result.disabled > 1 ? "s" : "");
 	}
 	if (g_test_ctx.counter.result.skipped != 0)
 	{
-		printf(COLOR_GREEN("[  SKIPPED ]") " %u test%s.\n",
+		_test_print_colorful(print_green, "[  SKIPPED ]");
+		printf(" %u test%s.\n",
 			g_test_ctx.counter.result.skipped,
 			g_test_ctx.counter.result.skipped > 1 ? "s" : "");
 	}
 	if (g_test_ctx.counter.result.success != 0)
 	{
-		printf(COLOR_GREEN("[  PASSED  ]") " %u test%s.\n",
+		_test_print_colorful(print_green, "[  PASSED  ]");
+		printf(" %u test%s.\n",
 			g_test_ctx.counter.result.success,
 			g_test_ctx.counter.result.success > 1 ? "s" : "");
 	}
@@ -1315,7 +1444,8 @@ static void _test_show_report(void)
 		return;
 	}
 
-	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
+	_test_print_colorful(print_red, "[  FAILED  ]");
+	printf(" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
 	_test_show_report_failed();
 }
 
@@ -1631,7 +1761,9 @@ static int _test_setup(int argc, char* argv[])
 static void _test_run_test_loop(void)
 {
 	_test_reset_all_test();
-	printf(COLOR_GREEN("[==========]") " total %u test%s registered.\n",
+
+	_test_print_colorful(print_yellow, "[==========]");
+	printf(" total %u test%s registered.\n",
 		g_test_ctx.info.case_list.size,
 		g_test_ctx.info.case_list.size > 1 ? "s" : "");
 
@@ -1834,7 +1966,8 @@ int etest_run_tests(int argc, char* argv[])
 	{
 		if (g_test_ctx.counter.repeat.repeat > 1)
 		{
-			printf(COLOR_YELLO("[==========]") " start loop: %u/%u\n",
+			_test_print_colorful(print_yellow, "[==========]");
+			printf(" start loop: %u/%u\n",
 				g_test_ctx.counter.repeat.repeated + 1, g_test_ctx.counter.repeat.repeat);
 		}
 
@@ -1842,7 +1975,8 @@ int etest_run_tests(int argc, char* argv[])
 
 		if (g_test_ctx.counter.repeat.repeat > 1)
 		{
-			printf(COLOR_YELLO("[==========]") " end loop (%u/%u)\n",
+			_test_print_colorful(print_yellow, "[==========]");
+			printf(" end loop (%u/%u)\n",
 				g_test_ctx.counter.repeat.repeated + 1, g_test_ctx.counter.repeat.repeat);
 			if (g_test_ctx.counter.repeat.repeated < g_test_ctx.counter.repeat.repeat - 1)
 			{
