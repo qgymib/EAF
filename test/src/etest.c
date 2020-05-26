@@ -906,7 +906,8 @@ void etest_unpatch(etest_stub_t* handler)
 #	define COLOR_YELLO(str)					str
 #endif
 
-#define MASK_FAILED							(0x01 << 0x00)
+#define MASK_FAILURE						(0x01 << 0x00)
+#define MASK_SKIPPED						(0x01 << 0x01)
 #define SET_MASK(val, mask)					do { (val) |= (mask); } while (0)
 #define HAS_MASK(val, mask)					((val) & (mask))
 
@@ -930,6 +931,19 @@ typedef union double_point
 	uint64_t				bits_;
 }double_point_t;
 
+typedef union float_point
+{
+	float					value_;
+	uint32_t				bits_;
+}float_point_t;
+
+typedef enum test_case_stage
+{
+	stage_setup = 0,
+	stage_run = 1,
+	stage_teardown = 2,
+}test_case_stage_t;
+
 typedef struct test_ctx
 {
 	struct
@@ -945,6 +959,7 @@ typedef struct test_ctx
 		etest_list_node_t*	cur_it;							/** 当前游标位置 */
 		etest_case_t*		cur_case;						/** 当前正在运行的用例 */
 		size_t				cur_idx;						/** 当前游标位置 */
+		test_case_stage_t	cur_stage;						/** 当前运行阶段 */
 	}runtime;
 
 	struct
@@ -962,9 +977,10 @@ typedef struct test_ctx
 	{
 		struct
 		{
-			unsigned		disabled;						/** 关闭数量 */
 			unsigned		total;							/** 总运行用例数 */
+			unsigned		disabled;						/** 关闭数量 */
 			unsigned		success;						/** 成功用例数 */
+			unsigned		skipped;						/** 跳过用例总数 */
 			unsigned		failed;							/** 失败用例数 */
 		}result;
 
@@ -993,14 +1009,26 @@ typedef struct test_ctx
 
 	struct
 	{
-		size_t				kMaxUlps;
-		size_t				kBitCount;
-		size_t				kFractionBitCount;
-		size_t				kExponentBitCount;
-		uint64_t			kSignBitMask;
-		uint64_t			kFractionBitMask;
-		uint64_t			kExponentBitMask;
-	}float_helper;
+		size_t			kMaxUlps;
+		struct
+		{
+			size_t			kBitCount_64;
+			size_t			kFractionBitCount_64;
+			size_t			kExponentBitCount_64;
+			uint64_t		kSignBitMask_64;
+			uint64_t		kFractionBitMask_64;
+			uint64_t		kExponentBitMask_64;
+		}_double;
+		struct
+		{
+			size_t			kBitCount_32;
+			size_t			kFractionBitCount_32;
+			size_t			kExponentBitCount_32;
+			uint32_t		kSignBitMask_32;
+			uint32_t		kFractionBitMask_32;
+			uint32_t		kExponentBitMask_32;
+		}_float;
+	}precision;
 }test_ctx_t;
 
 typedef struct test_ctx2
@@ -1013,12 +1041,12 @@ static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node
 static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
 	{ TEST_LIST_INITIALIZER, ETEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
-	{ 0, NULL, NULL, 0 },									// .runtime
+	{ 0, NULL, NULL, 0, stage_setup },						// .runtime
 	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },	// .timestamp
-	{ { 0, 0, 0, 0 }, { 1, 0 } },							// .counter
+	{ { 0, 0, 0, 0, 0 }, { 1, 0 } },						// .counter
 	{ 0, 1, 0, 0 },											// .mask
 	{ NULL, NULL, 0, 0 },									// .filter
-	{ 0, 0, 0, 0, 0, 0, 0 },								// .float_helper
+	{ 0, { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 } },		// .precision
 };
 
 static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg)
@@ -1028,7 +1056,7 @@ static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node
 	const etest_case_t* t_case_2 = CONTAINER_OF(key2, etest_case_t, node.table);
 
 	int ret;
-	if ((ret = strcmp(t_case_1->data.class_name, t_case_2->data.class_name)) != 0)
+	if ((ret = strcmp(t_case_1->data.suit_name, t_case_2->data.suit_name)) != 0)
 	{
 		return ret;
 	}
@@ -1068,6 +1096,629 @@ LARGE_INTEGER getFILETIMEoffset()
 	return t;
 }
 #endif
+
+/**
+* 检查str是否符合pat
+* @return		bool
+*/
+static test_bool _test_pattern_matches_string(const char* pat, const char* str)
+{
+	switch (*pat)
+	{
+	case '\0':
+		return *str == '\0';
+	case '?':
+		return *str != '\0' && _test_pattern_matches_string(pat + 1, str + 1);
+	case '*':
+		return (*str != '\0' && _test_pattern_matches_string(pat, str + 1)) || _test_pattern_matches_string(pat + 1, str);
+	default:
+		return *pat == *str && _test_pattern_matches_string(pat + 1, str + 1);
+	}
+}
+
+static test_bool _test_check_pattern(const char* str)
+{
+	size_t i;
+	for (i = 0; i < g_test_ctx.filter.n_negative; i++)
+	{
+		if (_test_pattern_matches_string(g_test_ctx.filter.negative_patterns[i], str))
+		{
+			return test_false;
+		}
+	}
+
+	if (g_test_ctx.filter.n_postive == 0)
+	{
+		return test_true;
+	}
+
+	for (i = 0; i < g_test_ctx.filter.n_postive; i++)
+	{
+		if (_test_pattern_matches_string(g_test_ctx.filter.postive_patterns[i], str))
+		{
+			return test_true;
+		}
+	}
+
+	return test_false;
+}
+
+static test_bool _test_check_disable(const char* name)
+{
+	return !g_test_ctx.mask.also_run_disabled_tests && (strncmp("DISABLED_", name, 9) == 0);
+}
+
+/**
+* run test case.
+* the target case was set to `g_test_ctx.runtime.cur_case`
+*/
+static void _test_run_case(void)
+{
+	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
+		g_test_ctx.runtime.cur_case->data.suit_name,
+		g_test_ctx.runtime.cur_case->data.case_name);
+
+	/* 判断是否需要运行 */
+	if (g_test_ctx.filter.postive_patterns != NULL && !_test_check_pattern(g_test_ctx2.strbuf))
+	{
+		return;
+	}
+	g_test_ctx.counter.result.total++;
+
+	/* check if this test is disabled */
+	if (_test_check_disable(g_test_ctx.runtime.cur_case->data.case_name))
+	{
+		g_test_ctx.counter.result.disabled++;
+		return;
+	}
+
+	printf(COLOR_GREEN("[ RUN      ]") " %s\n", g_test_ctx2.strbuf);
+	g_test_ctx.runtime.cur_idx = 0;
+
+	int ret;
+	if ((ret = setjmp(g_test_ctx2.jmpbuf)) != 0)
+	{
+		SET_MASK(g_test_ctx.runtime.cur_case->data.mask, ret);
+		goto procedure_teardown;
+	}
+
+
+
+	/* setup */
+	g_test_ctx.runtime.cur_stage = stage_setup;
+	if (g_test_ctx.runtime.cur_case->data.proc[0] != NULL)
+	{
+		g_test_ctx.runtime.cur_case->data.proc[0]();
+	}
+
+	/* record start time */
+	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
+
+	/* run test case */
+	g_test_ctx.runtime.cur_stage = stage_run;
+	if (g_test_ctx.runtime.cur_case->data.proc[1] != NULL)
+	{
+		g_test_ctx.runtime.cur_case->data.proc[1]();
+	}
+
+procedure_teardown:
+	if (g_test_ctx.runtime.cur_stage == stage_teardown)
+	{
+		goto procedure_teardown_fin;
+	}
+
+	/* record end time */
+	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_end) == 0);
+
+	/* teardown */
+	g_test_ctx.runtime.cur_stage = stage_teardown;
+	if (g_test_ctx.runtime.cur_case->data.proc[2] != NULL)
+	{
+		g_test_ctx.runtime.cur_case->data.proc[2]();
+	}
+
+procedure_teardown_fin:
+	etest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
+
+	const char* prefix_str = COLOR_GREEN("[       OK ]");
+	if (HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILURE))
+	{
+		prefix_str = COLOR_RED("[  FAILED  ]");
+		g_test_ctx.counter.result.failed++;
+	}
+	else if (HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_SKIPPED))
+	{
+		prefix_str = COLOR_GREEN("[      SKIP]");
+		g_test_ctx.counter.result.skipped++;
+	}
+	else
+	{
+		g_test_ctx.counter.result.success++;
+	}
+
+	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
+	if (g_test_ctx.mask.print_time)
+	{
+		printf(" (%llu ms)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+	}
+	printf("\n");
+}
+
+static void _test_reset_all_test(void)
+{
+	memset(&g_test_ctx.counter.result, 0, sizeof(g_test_ctx.counter.result));
+	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
+
+	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
+	{
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		case_data->data.mask = 0;
+	}
+
+	g_test_ctx.info.tid = GET_TID();
+}
+
+static void _test_show_report_failed(void)
+{
+	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
+	{
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		if (!HAS_MASK(case_data->data.mask, MASK_FAILURE))
+		{
+			continue;
+		}
+
+		snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
+			case_data->data.suit_name, case_data->data.case_name);
+		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_test_ctx2.strbuf);
+	}
+}
+
+static void _test_show_report(void)
+{
+	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start, &g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
+
+	printf(COLOR_GREEN("[==========]") " %u/%u test case%s ran.",
+		g_test_ctx.counter.result.total,
+		_test_list_size(&g_test_ctx.info.case_list),
+		g_test_ctx.counter.result.total > 1 ? "s" : "");
+	if (g_test_ctx.mask.print_time)
+	{
+		printf(" (%llu ms total)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+	}
+	printf("\n");
+
+	if (g_test_ctx.counter.result.disabled != 0)
+	{
+		printf(COLOR_GREEN("[ DISABLED ]") " %u test%s.\n",
+			g_test_ctx.counter.result.disabled,
+			g_test_ctx.counter.result.disabled > 1 ? "s" : "");
+	}
+	if (g_test_ctx.counter.result.skipped != 0)
+	{
+		printf(COLOR_GREEN("[  SKIPPED ]") " %u test%s.\n",
+			g_test_ctx.counter.result.skipped,
+			g_test_ctx.counter.result.skipped > 1 ? "s" : "");
+	}
+	if (g_test_ctx.counter.result.success != 0)
+	{
+		printf(COLOR_GREEN("[  PASSED  ]") " %u test%s.\n",
+			g_test_ctx.counter.result.success,
+			g_test_ctx.counter.result.success > 1 ? "s" : "");
+	}
+
+	/* don't show failed tests if every test was success */
+	if (g_test_ctx.counter.result.failed == 0)
+	{
+		return;
+	}
+
+	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
+	_test_show_report_failed();
+}
+
+static void _test_setup_arg_pattern(const char* user_pattern)
+{
+	int flag_allow_negative = 1;
+	size_t number_of_patterns = 1;
+	size_t number_of_negative = 0;
+	size_t user_pattern_size = 0;
+	while (user_pattern[user_pattern_size] != '\0')
+	{
+		if (user_pattern[user_pattern_size] == '-' && flag_allow_negative)
+		{/* 当遇到`-`时，若之前未遇到`:`，则不作为negative项 */
+			flag_allow_negative = 0;
+			number_of_negative++;
+		}
+		else if (user_pattern[user_pattern_size] == ':')
+		{
+			flag_allow_negative = 1;
+			number_of_patterns++;
+		}
+		user_pattern_size++;
+	}
+	user_pattern_size++;
+
+	size_t prefix_size = sizeof(void*) * number_of_patterns;
+	size_t malloc_size = prefix_size + user_pattern_size;
+	g_test_ctx.filter.postive_patterns = malloc(malloc_size);
+	if (g_test_ctx.filter.postive_patterns == NULL)
+	{
+		return;
+	}
+	g_test_ctx.filter.negative_patterns = g_test_ctx.filter.postive_patterns + (number_of_patterns - number_of_negative);
+	memcpy((char*)g_test_ctx.filter.postive_patterns + prefix_size, user_pattern, user_pattern_size);
+
+	char* str_it = (char*)g_test_ctx.filter.postive_patterns + prefix_size;
+	do 
+	{
+		while (*str_it == ':')
+		{
+			*str_it = '\0';
+			str_it++;
+		}
+
+		if (*str_it == '\0')
+		{
+			return;
+		}
+
+		if (*str_it == '-')
+		{
+			*str_it = '\0';
+			str_it++;
+
+			g_test_ctx.filter.negative_patterns[g_test_ctx.filter.n_negative] = str_it;
+			g_test_ctx.filter.n_negative++;
+			continue;
+		}
+
+		g_test_ctx.filter.postive_patterns[g_test_ctx.filter.n_postive] = str_it;
+		g_test_ctx.filter.n_postive++;
+	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
+}
+
+static size_t _etest_calculate_max_class_length(void)
+{
+	size_t tmp_len;
+	size_t max_length = 0;
+	const char* last_class_name = NULL;
+
+	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
+	{
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		if (last_class_name == case_data->data.suit_name)
+		{
+			continue;
+		}
+
+		last_class_name = case_data->data.suit_name;
+		if ((tmp_len = strlen(last_class_name)) > max_length)
+		{
+			max_length = tmp_len;
+		}
+	}
+
+	return max_length;
+}
+
+static void _etest_list_tests(void)
+{
+	unsigned c_class = 0;
+	unsigned c_test = 0;
+	const char* last_class_name = "";
+	const char* print_class_name = "";
+	unsigned max_class_length = (unsigned)_etest_calculate_max_class_length();
+	if (max_class_length > 32)
+	{
+		max_class_length = 32;
+	}
+
+	printf("===============================================================================\n");
+	printf("%-*.*s | test case\n", max_class_length, max_class_length, "class");
+	printf("-------------------------------------------------------------------------------\n");
+
+	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
+	{
+		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		/* some compiler will make same string with different address */
+		if (last_class_name != case_data->data.suit_name
+			&& strcmp(last_class_name, case_data->data.suit_name) != 0)
+		{
+			last_class_name = case_data->data.suit_name;
+			print_class_name = last_class_name;
+			c_class++;
+		}
+
+		printf("%-*.*s | %s\n", max_class_length, max_class_length, print_class_name, case_data->data.case_name);
+		print_class_name = "";
+
+		c_test++;
+	}
+
+	printf("-------------------------------------------------------------------------------\n");
+	printf("total: %u class%s, %u test%s\n",
+		c_class, c_class > 1 ? "es" : "",
+		c_test, c_test > 1 ? "s" : "");
+	printf("===============================================================================\n");
+}
+
+static void _test_setup_arg_repeat(const char* str)
+{
+	int repeat = 1;
+	sscanf(str, "%d", &repeat);
+	g_test_ctx.counter.repeat.repeat = (unsigned)repeat;
+}
+
+static void _test_setup_arg_print_time(const char* str)
+{
+	int val = 1;
+	sscanf(str, "%d", &val);
+	g_test_ctx.mask.print_time = !!val;
+}
+
+static void _test_setup_arg_random_seed(const char* str)
+{
+	long long val = time(NULL);
+	sscanf(str, "%lld", &val);
+
+	_test_srand(val);
+}
+
+static void _test_setup_precision(void)
+{
+	assert(sizeof(((double_point_t*)NULL)->bits_) == sizeof(((double_point_t*)NULL)->value_));
+	assert(sizeof(((float_point_t*)NULL)->bits_) == sizeof(((float_point_t*)NULL)->value_));
+
+	g_test_ctx.precision.kMaxUlps = 4;
+
+	// double
+	{
+		g_test_ctx.precision._double.kBitCount_64 = 8 * sizeof(((double_point_t*)NULL)->value_);
+		g_test_ctx.precision._double.kSignBitMask_64 = (uint64_t)1 << (g_test_ctx.precision._double.kBitCount_64 - 1);
+		g_test_ctx.precision._double.kFractionBitCount_64 = DBL_MANT_DIG - 1;
+		g_test_ctx.precision._double.kExponentBitCount_64 = g_test_ctx.precision._double.kBitCount_64 - 1 - g_test_ctx.precision._double.kFractionBitCount_64;
+		g_test_ctx.precision._double.kFractionBitMask_64 = (~(uint64_t)0) >> (g_test_ctx.precision._double.kExponentBitCount_64 + 1);
+		g_test_ctx.precision._double.kExponentBitMask_64 = ~(g_test_ctx.precision._double.kSignBitMask_64 | g_test_ctx.precision._double.kFractionBitMask_64);
+	}
+
+	// float
+	{
+		g_test_ctx.precision._float.kBitCount_32 = 8 * sizeof(((float_point_t*)NULL)->value_);
+		g_test_ctx.precision._float.kSignBitMask_32 = (uint32_t)1 << (g_test_ctx.precision._float.kBitCount_32 - 1);
+		g_test_ctx.precision._float.kFractionBitCount_32 = FLT_MANT_DIG - 1;
+		g_test_ctx.precision._float.kExponentBitCount_32 = g_test_ctx.precision._float.kBitCount_32 - 1 - g_test_ctx.precision._float.kFractionBitCount_32;
+		g_test_ctx.precision._float.kFractionBitMask_32 = (~(uint32_t)0) >> (g_test_ctx.precision._float.kExponentBitCount_32 + 1);
+		g_test_ctx.precision._float.kExponentBitMask_32 = ~(g_test_ctx.precision._float.kSignBitMask_32 | g_test_ctx.precision._float.kFractionBitMask_32);
+	}
+}
+
+/**
+* 测试用例随机排序
+*/
+static void _test_shuffle_cases(void)
+{
+	test_list_t copy_case_list = TEST_LIST_INITIALIZER;
+
+	while (_test_list_size(&g_test_ctx.info.case_list) != 0)
+	{
+		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
+
+		unsigned i = 0;
+		etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
+
+		_test_list_erase(&g_test_ctx.info.case_list, it);
+		_test_list_push_back(&copy_case_list, it);
+	}
+
+	g_test_ctx.info.case_list = copy_case_list;
+}
+
+static int _test_setup(int argc, char* argv[])
+{
+	(void)argc;
+	enum test_opt
+	{
+		etest_list_tests = 1,
+		etest_filter,
+		etest_also_run_disabled_tests,
+		etest_repeat,
+		etest_shuffle,
+		etest_random_seed,
+		etest_print_time,
+		etest_break_on_failure,
+		help,
+	};
+
+	test_optparse_long_opt_t longopts[] = {
+		{ "etest_list_tests",				etest_list_tests,				OPTPARSE_OPTIONAL },
+		{ "etest_filter",					etest_filter,					OPTPARSE_OPTIONAL },
+		{ "etest_also_run_disabled_tests",	etest_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
+		{ "etest_repeat",					etest_repeat,					OPTPARSE_OPTIONAL },
+		{ "etest_shuffle",					etest_shuffle,					OPTPARSE_OPTIONAL },
+		{ "etest_random_seed",				etest_random_seed,				OPTPARSE_OPTIONAL },
+		{ "etest_print_time",				etest_print_time,				OPTPARSE_OPTIONAL },
+		{ "etest_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
+		{ "help",							help,							OPTPARSE_OPTIONAL },
+		{ 0,								0,								OPTPARSE_NONE },
+	};
+
+	test_optparse_t options;
+	test_optparse_init(&options, argv);
+
+	int option;
+	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
+		switch (option) {
+		case etest_list_tests:
+			_etest_list_tests();
+			return -1;
+		case etest_filter:
+			_test_setup_arg_pattern(options.optarg);
+			break;
+		case etest_also_run_disabled_tests:
+			g_test_ctx.mask.also_run_disabled_tests = 1;
+			break;
+		case etest_repeat:
+			_test_setup_arg_repeat(options.optarg);
+			break;
+		case etest_shuffle:
+			g_test_ctx.mask.shuffle = 1;
+			break;
+		case etest_random_seed:
+			_test_setup_arg_random_seed(options.optarg);
+			break;
+		case etest_print_time:
+			_test_setup_arg_print_time(options.optarg);
+			break;
+		case etest_break_on_failure:
+			g_test_ctx.mask.break_on_failure = 1;
+			break;
+		case help:
+			printf(
+				"This program contains tests written using Test. You can use the\n"
+				"following command line flags to control its behavior:\n"
+				"\n"
+				"Test Selection:\n"
+				"  "COLOR_GREEN("--etest_list_tests")"\n"
+				"      List the names of all tests instead of running them. The name of\n"
+				"      TEST(Foo, Bar) is \"Foo.Bar\".\n"
+				"  "COLOR_GREEN("--etest_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
+				"      Run only the tests whose name matches one of the positive patterns but\n"
+				"      none of the negative patterns. '?' matches any single character; '*'\n"
+				"      matches any substring; ':' separates two patterns.\n"
+				"  "COLOR_GREEN("--etest_also_run_disabled_tests")"\n"
+				"      Run all disabled tests too.\n"
+				"\n"
+				"Test Execution:\n"
+				"  "COLOR_GREEN("--etest_repeat=")COLOR_YELLO("[COUNT]")"\n"
+				"      Run the tests repeatedly; use a negative count to repeat forever.\n"
+				"  "COLOR_GREEN("--etest_shuffle")"\n"
+				"      Randomize tests' orders on every iteration.\n"
+				"  "COLOR_GREEN("--etest_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
+				"      Random number seed to use for shuffling test orders (between 0 and\n"
+				"      99999. By default a seed based on the current time is used for shuffle).\n"
+				"\n"
+				"Test Output:\n"
+				"  "COLOR_GREEN("--etest_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
+				"      Don't print the elapsed time of each test.\n"
+				"\n"
+				"Assertion Behavior:\n"
+				"  "COLOR_GREEN("--etest_break_on_failure")"\n"
+				"      Turn assertion failures into debugger break-points.\n"
+				);
+			return -1;
+		default:
+			break;
+		}
+	}
+
+	_test_setup_precision();
+
+	/* 必要时对测试用例重排序 */
+	if (g_test_ctx.mask.shuffle)
+	{
+		_test_shuffle_cases();
+	}
+
+	return 0;
+}
+
+static void _test_run_test_loop(void)
+{
+	_test_reset_all_test();
+	printf(COLOR_GREEN("[==========]") " total %u test%s registered.\n",
+		g_test_ctx.info.case_list.size,
+		g_test_ctx.info.case_list.size > 1 ? "s" : "");
+
+	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
+
+	g_test_ctx.runtime.cur_it = _test_list_begin(&g_test_ctx.info.case_list);
+	for (; g_test_ctx.runtime.cur_it != NULL;
+		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
+	{
+		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node.queue);
+		_test_run_case();
+	}
+
+	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_end);
+
+	_test_show_report();
+}
+
+static uint32_t _test_float_point_exponent_bits(const float_point_t* p)
+{
+	return g_test_ctx.precision._float.kExponentBitMask_32 & p->bits_;
+}
+
+static uint64_t _test_double_point_exponent_bits(const double_point_t* p)
+{
+	return g_test_ctx.precision._double.kExponentBitMask_64 & p->bits_;
+}
+
+static uint32_t _test_float_point_fraction_bits(const float_point_t* p)
+{
+	return g_test_ctx.precision._float.kFractionBitMask_32 & p->bits_;
+}
+
+static uint64_t _test_double_point_fraction_bits(const double_point_t* p)
+{
+	return g_test_ctx.precision._double.kFractionBitMask_64 & p->bits_;
+}
+
+static int _test_float_point_is_nan(const float_point_t* p)
+{
+	return (_test_float_point_exponent_bits(p) == g_test_ctx.precision._float.kExponentBitMask_32)
+		&& (_test_float_point_fraction_bits(p) != 0);
+}
+
+static int _test_double_point_is_nan(const double_point_t* p)
+{
+	return (_test_double_point_exponent_bits(p) == g_test_ctx.precision._double.kExponentBitMask_64)
+		&& (_test_double_point_fraction_bits(p) != 0);
+}
+
+static uint32_t _test_float_point_sign_and_magnitude_to_biased(const uint32_t sam)
+{
+	if (g_test_ctx.precision._float.kSignBitMask_32 & sam) {
+		// sam represents a negative number.
+		return ~sam + 1;
+	}
+
+	// sam represents a positive number.
+	return g_test_ctx.precision._float.kSignBitMask_32 | sam;
+}
+
+static uint64_t _test_double_point_sign_and_magnitude_to_biased(const uint64_t sam)
+{
+	if (g_test_ctx.precision._double.kSignBitMask_64 & sam) {
+		// sam represents a negative number.
+		return ~sam + 1;
+	}
+
+	// sam represents a positive number.
+	return g_test_ctx.precision._double.kSignBitMask_64 | sam;
+}
+
+static uint32_t _test_float_point_distance_between_sign_and_magnitude_numbers(uint32_t sam1, uint32_t sam2)
+{
+	const uint32_t biased1 = _test_float_point_sign_and_magnitude_to_biased(sam1);
+	const uint32_t biased2 = _test_float_point_sign_and_magnitude_to_biased(sam2);
+
+	return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
+}
+
+static uint64_t _test_double_point_distance_between_sign_and_magnitude_numbers(uint64_t sam1, uint64_t sam2)
+{
+	const uint64_t biased1 = _test_double_point_sign_and_magnitude_to_biased(sam1);
+	const uint64_t biased2 = _test_double_point_sign_and_magnitude_to_biased(sam2);
+
+	return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
+}
 
 int etest_timestamp_get(etest_timestamp_t* ts)
 {
@@ -1157,456 +1808,6 @@ int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2
 	return t1 == little_t ? -1 : 1;
 }
 
-/**
-* 检查str是否符合pat
-* @return		bool
-*/
-static test_bool _test_pattern_matches_string(const char* pat, const char* str)
-{
-	switch (*pat)
-	{
-	case '\0':
-		return *str == '\0';
-	case '?':
-		return *str != '\0' && _test_pattern_matches_string(pat + 1, str + 1);
-	case '*':
-		return (*str != '\0' && _test_pattern_matches_string(pat, str + 1)) || _test_pattern_matches_string(pat + 1, str);
-	default:
-		return *pat == *str && _test_pattern_matches_string(pat + 1, str + 1);
-	}
-}
-
-static test_bool _test_check_pattern(const char* str)
-{
-	size_t i;
-	for (i = 0; i < g_test_ctx.filter.n_negative; i++)
-	{
-		if (_test_pattern_matches_string(g_test_ctx.filter.negative_patterns[i], str))
-		{
-			return test_false;
-		}
-	}
-
-	if (g_test_ctx.filter.n_postive == 0)
-	{
-		return test_true;
-	}
-
-	for (i = 0; i < g_test_ctx.filter.n_postive; i++)
-	{
-		if (_test_pattern_matches_string(g_test_ctx.filter.postive_patterns[i], str))
-		{
-			return test_true;
-		}
-	}
-
-	return test_false;
-}
-
-static test_bool _test_check_disable(const char* name)
-{
-	return !g_test_ctx.mask.also_run_disabled_tests && (strncmp("DISABLED_", name, 9) == 0);
-}
-
-/**
-* run test case.
-* the target case was set to `g_test_ctx.runtime.cur_case`
-*/
-static void _test_run_case(void)
-{
-	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
-		g_test_ctx.runtime.cur_case->data.class_name,
-		g_test_ctx.runtime.cur_case->data.case_name);
-
-	/* 判断是否需要运行 */
-	if (g_test_ctx.filter.postive_patterns != NULL && !_test_check_pattern(g_test_ctx2.strbuf))
-	{
-		return;
-	}
-	if (_test_check_disable(g_test_ctx.runtime.cur_case->data.case_name))
-	{
-		g_test_ctx.counter.result.disabled++;
-		return;
-	}
-
-	printf(COLOR_GREEN("[ RUN      ]") " %s\n", g_test_ctx2.strbuf);
-	g_test_ctx.runtime.cur_idx = 0;
-	g_test_ctx.counter.result.total++;
-
-	if (setjmp(g_test_ctx2.jmpbuf) != 0)
-	{
-		/* 标记失败 */
-		SET_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILED);
-
-		/* 进入清理阶段 */
-		goto procedure_teardown;
-	}
-
-	if (g_test_ctx.runtime.cur_case->data.proc[0] != NULL)
-	{
-		g_test_ctx.runtime.cur_case->data.proc[0]();
-	}
-
-	/* 记录开始时间 */
-	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
-	if (g_test_ctx.runtime.cur_case->data.proc[1] != NULL)
-	{
-		g_test_ctx.runtime.cur_case->data.proc[1]();
-	}
-
-procedure_teardown:
-	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_end) == 0);
-	if (g_test_ctx.runtime.cur_case->data.proc[2] != NULL)
-	{
-		g_test_ctx.runtime.cur_case->data.proc[2]();
-	}
-
-	etest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
-
-	const char* prefix_str = COLOR_RED("[  FAILED  ]");
-	if (!HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILED))
-	{
-		prefix_str = COLOR_GREEN("[       OK ]");
-		g_test_ctx.counter.result.success++;
-	}
-	else
-	{
-		g_test_ctx.counter.result.failed++;
-	}
-
-	printf("%s %s", prefix_str, g_test_ctx2.strbuf);
-	if (g_test_ctx.mask.print_time)
-	{
-		printf(" (%llu ms)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
-	}
-	printf("\n");
-}
-
-static void _test_reset_all_test(void)
-{
-	memset(&g_test_ctx.counter.result, 0, sizeof(g_test_ctx.counter.result));
-	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
-
-	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
-	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
-		case_data->data.mask = 0;
-	}
-
-	g_test_ctx.info.tid = GET_TID();
-}
-
-static void _test_show_report(void)
-{
-	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start, &g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
-
-	printf(COLOR_GREEN("[==========]") " %u/%u test case%s ran.",
-		g_test_ctx.counter.result.total,
-		_test_list_size(&g_test_ctx.info.case_list),
-		g_test_ctx.counter.result.total > 1 ? "s" : "");
-	if (g_test_ctx.mask.print_time)
-	{
-		printf(" (%llu ms total)", (unsigned long long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
-	}
-	printf("\n");
-
-	if (g_test_ctx.counter.result.disabled != 0)
-	{
-		printf(COLOR_GREEN("[ DISABLED ]") " %u test%s.\n",
-			g_test_ctx.counter.result.disabled,
-			g_test_ctx.counter.result.disabled > 1 ? "s" : "");
-	}
-
-	printf(COLOR_GREEN("[  PASSED  ]") " %u test%s.\n",
-		g_test_ctx.counter.result.success,
-		g_test_ctx.counter.result.success > 1 ? "s" : "");
-	if (g_test_ctx.counter.result.failed == 0)
-	{
-		return;
-	}
-
-	printf(COLOR_RED("[  FAILED  ]")" %u test%s, listed below:\n", g_test_ctx.counter.result.failed, g_test_ctx.counter.result.failed > 1 ? "s" : "");
-	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
-	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
-		if (!HAS_MASK(case_data->data.mask, MASK_FAILED))
-		{
-			continue;
-		}
-
-		snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
-			case_data->data.class_name, case_data->data.case_name);
-		printf(COLOR_RED("[  FAILED  ]")" %s\n", g_test_ctx2.strbuf);
-	}
-}
-
-static void _etest_setup_arg_pattern(const char* user_pattern)
-{
-	int flag_allow_negative = 1;
-	size_t number_of_patterns = 1;
-	size_t number_of_negative = 0;
-	size_t user_pattern_size = 0;
-	while (user_pattern[user_pattern_size] != '\0')
-	{
-		if (user_pattern[user_pattern_size] == '-' && flag_allow_negative)
-		{/* 当遇到`-`时，若之前未遇到`:`，则不作为negative项 */
-			flag_allow_negative = 0;
-			number_of_negative++;
-		}
-		else if (user_pattern[user_pattern_size] == ':')
-		{
-			flag_allow_negative = 1;
-			number_of_patterns++;
-		}
-		user_pattern_size++;
-	}
-	user_pattern_size++;
-
-	size_t prefix_size = sizeof(void*) * number_of_patterns;
-	size_t malloc_size = prefix_size + user_pattern_size;
-	g_test_ctx.filter.postive_patterns = malloc(malloc_size);
-	if (g_test_ctx.filter.postive_patterns == NULL)
-	{
-		return;
-	}
-	g_test_ctx.filter.negative_patterns = g_test_ctx.filter.postive_patterns + (number_of_patterns - number_of_negative);
-	memcpy((char*)g_test_ctx.filter.postive_patterns + prefix_size, user_pattern, user_pattern_size);
-
-	char* str_it = (char*)g_test_ctx.filter.postive_patterns + prefix_size;
-	do 
-	{
-		while (*str_it == ':')
-		{
-			*str_it = '\0';
-			str_it++;
-		}
-
-		if (*str_it == '\0')
-		{
-			return;
-		}
-
-		if (*str_it == '-')
-		{
-			*str_it = '\0';
-			str_it++;
-
-			g_test_ctx.filter.negative_patterns[g_test_ctx.filter.n_negative] = str_it;
-			g_test_ctx.filter.n_negative++;
-			continue;
-		}
-
-		g_test_ctx.filter.postive_patterns[g_test_ctx.filter.n_postive] = str_it;
-		g_test_ctx.filter.n_postive++;
-	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
-}
-
-static size_t _etest_calculate_max_class_length(void)
-{
-	size_t tmp_len;
-	size_t max_length = 0;
-	const char* last_class_name = NULL;
-
-	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
-	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
-		if (last_class_name == case_data->data.class_name)
-		{
-			continue;
-		}
-
-		last_class_name = case_data->data.class_name;
-		if ((tmp_len = strlen(last_class_name)) > max_length)
-		{
-			max_length = tmp_len;
-		}
-	}
-
-	return max_length;
-}
-
-static void _etest_list_tests(void)
-{
-	unsigned c_class = 0;
-	unsigned c_test = 0;
-	const char* last_class_name = "";
-	const char* print_class_name = "";
-	unsigned max_class_length = (unsigned)_etest_calculate_max_class_length();
-	if (max_class_length > 32)
-	{
-		max_class_length = 32;
-	}
-
-	printf("===============================================================================\n");
-	printf("%-*.*s | test case\n", max_class_length, max_class_length, "class");
-	printf("-------------------------------------------------------------------------------\n");
-
-	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
-	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
-		/* some compiler will make same string with different address */
-		if (last_class_name != case_data->data.class_name
-			&& strcmp(last_class_name, case_data->data.class_name) != 0)
-		{
-			last_class_name = case_data->data.class_name;
-			print_class_name = last_class_name;
-			c_class++;
-		}
-
-		printf("%-*.*s | %s\n", max_class_length, max_class_length, print_class_name, case_data->data.case_name);
-		print_class_name = "";
-
-		c_test++;
-	}
-
-	printf("-------------------------------------------------------------------------------\n");
-	printf("total: %u class%s, %u test%s\n",
-		c_class, c_class > 1 ? "es" : "",
-		c_test, c_test > 1 ? "s" : "");
-	printf("===============================================================================\n");
-}
-
-static void _etest_setup_arg_repeat(const char* str)
-{
-	int repeat = 1;
-	sscanf(str, "%d", &repeat);
-	g_test_ctx.counter.repeat.repeat = (unsigned)repeat;
-}
-
-static void _etest_setup_arg_print_time(const char* str)
-{
-	int val = 1;
-	sscanf(str, "%d", &val);
-	g_test_ctx.mask.print_time = !!val;
-}
-
-static void _etest_setup_arg_random_seed(const char* str)
-{
-	long long val = time(NULL);
-	sscanf(str, "%lld", &val);
-
-	_test_srand(val);
-}
-
-static void _etest_setup_double(void)
-{
-	assert(sizeof(((double_point_t*)NULL)->bits_) == sizeof(((double_point_t*)NULL)->value_));
-
-	g_test_ctx.float_helper.kBitCount = 8 * sizeof(((double_point_t*)0)->value_);
-	g_test_ctx.float_helper.kSignBitMask = (uint64_t)1 << (g_test_ctx.float_helper.kBitCount - 1);
-	g_test_ctx.float_helper.kFractionBitCount = DBL_MANT_DIG - 1;
-	g_test_ctx.float_helper.kExponentBitCount = g_test_ctx.float_helper.kBitCount - 1 - g_test_ctx.float_helper.kFractionBitCount;
-	g_test_ctx.float_helper.kFractionBitMask = (~(uint64_t)0) >> (g_test_ctx.float_helper.kExponentBitCount + 1);
-	g_test_ctx.float_helper.kExponentBitMask = ~(g_test_ctx.float_helper.kSignBitMask | g_test_ctx.float_helper.kFractionBitMask);
-	g_test_ctx.float_helper.kMaxUlps = 4;
-}
-
-static int _test_setup(int argc, char* argv[])
-{
-	(void)argc;
-	enum test_opt
-	{
-		etest_list_tests = 1,
-		etest_filter,
-		etest_also_run_disabled_tests,
-		etest_repeat,
-		etest_shuffle,
-		etest_random_seed,
-		etest_print_time,
-		etest_break_on_failure,
-		help,
-	};
-
-	test_optparse_long_opt_t longopts[] = {
-		{ "etest_list_tests",				etest_list_tests,				OPTPARSE_OPTIONAL },
-		{ "etest_filter",					etest_filter,					OPTPARSE_OPTIONAL },
-		{ "etest_also_run_disabled_tests",	etest_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
-		{ "etest_repeat",					etest_repeat,					OPTPARSE_OPTIONAL },
-		{ "etest_shuffle",					etest_shuffle,					OPTPARSE_OPTIONAL },
-		{ "etest_random_seed",				etest_random_seed,				OPTPARSE_OPTIONAL },
-		{ "etest_print_time",				etest_print_time,				OPTPARSE_OPTIONAL },
-		{ "etest_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
-		{ "help",							help,							OPTPARSE_OPTIONAL },
-		{ 0,								0,								OPTPARSE_NONE },
-	};
-
-	test_optparse_t options;
-	test_optparse_init(&options, argv);
-
-	int option;
-	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
-		switch (option) {
-		case etest_list_tests:
-			_etest_list_tests();
-			return -1;
-		case etest_filter:
-			_etest_setup_arg_pattern(options.optarg);
-			break;
-		case etest_also_run_disabled_tests:
-			g_test_ctx.mask.also_run_disabled_tests = 1;
-			break;
-		case etest_repeat:
-			_etest_setup_arg_repeat(options.optarg);
-			break;
-		case etest_shuffle:
-			g_test_ctx.mask.shuffle = 1;
-			break;
-		case etest_random_seed:
-			_etest_setup_arg_random_seed(options.optarg);
-			break;
-		case etest_print_time:
-			_etest_setup_arg_print_time(options.optarg);
-			break;
-		case etest_break_on_failure:
-			g_test_ctx.mask.break_on_failure = 1;
-			break;
-		case help:
-			printf(
-				"This program contains tests written using Test. You can use the\n"
-				"following command line flags to control its behavior:\n"
-				"\n"
-				"Test Selection:\n"
-				"  "COLOR_GREEN("--etest_list_tests")"\n"
-				"      List the names of all tests instead of running them. The name of\n"
-				"      TEST(Foo, Bar) is \"Foo.Bar\".\n"
-				"  "COLOR_GREEN("--etest_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
-				"      Run only the tests whose name matches one of the positive patterns but\n"
-				"      none of the negative patterns. '?' matches any single character; '*'\n"
-				"      matches any substring; ':' separates two patterns.\n"
-				"  "COLOR_GREEN("--etest_also_run_disabled_tests")"\n"
-				"      Run all disabled tests too.\n"
-				"\n"
-				"Test Execution:\n"
-				"  "COLOR_GREEN("--etest_repeat=")COLOR_YELLO("[COUNT]")"\n"
-				"      Run the tests repeatedly; use a negative count to repeat forever.\n"
-				"  "COLOR_GREEN("--etest_shuffle")"\n"
-				"      Randomize tests' orders on every iteration.\n"
-				"  "COLOR_GREEN("--etest_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
-				"      Random number seed to use for shuffling test orders (between 0 and\n"
-				"      99999. By default a seed based on the current time is used for shuffle).\n"
-				"\n"
-				"Test Output:\n"
-				"  "COLOR_GREEN("--etest_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
-				"      Don't print the elapsed time of each test.\n"
-				"\n"
-				"Assertion Behavior:\n"
-				"  "COLOR_GREEN("--etest_break_on_failure")"\n"
-				"      Turn assertion failures into debugger break-points.\n"
-				);
-			return -1;
-		default:
-			break;
-		}
-	}
-
-	_etest_setup_double();
-	return 0;
-}
-
 void etest_register_case(etest_case_t* data)
 {
 	if (etest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
@@ -1614,50 +1815,6 @@ void etest_register_case(etest_case_t* data)
 		return;
 	}
 	_test_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
-}
-
-static void _test_run_test_loop(void)
-{
-	_test_reset_all_test();
-	printf(COLOR_GREEN("[==========]") " total %u test%s registered.\n",
-		g_test_ctx.info.case_list.size,
-		g_test_ctx.info.case_list.size > 1 ? "s" : "");
-
-	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
-
-	g_test_ctx.runtime.cur_it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; g_test_ctx.runtime.cur_it != NULL;
-		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
-	{
-		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node.queue);
-		_test_run_case();
-	}
-
-	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_end);
-
-	_test_show_report();
-}
-
-/**
-* 测试用例随机排序
-*/
-static void _test_shuffle_cases(void)
-{
-	test_list_t copy_case_list = TEST_LIST_INITIALIZER;
-
-	while (_test_list_size(&g_test_ctx.info.case_list) != 0)
-	{
-		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
-
-		unsigned i = 0;
-		etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
-
-		_test_list_erase(&g_test_ctx.info.case_list, it);
-		_test_list_push_back(&copy_case_list, it);
-	}
-
-	g_test_ctx.info.case_list = copy_case_list;
 }
 
 int etest_run_tests(int argc, char* argv[])
@@ -1669,12 +1826,6 @@ int etest_run_tests(int argc, char* argv[])
 	if (_test_setup(argc, argv) < 0)
 	{
 		goto fin;
-	}
-
-	/* 必要时对测试用例重排序 */
-	if (g_test_ctx.mask.shuffle)
-	{
-		_test_shuffle_cases();
 	}
 
 	for (g_test_ctx.counter.repeat.repeated = 0;
@@ -1705,97 +1856,109 @@ fin:
 	if (g_test_ctx.filter.postive_patterns != NULL)
 	{
 		free(g_test_ctx.filter.postive_patterns);
-		g_test_ctx.filter.postive_patterns = NULL;
-		g_test_ctx.filter.negative_patterns = NULL;
-		g_test_ctx.filter.n_postive = 0;
-		g_test_ctx.filter.n_negative = 0;
+		memset(&g_test_ctx.filter, 0, sizeof(g_test_ctx.filter));
 	}
 
 	return (int)g_test_ctx.counter.result.failed;
 }
 
 TEST_NORETURN
-void etest_assert_fail(const char *expr, const char *file, int line, const char *func)
+void etest_internal_assert_fail(const char *expr, const char *file, int line, const char *func)
 {
 	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
 	fflush(NULL);
 	abort();
 }
 
-int etest_assert_helper_str_eq(const char* a, const char* b)
+const char* etest_get_current_suit_name(void)
+{
+	if (g_test_ctx.runtime.cur_case == NULL)
+	{
+		return NULL;
+	}
+	return g_test_ctx.runtime.cur_case->data.suit_name;
+}
+
+const char* etest_get_current_case_name(void)
+{
+	if (g_test_ctx.runtime.cur_case == NULL)
+	{
+		return NULL;
+	}
+	return g_test_ctx.runtime.cur_case->data.case_name;
+}
+
+int etest_internal_assert_helper_str_eq(const char* a, const char* b)
 {
 	return strcmp(a, b) == 0;
 }
 
-static uint64_t _double_point_exponent_bits(const double_point_t* p)
+int etest_internal_assert_helper_float_eq(float a, float b)
 {
-	return g_test_ctx.float_helper.kExponentBitMask & p->bits_;
-}
+	float_point_t v_a; v_a.value_ = a;
+	float_point_t v_b; v_b.value_ = b;
 
-static uint64_t _double_point_fraction_bits(const double_point_t* p)
-{
-	return g_test_ctx.float_helper.kFractionBitMask & p->bits_;
-}
-
-static int _double_point_is_nan(const double_point_t* p)
-{
-	return (_double_point_exponent_bits(p) == g_test_ctx.float_helper.kExponentBitMask) && (_double_point_fraction_bits(p) != 0);
-}
-
-static uint64_t _double_point_sign_and_magnitude_to_biased(const uint64_t sam)
-{
-	if (g_test_ctx.float_helper.kSignBitMask & sam) {
-		// sam represents a negative number.
-		return ~sam + 1;
-	}
-
-	// sam represents a positive number.
-	return g_test_ctx.float_helper.kSignBitMask | sam;
-}
-
-static uint64_t _double_point_distance_between_sign_and_magnitude_numbers(uint64_t sam1, uint64_t sam2)
-{
-	const uint64_t biased1 = _double_point_sign_and_magnitude_to_biased(sam1);
-	const uint64_t biased2 = _double_point_sign_and_magnitude_to_biased(sam2);
-
-	return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
-}
-
-int etest_assert_helper_double_eq(double a, double b)
-{
-	double_point_t v_a; v_a.value_ = a;
-	double_point_t v_b; v_b.value_ = b;
-
-	if (_double_point_is_nan(&v_a) || _double_point_is_nan(&v_b))
+	if (_test_float_point_is_nan(&v_a) || _test_float_point_is_nan(&v_b))
 	{
 		return 0;
 	}
 
-	return _double_point_distance_between_sign_and_magnitude_numbers(v_a.bits_, v_b.bits_) <= g_test_ctx.float_helper.kMaxUlps;
+	return _test_float_point_distance_between_sign_and_magnitude_numbers(v_a.bits_, v_b.bits_)
+		<= g_test_ctx.precision.kMaxUlps;
 }
 
-int etest_assert_helper_double_le(double a, double b)
+int etest_internal_assert_helper_float_le(float a, float b)
 {
-	return (a < b) || etest_assert_helper_double_eq(a, b);
+	return (a < b) || etest_internal_assert_helper_float_eq(a, b);
 }
 
-int etest_assert_helper_double_ge(double a, double b)
+int etest_internal_assert_helper_float_ge(float a, float b)
 {
-	return (a > b) || etest_assert_helper_double_eq(a, b);
+	return (a > b) || etest_internal_assert_helper_float_eq(a, b);
+}
+
+int etest_internal_assert_helper_double_eq(double a, double b)
+{
+	double_point_t v_a; v_a.value_ = a;
+	double_point_t v_b; v_b.value_ = b;
+
+	if (_test_double_point_is_nan(&v_a) || _test_double_point_is_nan(&v_b))
+	{
+		return 0;
+	}
+
+	return _test_double_point_distance_between_sign_and_magnitude_numbers(v_a.bits_, v_b.bits_)
+		<= g_test_ctx.precision.kMaxUlps;
+}
+
+int etest_internal_assert_helper_double_le(double a, double b)
+{
+	return (a < b) || etest_internal_assert_helper_double_eq(a, b);
+}
+
+int etest_internal_assert_helper_double_ge(double a, double b)
+{
+	return (a > b) || etest_internal_assert_helper_double_eq(a, b);
 }
 
 TEST_NORETURN
-void etest_set_as_failure(void)
+void etest_internal_set_as_failure(void)
 {
-	longjmp(g_test_ctx2.jmpbuf, 1);
+	longjmp(g_test_ctx2.jmpbuf, MASK_FAILURE);
 }
 
-void etest_flush(void)
+TEST_NORETURN
+void etest_skip_test(void)
+{
+	longjmp(g_test_ctx2.jmpbuf, MASK_SKIPPED);
+}
+
+void etest_internal_flush(void)
 {
 	fflush(NULL);
 }
 
-int etest_break_on_failure(void)
+int etest_internal_break_on_failure(void)
 {
 	return g_test_ctx.mask.break_on_failure;
 }
