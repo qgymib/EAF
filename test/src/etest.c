@@ -1362,7 +1362,9 @@ procedure_teardown_fin:
 	printf(" %s", g_test_ctx2.strbuf);
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%lu ms)", (unsigned long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+		unsigned long take_time = (unsigned long)(g_test_ctx.timestamp.tv_diff.sec * 1000
+			+ g_test_ctx.timestamp.tv_diff.usec / 1000);
+		printf(" (%lu ms)", take_time);
 	}
 	printf("\n");
 }
@@ -1403,7 +1405,8 @@ static void _test_show_report_failed(void)
 
 static void _test_show_report(void)
 {
-	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start, &g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
+	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start,
+		&g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
 
 	_test_print_colorful(print_green, "[==========]");
 	printf(" %u/%u test case%s ran.",
@@ -1412,7 +1415,9 @@ static void _test_show_report(void)
 		g_test_ctx.counter.result.total > 1 ? "s" : "");
 	if (g_test_ctx.mask.print_time)
 	{
-		printf(" (%lu ms total)", (unsigned long)g_test_ctx.timestamp.tv_diff.sec * 1000 + g_test_ctx.timestamp.tv_diff.usec / 1000);
+		unsigned long take_time = (unsigned long)(g_test_ctx.timestamp.tv_diff.sec * 1000
+			+ g_test_ctx.timestamp.tv_diff.usec / 1000);
+		printf(" (%lu ms total)", take_time);
 	}
 	printf("\n");
 
