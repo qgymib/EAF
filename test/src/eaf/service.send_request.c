@@ -1,4 +1,4 @@
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 #include "eaf/eaf.h"
 
 #define TEST_SERVICE_S1			0x00010000

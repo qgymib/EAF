@@ -1,6 +1,6 @@
 #include <string.h>
 #include "eaf/eaf.h"
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 #include "quick.h"
 
 #define TEST_QUICK_S4		0xE0040000

@@ -1,4 +1,4 @@
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 #if defined(_MSC_VER)
 #	define _CRTDBG_MAP_ALLOC
 #	include <stdlib.h>
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 {
 #if defined(_MSC_VER)
 	int flag_leack_check = 0;
-	FIND_ARG(flag_leack_check, argc, argv, "etest_check_leak");
+	FIND_ARG(flag_leack_check, argc, argv, "ctest_check_leak");
 
 	if (flag_leack_check)
 	{
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 	}
 #endif
 
-	int ret = etest_run_tests(argc, argv);
+	int ret = ctest_run_tests(argc, argv);
 
 #if defined(_MSC_VER)
 	if (flag_leack_check)
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 	}
 
 	int flag_pause_on_exit;
-	FIND_ARG(flag_pause_on_exit, argc, argv, "etest_pause_on_exit");
+	FIND_ARG(flag_pause_on_exit, argc, argv, "ctest_pause_on_exit");
 	if (flag_pause_on_exit)
 	{
 		system("pause");

@@ -1,5 +1,5 @@
 #include "eaf/eaf.h"
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 
 static eaf_sem_t* s_eaf_thread_sem;
 

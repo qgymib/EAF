@@ -1,6 +1,6 @@
 #include <string.h>
 #include "eaf/powerpack.h"
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 
 TEST_CLASS_SETUP(powerpack_hash)
 {

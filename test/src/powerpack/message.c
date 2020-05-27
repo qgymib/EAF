@@ -1,6 +1,6 @@
 #include <string.h>
 #include "eaf/powerpack.h"
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 
 /*
 * Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning

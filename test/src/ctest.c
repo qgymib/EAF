@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <float.h>
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 
 /*
 * Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
@@ -27,21 +27,21 @@
 #define __rb_color(pc)     ((uintptr_t)(pc) & 1)
 #define __rb_is_black(pc)  __rb_color(pc)
 #define __rb_is_red(pc)    (!__rb_color(pc))
-#define __rb_parent(pc)    ((etest_map_node_t*)(pc & ~3))
+#define __rb_parent(pc)    ((ctest_map_node_t*)(pc & ~3))
 #define rb_color(rb)       __rb_color((rb)->__rb_parent_color)
 #define rb_is_red(rb)      __rb_is_red((rb)->__rb_parent_color)
 #define rb_is_black(rb)    __rb_is_black((rb)->__rb_parent_color)
-#define rb_parent(r)   ((etest_map_node_t*)((uintptr_t)((r)->__rb_parent_color) & ~3))
+#define rb_parent(r)   ((ctest_map_node_t*)((uintptr_t)((r)->__rb_parent_color) & ~3))
 
 /* 'empty' nodes are nodes that are known not to be inserted in an rbtree */
 #define RB_EMPTY_NODE(node)  \
-	((node)->__rb_parent_color == (etest_map_node_t*)(node))
+	((node)->__rb_parent_color == (ctest_map_node_t*)(node))
 
-typedef int(*etest_map_cmp_fn)(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg);
+typedef int(*etest_map_cmp_fn)(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
 
 typedef struct etest_map
 {
-	etest_map_node_t*		rb_root;	/** 根元素节点 */
+	ctest_map_node_t*		rb_root;	/** 根元素节点 */
 
 	struct
 	{
@@ -53,7 +53,7 @@ typedef struct etest_map
 }etest_map_t;
 #define ETEST_MAP_INITIALIZER(fn, arg)		{ NULL, { fn, arg }, 0 }
 
-static void _etest_map_link_node(etest_map_node_t* node, etest_map_node_t* parent, etest_map_node_t** rb_link)
+static void _etest_map_link_node(ctest_map_node_t* node, ctest_map_node_t* parent, ctest_map_node_t** rb_link)
 {
 	node->__rb_parent_color = parent;
 	node->rb_left = node->rb_right = NULL;
@@ -62,18 +62,18 @@ static void _etest_map_link_node(etest_map_node_t* node, etest_map_node_t* paren
 	return;
 }
 
-static etest_map_node_t* rb_red_parent(etest_map_node_t *red)
+static ctest_map_node_t* rb_red_parent(ctest_map_node_t *red)
 {
 	return red->__rb_parent_color;
 }
 
-static void rb_set_parent_color(etest_map_node_t *rb, etest_map_node_t *p, int color)
+static void rb_set_parent_color(ctest_map_node_t *rb, ctest_map_node_t *p, int color)
 {
-	rb->__rb_parent_color = (etest_map_node_t*)((uintptr_t)p | color);
+	rb->__rb_parent_color = (ctest_map_node_t*)((uintptr_t)p | color);
 }
 
-static void __rb_change_child(etest_map_node_t* old_node, etest_map_node_t* new_node,
-	etest_map_node_t* parent, etest_map_t* root)
+static void __rb_change_child(ctest_map_node_t* old_node, ctest_map_node_t* new_node,
+	ctest_map_node_t* parent, etest_map_t* root)
 {
 	if (parent)
 	{
@@ -97,18 +97,18 @@ static void __rb_change_child(etest_map_node_t* old_node, etest_map_node_t* new_
 * - old's parent and color get assigned to new
 * - old gets assigned new as a parent and 'color' as a color.
 */
-static void __rb_rotate_set_parents(etest_map_node_t* old, etest_map_node_t* new_node,
+static void __rb_rotate_set_parents(ctest_map_node_t* old, ctest_map_node_t* new_node,
 	etest_map_t* root, int color)
 {
-	etest_map_node_t* parent = rb_parent(old);
+	ctest_map_node_t* parent = rb_parent(old);
 	new_node->__rb_parent_color = old->__rb_parent_color;
 	rb_set_parent_color(old, new_node, color);
 	__rb_change_child(old, new_node, parent, root);
 }
 
-static void _etest_map_insert(etest_map_node_t* node, etest_map_t* root)
+static void _etest_map_insert(ctest_map_node_t* node, etest_map_t* root)
 {
-	etest_map_node_t* parent = rb_red_parent(node), *gparent, *tmp;
+	ctest_map_node_t* parent = rb_red_parent(node), *gparent, *tmp;
 
 	while (1) {
 		/*
@@ -227,14 +227,14 @@ static void _etest_map_insert(etest_map_node_t* node, etest_map_t* root)
 	}
 }
 
-static void _etest_map_insert_color(etest_map_node_t* node, etest_map_t* root)
+static void _etest_map_insert_color(ctest_map_node_t* node, etest_map_t* root)
 {
 	_etest_map_insert(node, root);
 }
 
-static int etest_map_insert(etest_map_t* handler, etest_map_node_t* node)
+static int etest_map_insert(etest_map_t* handler, ctest_map_node_t* node)
 {
-	etest_map_node_t **new_node = &(handler->rb_root), *parent = NULL;
+	ctest_map_node_t **new_node = &(handler->rb_root), *parent = NULL;
 
 	/* Figure out where to put new node */
 	while (*new_node)
@@ -263,9 +263,9 @@ static int etest_map_insert(etest_map_t* handler, etest_map_node_t* node)
 	return 0;
 }
 
-static etest_map_node_t* etest_map_begin(const etest_map_t* handler)
+static ctest_map_node_t* etest_map_begin(const etest_map_t* handler)
 {
-	etest_map_node_t* n = handler->rb_root;
+	ctest_map_node_t* n = handler->rb_root;
 
 	if (!n)
 		return NULL;
@@ -274,10 +274,10 @@ static etest_map_node_t* etest_map_begin(const etest_map_t* handler)
 	return n;
 }
 
-static etest_map_node_t* etest_map_next(const etest_map_t* handler, const etest_map_node_t* node)
+static ctest_map_node_t* etest_map_next(const etest_map_t* handler, const ctest_map_node_t* node)
 {
 	(void)handler;
-	etest_map_node_t* parent;
+	ctest_map_node_t* parent;
 
 	if (RB_EMPTY_NODE(node))
 		return NULL;
@@ -290,7 +290,7 @@ static etest_map_node_t* etest_map_next(const etest_map_t* handler, const etest_
 		node = node->rb_right;
 		while (node->rb_left)
 			node = node->rb_left;
-		return (etest_map_node_t *)node;
+		return (ctest_map_node_t *)node;
 	}
 
 	/*
@@ -597,13 +597,13 @@ static void test_optparse_init(test_optparse_t *options, char **argv)
 
 typedef struct test_list
 {
-	etest_list_node_t*		head;							/** 头结点 */
-	etest_list_node_t*		tail;							/** 尾节点 */
+	ctest_list_node_t*		head;							/** 头结点 */
+	ctest_list_node_t*		tail;							/** 尾节点 */
 	unsigned				size;							/** 节点数量 */
 }test_list_t;
 #define TEST_LIST_INITIALIZER		{ NULL, NULL, 0 }
 
-static void _test_list_set_once(test_list_t* handler, etest_list_node_t* node)
+static void _test_list_set_once(test_list_t* handler, ctest_list_node_t* node)
 {
 	handler->head = node;
 	handler->tail = node;
@@ -612,7 +612,7 @@ static void _test_list_set_once(test_list_t* handler, etest_list_node_t* node)
 	handler->size = 1;
 }
 
-static void _test_list_push_back(test_list_t* handler, etest_list_node_t* node)
+static void _test_list_push_back(test_list_t* handler, ctest_list_node_t* node)
 {
 	if (handler->head == NULL)
 	{
@@ -627,12 +627,12 @@ static void _test_list_push_back(test_list_t* handler, etest_list_node_t* node)
 	handler->size++;
 }
 
-static etest_list_node_t* _test_list_begin(const test_list_t* handler)
+static ctest_list_node_t* _test_list_begin(const test_list_t* handler)
 {
 	return handler->head;
 }
 
-static etest_list_node_t* _test_list_next(const test_list_t* handler, const etest_list_node_t* node)
+static ctest_list_node_t* _test_list_next(const test_list_t* handler, const ctest_list_node_t* node)
 {
 	(void)handler;
 	return node->p_after;
@@ -643,7 +643,7 @@ static unsigned _test_list_size(const test_list_t* handler)
 	return handler->size;
 }
 
-static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
+static void _test_list_erase(test_list_t* handler, ctest_list_node_t* node)
 {
 	handler->size--;
 
@@ -689,7 +689,7 @@ static void _test_list_erase(test_list_t* handler, etest_list_node_t* node)
 #	pragma warning(push)
 #	pragma warning(disable : 4200)
 #endif
-struct etest_stub
+struct ctest_stub
 {
 	uint8_t*			orig;						/** 原始地址 */
 	uint8_t*			stub;						/** 替换地址 */
@@ -730,7 +730,7 @@ static size_t _fmock_get_page_size(void)
 	return page_size <= 0 ? 4096 : page_size;
 }
 
-static int _fstub_exchange_opcode(etest_stub_t* handler)
+static int _fstub_exchange_opcode(ctest_stub_t* handler)
 {
 	void* page_addr = _fmock_page_of(handler->orig, handler->page_size);
 
@@ -772,9 +772,9 @@ static int _fstub_exchange_opcode(etest_stub_t* handler)
 	return 0;
 }
 
-static etest_stub_t* _fstub_alloc_patch(uintptr_t fn_orig, uintptr_t fn_stub, size_t code_size)
+static ctest_stub_t* _fstub_alloc_patch(uintptr_t fn_orig, uintptr_t fn_stub, size_t code_size)
 {
-	etest_stub_t* patch = calloc(1, sizeof(etest_stub_t) + code_size);
+	ctest_stub_t* patch = calloc(1, sizeof(ctest_stub_t) + code_size);
 	if (patch == NULL)
 	{
 		return NULL;
@@ -788,9 +788,9 @@ static etest_stub_t* _fstub_alloc_patch(uintptr_t fn_orig, uintptr_t fn_stub, si
 	return patch;
 }
 
-etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub)
+ctest_stub_t* ctest_patch(uintptr_t fn_orig, uintptr_t fn_stub)
 {
-	etest_stub_t* patch = NULL;
+	ctest_stub_t* patch = NULL;
 	const intptr_t addr_diff = (char*)fn_stub - (char*)fn_orig;
 	const uintptr_t abs_addr_diff = addr_diff > 0 ? addr_diff : (-addr_diff);
 
@@ -869,7 +869,7 @@ etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub)
 	return patch;
 }
 
-void etest_unpatch(etest_stub_t* handler)
+void ctest_unpatch(ctest_stub_t* handler)
 {
 	ASSERT(_fstub_exchange_opcode(handler) == 0);
 	free(handler);
@@ -964,21 +964,21 @@ typedef struct test_ctx
 	struct
 	{
 		unsigned long long	seed;							/** 随机数 */
-		etest_list_node_t*	cur_it;							/** 当前游标位置 */
-		etest_case_t*		cur_case;						/** 当前正在运行的用例 */
+		ctest_list_node_t*	cur_it;							/** 当前游标位置 */
+		ctest_case_t*		cur_case;						/** 当前正在运行的用例 */
 		size_t				cur_idx;						/** 当前游标位置 */
 		test_case_stage_t	cur_stage;						/** 当前运行阶段 */
 	}runtime;
 
 	struct
 	{
-		etest_timestamp_t	tv_case_start;					/** 用例开始时间 */
-		etest_timestamp_t	tv_case_end;					/** 结束时间 */
+		ctest_timestamp_t	tv_case_start;					/** 用例开始时间 */
+		ctest_timestamp_t	tv_case_end;					/** 结束时间 */
 
-		etest_timestamp_t	tv_total_start;					/** 总开始时间 */
-		etest_timestamp_t	tv_total_end;					/** 总结束时间 */
+		ctest_timestamp_t	tv_total_start;					/** 总开始时间 */
+		ctest_timestamp_t	tv_total_end;					/** 总结束时间 */
 
-		etest_timestamp_t	tv_diff;						/** 时间差值 */
+		ctest_timestamp_t	tv_diff;						/** 时间差值 */
 	}timestamp;
 
 	struct
@@ -1045,7 +1045,7 @@ typedef struct test_ctx2
 	jmp_buf					jmpbuf;							/** 跳转地址 */
 }test_ctx2_t;
 
-static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg);
+static int _etest_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
 static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
 	{ TEST_LIST_INITIALIZER, ETEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
@@ -1057,11 +1057,11 @@ static test_ctx_t			g_test_ctx = {
 	{ 0, { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 } },		// .precision
 };
 
-static int _etest_on_cmp_case(const etest_map_node_t* key1, const etest_map_node_t* key2, void* arg)
+static int _etest_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg)
 {
 	(void)arg;
-	const etest_case_t* t_case_1 = CONTAINER_OF(key1, etest_case_t, node.table);
-	const etest_case_t* t_case_2 = CONTAINER_OF(key2, etest_case_t, node.table);
+	const ctest_case_t* t_case_1 = CONTAINER_OF(key1, ctest_case_t, node.table);
+	const ctest_case_t* t_case_2 = CONTAINER_OF(key2, ctest_case_t, node.table);
 
 	int ret;
 	if ((ret = strcmp(t_case_1->data.suit_name, t_case_2->data.suit_name)) != 0)
@@ -1315,7 +1315,7 @@ static void _test_run_case(void)
 	}
 
 	/* record start time */
-	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
+	ASSERT(ctest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
 
 	/* run test case */
 	g_test_ctx.runtime.cur_stage = stage_run;
@@ -1331,7 +1331,7 @@ procedure_teardown:
 	}
 
 	/* record end time */
-	ASSERT(etest_timestamp_get(&g_test_ctx.timestamp.tv_case_end) == 0);
+	ASSERT(ctest_timestamp_get(&g_test_ctx.timestamp.tv_case_end) == 0);
 
 	/* teardown */
 	g_test_ctx.runtime.cur_stage = stage_teardown;
@@ -1341,7 +1341,7 @@ procedure_teardown:
 	}
 
 procedure_teardown_fin:
-	etest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
+	ctest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
 
 	if (HAS_MASK(g_test_ctx.runtime.cur_case->data.mask, MASK_FAILURE))
 	{
@@ -1374,10 +1374,10 @@ static void _test_reset_all_test(void)
 	memset(&g_test_ctx.counter.result, 0, sizeof(g_test_ctx.counter.result));
 	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
 
-	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		case_data->data.mask = 0;
 	}
 
@@ -1386,10 +1386,10 @@ static void _test_reset_all_test(void)
 
 static void _test_show_report_failed(void)
 {
-	etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+	ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.queue);
+		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		if (!HAS_MASK(case_data->data.mask, MASK_FAILURE))
 		{
 			continue;
@@ -1405,7 +1405,7 @@ static void _test_show_report_failed(void)
 
 static void _test_show_report(void)
 {
-	etest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start,
+	ctest_timestamp_dif(&g_test_ctx.timestamp.tv_total_start,
 		&g_test_ctx.timestamp.tv_total_end, &g_test_ctx.timestamp.tv_diff);
 
 	_test_print_colorful(print_green, "[==========]");
@@ -1521,10 +1521,10 @@ static size_t _etest_calculate_max_class_length(void)
 	size_t max_length = 0;
 	const char* last_class_name = NULL;
 
-	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
 	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		if (last_class_name == case_data->data.suit_name)
 		{
 			continue;
@@ -1556,10 +1556,10 @@ static void _etest_list_tests(void)
 	printf("%-*.*s | test case\n", max_class_length, max_class_length, "class");
 	printf("-------------------------------------------------------------------------------\n");
 
-	etest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
+	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
 	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
 	{
-		etest_case_t* case_data = CONTAINER_OF(it, etest_case_t, node.table);
+		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		/* some compiler will make same string with different address */
 		if (last_class_name != case_data->data.suit_name
 			&& strcmp(last_class_name, case_data->data.suit_name) != 0)
@@ -1644,7 +1644,7 @@ static void _test_shuffle_cases(void)
 		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
 
 		unsigned i = 0;
-		etest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
+		ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
 		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
 
 		_test_list_erase(&g_test_ctx.info.case_list, it);
@@ -1719,31 +1719,31 @@ static int _test_setup(int argc, char* argv[])
 				"following command line flags to control its behavior:\n"
 				"\n"
 				"Test Selection:\n"
-				"  "COLOR_GREEN("--etest_list_tests")"\n"
+				"  "COLOR_GREEN("--ctest_list_tests")"\n"
 				"      List the names of all tests instead of running them. The name of\n"
 				"      TEST(Foo, Bar) is \"Foo.Bar\".\n"
-				"  "COLOR_GREEN("--etest_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
+				"  "COLOR_GREEN("--ctest_filter=") COLOR_YELLO("POSTIVE_PATTERNS[") COLOR_GREEN("-") COLOR_YELLO("NEGATIVE_PATTERNS]")"\n"
 				"      Run only the tests whose name matches one of the positive patterns but\n"
 				"      none of the negative patterns. '?' matches any single character; '*'\n"
 				"      matches any substring; ':' separates two patterns.\n"
-				"  "COLOR_GREEN("--etest_also_run_disabled_tests")"\n"
+				"  "COLOR_GREEN("--ctest_also_run_disabled_tests")"\n"
 				"      Run all disabled tests too.\n"
 				"\n"
 				"Test Execution:\n"
-				"  "COLOR_GREEN("--etest_repeat=")COLOR_YELLO("[COUNT]")"\n"
+				"  "COLOR_GREEN("--ctest_repeat=")COLOR_YELLO("[COUNT]")"\n"
 				"      Run the tests repeatedly; use a negative count to repeat forever.\n"
-				"  "COLOR_GREEN("--etest_shuffle")"\n"
+				"  "COLOR_GREEN("--ctest_shuffle")"\n"
 				"      Randomize tests' orders on every iteration.\n"
-				"  "COLOR_GREEN("--etest_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
+				"  "COLOR_GREEN("--ctest_random_seed=") COLOR_YELLO("[NUMBER]") "\n"
 				"      Random number seed to use for shuffling test orders (between 0 and\n"
 				"      99999. By default a seed based on the current time is used for shuffle).\n"
 				"\n"
 				"Test Output:\n"
-				"  "COLOR_GREEN("--etest_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
+				"  "COLOR_GREEN("--ctest_print_time=") COLOR_YELLO("(") COLOR_GREEN("0") COLOR_YELLO("|") COLOR_GREEN("1") COLOR_YELLO(")") "\n"
 				"      Don't print the elapsed time of each test.\n"
 				"\n"
 				"Assertion Behavior:\n"
-				"  "COLOR_GREEN("--etest_break_on_failure")"\n"
+				"  "COLOR_GREEN("--ctest_break_on_failure")"\n"
 				"      Turn assertion failures into debugger break-points.\n"
 				);
 			return -1;
@@ -1772,17 +1772,17 @@ static void _test_run_test_loop(void)
 		g_test_ctx.info.case_list.size,
 		g_test_ctx.info.case_list.size > 1 ? "s" : "");
 
-	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
+	ctest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
 
 	g_test_ctx.runtime.cur_it = _test_list_begin(&g_test_ctx.info.case_list);
 	for (; g_test_ctx.runtime.cur_it != NULL;
 		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
 	{
-		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, etest_case_t, node.queue);
+		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, ctest_case_t, node.queue);
 		_test_run_case();
 	}
 
-	etest_timestamp_get(&g_test_ctx.timestamp.tv_total_end);
+	ctest_timestamp_get(&g_test_ctx.timestamp.tv_total_end);
 
 	_test_show_report();
 }
@@ -1857,7 +1857,7 @@ static uint64_t _test_double_point_distance_between_sign_and_magnitude_numbers(u
 	return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
 }
 
-int etest_timestamp_get(etest_timestamp_t* ts)
+int ctest_timestamp_get(ctest_timestamp_t* ts)
 {
 #if defined(_MSC_VER)
 
@@ -1916,11 +1916,11 @@ int etest_timestamp_get(etest_timestamp_t* ts)
 #endif
 }
 
-int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2, etest_timestamp_t* dif)
+int ctest_timestamp_dif(const ctest_timestamp_t* t1, const ctest_timestamp_t* t2, ctest_timestamp_t* dif)
 {
-	etest_timestamp_t tmp_dif;
-	const etest_timestamp_t* large_t = t1->sec > t2->sec ? t1 : (t1->sec < t2->sec ? t2 : (t1->usec > t2->usec ? t1 : t2));
-	const etest_timestamp_t* little_t = large_t == t1 ? t2 : t1;
+	ctest_timestamp_t tmp_dif;
+	const ctest_timestamp_t* large_t = t1->sec > t2->sec ? t1 : (t1->sec < t2->sec ? t2 : (t1->usec > t2->usec ? t1 : t2));
+	const ctest_timestamp_t* little_t = large_t == t1 ? t2 : t1;
 
 	tmp_dif.sec = large_t->sec - little_t->sec;
 	if (large_t->usec < little_t->usec)
@@ -1945,7 +1945,7 @@ int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2
 	return t1 == little_t ? -1 : 1;
 }
 
-void etest_register_case(etest_case_t* data)
+void ctest_register_case(ctest_case_t* data)
 {
 	if (etest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
 	{
@@ -1954,7 +1954,7 @@ void etest_register_case(etest_case_t* data)
 	_test_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
 }
 
-int etest_run_tests(int argc, char* argv[])
+int ctest_run_tests(int argc, char* argv[])
 {
 	/* 初始化随机数 */
 	_test_srand(time(NULL));
@@ -2002,14 +2002,14 @@ fin:
 }
 
 TEST_NORETURN
-void etest_internal_assert_fail(const char *expr, const char *file, int line, const char *func)
+void ctest_internal_assert_fail(const char *expr, const char *file, int line, const char *func)
 {
 	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
 	fflush(NULL);
 	abort();
 }
 
-const char* etest_get_current_suit_name(void)
+const char* ctest_get_current_suit_name(void)
 {
 	if (g_test_ctx.runtime.cur_case == NULL)
 	{
@@ -2018,7 +2018,7 @@ const char* etest_get_current_suit_name(void)
 	return g_test_ctx.runtime.cur_case->data.suit_name;
 }
 
-const char* etest_get_current_case_name(void)
+const char* ctest_get_current_case_name(void)
 {
 	if (g_test_ctx.runtime.cur_case == NULL)
 	{
@@ -2027,12 +2027,12 @@ const char* etest_get_current_case_name(void)
 	return g_test_ctx.runtime.cur_case->data.case_name;
 }
 
-int etest_internal_assert_helper_str_eq(const char* a, const char* b)
+int ctest_internal_assert_helper_str_eq(const char* a, const char* b)
 {
 	return strcmp(a, b) == 0;
 }
 
-int etest_internal_assert_helper_float_eq(float a, float b)
+int ctest_internal_assert_helper_float_eq(float a, float b)
 {
 	float_point_t v_a; v_a.value_ = a;
 	float_point_t v_b; v_b.value_ = b;
@@ -2046,17 +2046,17 @@ int etest_internal_assert_helper_float_eq(float a, float b)
 		<= g_test_ctx.precision.kMaxUlps;
 }
 
-int etest_internal_assert_helper_float_le(float a, float b)
+int ctest_internal_assert_helper_float_le(float a, float b)
 {
-	return (a < b) || etest_internal_assert_helper_float_eq(a, b);
+	return (a < b) || ctest_internal_assert_helper_float_eq(a, b);
 }
 
-int etest_internal_assert_helper_float_ge(float a, float b)
+int ctest_internal_assert_helper_float_ge(float a, float b)
 {
-	return (a > b) || etest_internal_assert_helper_float_eq(a, b);
+	return (a > b) || ctest_internal_assert_helper_float_eq(a, b);
 }
 
-int etest_internal_assert_helper_double_eq(double a, double b)
+int ctest_internal_assert_helper_double_eq(double a, double b)
 {
 	double_point_t v_a; v_a.value_ = a;
 	double_point_t v_b; v_b.value_ = b;
@@ -2070,34 +2070,34 @@ int etest_internal_assert_helper_double_eq(double a, double b)
 		<= g_test_ctx.precision.kMaxUlps;
 }
 
-int etest_internal_assert_helper_double_le(double a, double b)
+int ctest_internal_assert_helper_double_le(double a, double b)
 {
-	return (a < b) || etest_internal_assert_helper_double_eq(a, b);
+	return (a < b) || ctest_internal_assert_helper_double_eq(a, b);
 }
 
-int etest_internal_assert_helper_double_ge(double a, double b)
+int ctest_internal_assert_helper_double_ge(double a, double b)
 {
-	return (a > b) || etest_internal_assert_helper_double_eq(a, b);
+	return (a > b) || ctest_internal_assert_helper_double_eq(a, b);
 }
 
 TEST_NORETURN
-void etest_internal_set_as_failure(void)
+void ctest_internal_set_as_failure(void)
 {
 	longjmp(g_test_ctx2.jmpbuf, MASK_FAILURE);
 }
 
 TEST_NORETURN
-void etest_skip_test(void)
+void ctest_skip_test(void)
 {
 	longjmp(g_test_ctx2.jmpbuf, MASK_SKIPPED);
 }
 
-void etest_internal_flush(void)
+void ctest_internal_flush(void)
 {
 	fflush(NULL);
 }
 
-int etest_internal_break_on_failure(void)
+int ctest_internal_break_on_failure(void)
 {
 	return g_test_ctx.mask.break_on_failure;
 }
@@ -2106,7 +2106,7 @@ int etest_internal_break_on_failure(void)
 /* LOG                                                                  */
 /************************************************************************/
 
-const char* etest_pretty_file(const char* file)
+const char* ctest_pretty_file(const char* file)
 {
 	const char* pos = file;
 

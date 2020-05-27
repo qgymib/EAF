@@ -1,6 +1,6 @@
 #include <string.h>
 #include "eaf/powerpack.h"
-#include "etest/etest.h"
+#include "ctest/ctest.h"
 
 /*
 * Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
@@ -15,8 +15,8 @@
 
 #define TEST_SERVICE_SS			0x11110000
 
-static etest_timestamp_t	s_powerpack_timer_start;
-static etest_timestamp_t	s_powerpack_timer_end;
+static ctest_timestamp_t	s_powerpack_timer_start;
+static ctest_timestamp_t	s_powerpack_timer_end;
 static eaf_sem_t*			s_powerpack_timer_sem;
 static unsigned long		s_sleep_time;
 
@@ -24,9 +24,9 @@ static int _test_powerpack_timer_on_init(void)
 {
 	eaf_reenter
 	{
-		etest_timestamp_get(&s_powerpack_timer_start);
+		ctest_timestamp_get(&s_powerpack_timer_start);
 		eaf_sleep(s_sleep_time);
-		etest_timestamp_get(&s_powerpack_timer_end);
+		ctest_timestamp_get(&s_powerpack_timer_end);
 
 		eaf_sem_post(s_powerpack_timer_sem);
 	};
@@ -83,8 +83,8 @@ TEST_F(powerpack_timer, sleep)
 {
 	ASSERT_EQ_D32(eaf_sem_pend(s_powerpack_timer_sem, (unsigned long)-1), 0);
 
-	etest_timestamp_t dif;
-	ASSERT_LT_D32(etest_timestamp_dif(&s_powerpack_timer_start, &s_powerpack_timer_end, &dif), 0);
+	ctest_timestamp_t dif;
+	ASSERT_LT_D32(ctest_timestamp_dif(&s_powerpack_timer_start, &s_powerpack_timer_end, &dif), 0);
 
 	uint64_t diff_time = dif.sec * 1000 + dif.usec / 1000;
 	ASSERT_GE_U64(diff_time, (long long)(s_sleep_time * 0.8));

@@ -1,5 +1,5 @@
-#ifndef __ETEST_ETEST_H__
-#define __ETEST_ETEST_H__
+#ifndef __CTEST_CTEST_H__
+#define __CTEST_CTEST_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,7 +98,7 @@ extern "C" {
 #define TEST_F(suit_name, case_name)	\
 	static void TEST_##suit_name##_##case_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##suit_name##_##case_name) {\
-		static etest_case_t _case_##suit_name##_##case_name = {\
+		static ctest_case_t _case_##suit_name##_##case_name = {\
 			{ { NULL, NULL }, { NULL, NULL, NULL } },\
 			{ 0, #suit_name, #case_name,\
 				{\
@@ -108,7 +108,7 @@ extern "C" {
 				}\
 			},\
 		};\
-		etest_register_case(&_case_##suit_name##_##case_name);\
+		ctest_register_case(&_case_##suit_name##_##case_name);\
 	}\
 	static void TEST_##suit_name##_##case_name(void)
 
@@ -120,7 +120,7 @@ extern "C" {
 #define TEST(suit_name, case_name)	\
 	static void TEST_##suit_name##_##case_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##case_name) {\
-		static etest_case_t _case_##suit_name##_##case_name = {\
+		static ctest_case_t _case_##suit_name##_##case_name = {\
 			{ { NULL, NULL }, { NULL, NULL, NULL } },\
 			{ 0, #suit_name, #case_name,\
 				{\
@@ -128,12 +128,12 @@ extern "C" {
 				}\
 			},\
 		};\
-		etest_register_case(&_case_##suit_name##_##case_name);\
+		ctest_register_case(&_case_##suit_name##_##case_name);\
 	}\
 	static void TEST_##suit_name##_##case_name(void)
 
 #define ASSERT(x)	\
-	((void)((x) || (etest_internal_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
+	((void)((x) || (ctest_internal_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
 
 #if defined(_MSC_VER)
 #	define TEST_DEBUGBREAK		__debugbreak()
@@ -153,11 +153,11 @@ extern "C" {
 			"            expected:    `%s' %s `%s'\n"\
 			"              actual:    " FMT " vs " FMT "\n",\
 			__FILE__, __LINE__, ##__VA_ARGS__, #a, #OP, #b, _a, _b);\
-		etest_internal_flush();\
-		if (etest_internal_break_on_failure()) {\
+		ctest_internal_flush();\
+		if (ctest_internal_break_on_failure()) {\
 			TEST_DEBUGBREAK;\
 		}\
-		etest_internal_set_as_failure();\
+		ctest_internal_set_as_failure();\
 	} TEST_MSVC_WARNNING_GUARD(while (0), 4127)
 
 #define ASSERT_TEMPLATE_VA(...)									TEST_JOIN(ASSERT_TEMPLATE_VA_, GET_ARG_COUNT(__VA_ARGS__))
@@ -263,44 +263,44 @@ extern "C" {
 #define ASSERT_GT_ULONG(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(unsigned long, "%lu", >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
 #define ASSERT_GE_ULONG(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(unsigned long, "%lu", >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
 
-#define ASSERT_EQ_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", ==, etest_internal_assert_helper_float_eq,  a, b, ##__VA_ARGS__)
-#define ASSERT_NE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", !=, !etest_internal_assert_helper_float_eq, a, b, ##__VA_ARGS__)
-#define ASSERT_LT_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", <,  !etest_internal_assert_helper_float_ge, a, b, ##__VA_ARGS__)
-#define ASSERT_LE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", <=, etest_internal_assert_helper_float_le,  a, b, ##__VA_ARGS__)
-#define ASSERT_GT_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", >,  !etest_internal_assert_helper_float_le, a, b, ##__VA_ARGS__)
-#define ASSERT_GE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", >=, etest_internal_assert_helper_float_ge,  a, b, ##__VA_ARGS__)
+#define ASSERT_EQ_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", ==, ctest_internal_assert_helper_float_eq,  a, b, ##__VA_ARGS__)
+#define ASSERT_NE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", !=, !ctest_internal_assert_helper_float_eq, a, b, ##__VA_ARGS__)
+#define ASSERT_LT_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", <,  !ctest_internal_assert_helper_float_ge, a, b, ##__VA_ARGS__)
+#define ASSERT_LE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", <=, ctest_internal_assert_helper_float_le,  a, b, ##__VA_ARGS__)
+#define ASSERT_GT_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", >,  !ctest_internal_assert_helper_float_le, a, b, ##__VA_ARGS__)
+#define ASSERT_GE_FLOAT(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(float, "%f", >=, ctest_internal_assert_helper_float_ge,  a, b, ##__VA_ARGS__)
 
-#define ASSERT_EQ_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", ==, etest_internal_assert_helper_double_eq,  a, b, ##__VA_ARGS__)
-#define ASSERT_NE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", !=, !etest_internal_assert_helper_double_eq, a, b, ##__VA_ARGS__)
-#define ASSERT_LT_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", <,  !etest_internal_assert_helper_double_ge, a, b, ##__VA_ARGS__)
-#define ASSERT_LE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", <=, etest_internal_assert_helper_double_le,  a, b, ##__VA_ARGS__)
-#define ASSERT_GT_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", >,  !etest_internal_assert_helper_double_le, a, b, ##__VA_ARGS__)
-#define ASSERT_GE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", >=, etest_internal_assert_helper_double_ge,  a, b, ##__VA_ARGS__)
+#define ASSERT_EQ_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", ==, ctest_internal_assert_helper_double_eq,  a, b, ##__VA_ARGS__)
+#define ASSERT_NE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", !=, !ctest_internal_assert_helper_double_eq, a, b, ##__VA_ARGS__)
+#define ASSERT_LT_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", <,  !ctest_internal_assert_helper_double_ge, a, b, ##__VA_ARGS__)
+#define ASSERT_LE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", <=, ctest_internal_assert_helper_double_le,  a, b, ##__VA_ARGS__)
+#define ASSERT_GT_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", >,  !ctest_internal_assert_helper_double_le, a, b, ##__VA_ARGS__)
+#define ASSERT_GE_DOUBLE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(double, "%f", >=, ctest_internal_assert_helper_double_ge,  a, b, ##__VA_ARGS__)
 
-#define ASSERT_EQ_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", ==, etest_internal_assert_helper_str_eq,  a, b, ##__VA_ARGS__)
-#define ASSERT_NE_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", !=, !etest_internal_assert_helper_str_eq, a, b, ##__VA_ARGS__)
+#define ASSERT_EQ_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", ==, ctest_internal_assert_helper_str_eq,  a, b, ##__VA_ARGS__)
+#define ASSERT_NE_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", !=, !ctest_internal_assert_helper_str_eq, a, b, ##__VA_ARGS__)
 
-typedef struct etest_list_node
+typedef struct ctest_list_node
 {
-	struct etest_list_node*		p_after;				/**< next node */
-	struct etest_list_node*		p_before;				/**< previous node */
-}etest_list_node_t;
+	struct ctest_list_node*		p_after;				/**< next node */
+	struct ctest_list_node*		p_before;				/**< previous node */
+}ctest_list_node_t;
 
-typedef struct etest_map_node
+typedef struct ctest_map_node
 {
-	struct etest_map_node*		__rb_parent_color;		/**< father node | color */
-	struct etest_map_node*		rb_right;				/**< right child node */
-	struct etest_map_node*		rb_left;				/**< left child node */
-}etest_map_node_t;
+	struct ctest_map_node*		__rb_parent_color;		/**< father node | color */
+	struct ctest_map_node*		rb_right;				/**< right child node */
+	struct ctest_map_node*		rb_left;				/**< left child node */
+}ctest_map_node_t;
 
-typedef void(*etest_procedure_fn)(void);
+typedef void(*ctest_procedure_fn)(void);
 
-typedef struct etest_case
+typedef struct ctest_case
 {
 	struct
 	{
-		etest_list_node_t		queue;					/**< 侵入式节点 */
-		etest_map_node_t		table;					/**< 侵入式节点 */
+		ctest_list_node_t		queue;					/**< 侵入式节点 */
+		ctest_map_node_t		table;					/**< 侵入式节点 */
 	}node;
 
 	struct
@@ -308,15 +308,15 @@ typedef struct etest_case
 		unsigned long			mask;					/**< 内部标记 */
 		const char*				suit_name;				/**< 用例集名称 */
 		const char*				case_name;				/**< 用例名称 */
-		etest_procedure_fn		proc[3];				/**< 用例体 */
+		ctest_procedure_fn		proc[3];				/**< 用例体 */
 	}data;
-}etest_case_t;
+}ctest_case_t;
 
 /**
  * @brief Register test case
  * @param[in] test_case		Test case
  */
-void etest_register_case(etest_case_t* test_case);
+void ctest_register_case(ctest_case_t* test_case);
 
 /**
  * @brief Run all test cases
@@ -324,36 +324,36 @@ void etest_register_case(etest_case_t* test_case);
  * @param[in] argv	The argument list
  * @return			The number of failure test
  */
-int etest_run_tests(int argc, char* argv[]);
+int ctest_run_tests(int argc, char* argv[]);
 
 /**
  * @brief Get current running suit name
  * @return			The suit name
  */
-const char* etest_get_current_suit_name(void);
+const char* ctest_get_current_suit_name(void);
 
 /**
  * @brief Get current running case name
  * @return			The case name
  */
-const char* etest_get_current_case_name(void);
+const char* ctest_get_current_case_name(void);
 
 /**
  * @brief Skip current test case
  */
-TEST_NORETURN void etest_skip_test(void);
+TEST_NORETURN void ctest_skip_test(void);
 
-TEST_NORETURN void etest_internal_set_as_failure(void);
-TEST_NORETURN void etest_internal_assert_fail(const char *expr, const char *file, int line, const char *func);
-void etest_internal_flush(void);
-int etest_internal_break_on_failure(void);
-int etest_internal_assert_helper_str_eq(const char* a, const char* b);
-int etest_internal_assert_helper_float_eq(float a, float b);
-int etest_internal_assert_helper_float_le(float a, float b);
-int etest_internal_assert_helper_float_ge(float a, float b);
-int etest_internal_assert_helper_double_eq(double a, double b);
-int etest_internal_assert_helper_double_le(double a, double b);
-int etest_internal_assert_helper_double_ge(double a, double b);
+TEST_NORETURN void ctest_internal_set_as_failure(void);
+TEST_NORETURN void ctest_internal_assert_fail(const char *expr, const char *file, int line, const char *func);
+void ctest_internal_flush(void);
+int ctest_internal_break_on_failure(void);
+int ctest_internal_assert_helper_str_eq(const char* a, const char* b);
+int ctest_internal_assert_helper_float_eq(float a, float b);
+int ctest_internal_assert_helper_float_le(float a, float b);
+int ctest_internal_assert_helper_float_ge(float a, float b);
+int ctest_internal_assert_helper_double_eq(double a, double b);
+int ctest_internal_assert_helper_double_le(double a, double b);
+int ctest_internal_assert_helper_double_ge(double a, double b);
 
 /************************************************************************/
 /* LOG                                                                  */
@@ -363,26 +363,26 @@ int etest_internal_assert_helper_double_ge(double a, double b);
  * @brief 简单日志
  */
 #define TEST_LOG(fmt, ...)	\
-	printf("[%s:%d %s] " fmt "\n", etest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+	printf("[%s:%d %s] " fmt "\n", ctest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
-const char* etest_pretty_file(const char* file);
+const char* ctest_pretty_file(const char* file);
 
 /************************************************************************/
 /* time                                                                 */
 /************************************************************************/
 
-typedef struct etest_timestamp
+typedef struct ctest_timestamp
 {
 	uint64_t	sec;		/** seconds */
 	uint64_t	usec;		/** microseconds */
-}etest_timestamp_t;
+}ctest_timestamp_t;
 
 /**
  * @brief Monotonic time since some unspecified starting point
  * @param ts		etest_timestamp_t*
  * @return		0 if success, otherwise failure
  */
-int etest_timestamp_get(etest_timestamp_t* ts);
+int ctest_timestamp_get(ctest_timestamp_t* ts);
 
 /**
  * @brief Compare timestamp
@@ -391,13 +391,13 @@ int etest_timestamp_get(etest_timestamp_t* ts);
  * @param dif	diff
  * @return		-1 if t1 < t2; 1 if t1 > t2; 0 if t1 == t2
  */
-int etest_timestamp_dif(const etest_timestamp_t* t1, const etest_timestamp_t* t2, etest_timestamp_t* dif);
+int ctest_timestamp_dif(const ctest_timestamp_t* t1, const ctest_timestamp_t* t2, ctest_timestamp_t* dif);
 
 /************************************************************************/
 /* inline hook                                                          */
 /************************************************************************/
-struct etest_stub;
-typedef struct etest_stub etest_stub_t;
+struct ctest_stub;
+typedef struct ctest_stub ctest_stub_t;
 
 /**
  * @brief 进行函数patch
@@ -405,13 +405,13 @@ typedef struct etest_stub etest_stub_t;
  * @param fn_stub	替换函数
  * @return			替换句柄，可随后用于取消patch
  */
-etest_stub_t* etest_patch(uintptr_t fn_orig, uintptr_t fn_stub);
+ctest_stub_t* ctest_patch(uintptr_t fn_orig, uintptr_t fn_stub);
 
 /**
  * @brief 取消函数替换
  * @param handler	替换句柄
  */
-void etest_unpatch(etest_stub_t* handler);
+void ctest_unpatch(ctest_stub_t* handler);
 
 #ifdef __cplusplus
 }
