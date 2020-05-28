@@ -198,7 +198,7 @@ extern "C" {
 
 #define ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, u_fmt, ...)	\
 	do {\
-		TYPE _a = (TYPE)a; TYPE _b = (TYPE)b;\
+		TYPE _a = (TYPE)(a); TYPE _b = (TYPE)(b);\
 		if (CMP(_a, _b)) {\
 			break;\
 		}\
