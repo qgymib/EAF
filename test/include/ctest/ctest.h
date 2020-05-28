@@ -1,3 +1,7 @@
+/**
+ * @file
+ * CTest header file.
+ */
 #ifndef __CTEST_CTEST_H__
 #define __CTEST_CTEST_H__
 #ifdef __cplusplus
@@ -13,6 +17,10 @@ extern "C" {
 /* TEST                                                                 */
 /************************************************************************/
 
+/**
+ * @def TEST_INITIALIZER(f)
+ * @brief Run the following code before main() invoke.
+ */
 #ifdef __cplusplus
 #	define TEST_INITIALIZER(f) \
 		void f(void); \
@@ -38,6 +46,22 @@ extern "C" {
 #	error "INITIALIZER not support on your arch"
 #endif
 
+/**
+ * @def TEST_NOINLINE
+ * @brief Prevents a function from being considered for inlining.
+ * @note If the function does not have side-effects, there are optimizations
+ *   other than inlining that causes function calls to be optimized away,
+ *   although the function call is live.
+ */
+/**
+ * @def TEST_NORETURN
+ * @brief Define function that never return.
+ */
+/**
+ * @def TEST_UNREACHABLE
+ * @brief If control flow reaches the point of the TEST_UNREACHABLE, the
+ *   program is undefined.
+ */
 #if defined(__GNUC__) || defined(__clang__)
 #	define TEST_NOINLINE	__attribute__((noinline))
 #	define TEST_NORETURN	__attribute__((noreturn))
@@ -52,6 +76,11 @@ extern "C" {
 #	define TEST_UNREACHABLE
 #endif
 
+/**
+ * @def TEST_MSVC_WARNNING_GUARD(exp, code)
+ * @brief Disable warning for `code'.
+ * @note This macro only works for MSVC.
+ */
 #if defined(_MSC_VER)
 #	define TEST_MSVC_WARNNING_GUARD(exp, code)	\
 		__pragma(warning(push))\
@@ -63,28 +92,42 @@ extern "C" {
 		exp
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1900
-#	define TEST_PREFIX_SIZE	"I"
-#else
-#	define TEST_PREFIX_SIZE	"z"
-#endif
-
+/**
+ * @def TEST_DEBUGBREAK
+ * @brief Causes a breakpoint in your code, where the user will be prompted to
+ *   run the debugger.
+ */
 #if defined(_MSC_VER)
-#	define TEST_UNUSED(x)	TEST_MSVC_WARNNING_GUARD(x, 4100)
-#elif defined(__GNUC__) || defined(__clang__)
-#	define TEST_UNUSED(x)	__attribute__((unused)) x
+#	define TEST_DEBUGBREAK		__debugbreak()
+#elif !defined(__native_client__) \
+	&& (defined(__clang__) || defined(__GNUC__)) && (defined(__x86_64__) || defined(__i386__))
+#	define TEST_DEBUGBREAK		asm("int3")
 #else
-#	define TEST_UNUSED(x)	x
+#	define TEST_DEBUGBREAK		*(volatile int*)NULL = 1
 #endif
 
+/**
+ * @def TEST_PRIsize
+ * @brief A correct format for print `size_t'
+ */
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#	define TEST_PRIsize	"Iu"
+#else
+#	define TEST_PRIsize	"zu"
+#endif
+
+/**
+ * @def TEST_ARG_COUNT
+ * @brief Get the number of arguments
+ */
 #ifdef _MSC_VER // Microsoft compilers
-#   define GET_ARG_COUNT(...)  INTERNAL_EXPAND_ARGS_PRIVATE(INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
+#   define TEST_ARG_COUNT(...)  INTERNAL_EXPAND_ARGS_PRIVATE(INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
 #   define INTERNAL_ARGS_AUGMENTER(...) unused, __VA_ARGS__
 #   define INTERNAL_EXPAND(x) x
 #   define INTERNAL_EXPAND_ARGS_PRIVATE(...) INTERNAL_EXPAND(INTERNAL_GET_ARG_COUNT_PRIVATE(__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 #   define INTERNAL_GET_ARG_COUNT_PRIVATE(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
 #else // Non-Microsoft compilers
-#   define GET_ARG_COUNT(...) INTERNAL_GET_ARG_COUNT_PRIVATE(0, ## __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#   define TEST_ARG_COUNT(...) INTERNAL_GET_ARG_COUNT_PRIVATE(0, ## __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 #   define INTERNAL_GET_ARG_COUNT_PRIVATE(_0, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
 #endif
 
@@ -127,7 +170,7 @@ extern "C" {
  * @param[in] case_name		The name of test case
  */
 #define TEST_P(fixture_name, case_name)	\
-	static void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name* _test_parameterized_data);\
+	static void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name*);\
 	TEST_INITIALIZER(TEST_INIT_##fixture_name##_##case_name) {\
 		static ctest_case_t _case_##fixture_name##_##case_name = {\
 			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
@@ -142,7 +185,8 @@ extern "C" {
 		};\
 		ctest_register_case(&_case_##fixture_name##_##case_name);\
 	}\
-	static void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name* _test_parameterized_data)
+	static void TEST_##fixture_name##_##case_name(\
+		_parameterized_type_##fixture_name* _test_parameterized_data)
 
 /**
  * @brief Test Fixture
@@ -185,17 +229,6 @@ extern "C" {
 	}\
 	static void TEST_##suit_name##_##case_name(void)
 
-#define ASSERT(x)	\
-	((void)((x) || (ctest_internal_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
-
-#if defined(_MSC_VER)
-#	define TEST_DEBUGBREAK		__debugbreak()
-#elif !defined(__native_client__) && (defined(__clang__) || defined(__GNUC__)) && (defined(__x86_64__) || defined(__i386__))
-#	define TEST_DEBUGBREAK		asm("int3")
-#else
-#	define TEST_DEBUGBREAK		*(volatile int*)NULL = 1
-#endif
-
 #define ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, u_fmt, ...)	\
 	do {\
 		TYPE _a = (TYPE)(a); TYPE _b = (TYPE)(b);\
@@ -213,7 +246,7 @@ extern "C" {
 		ctest_internal_set_as_failure();\
 	} TEST_MSVC_WARNNING_GUARD(while (0), 4127)
 
-#define ASSERT_TEMPLATE_VA(...)									TEST_JOIN(ASSERT_TEMPLATE_VA_, GET_ARG_COUNT(__VA_ARGS__))
+#define ASSERT_TEMPLATE_VA(...)									TEST_JOIN(ASSERT_TEMPLATE_VA_, TEST_ARG_COUNT(__VA_ARGS__))
 #define ASSERT_TEMPLATE_VA_0(TYPE, FMT, OP, CMP, a, b, ...)		TEST_EXPAND(ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, __VA_ARGS__))
 #define ASSERT_TEMPLATE_VA_1(TYPE, FMT, OP, CMP, a, b, ...)		TEST_EXPAND(ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, __VA_ARGS__))
 #define ASSERT_TEMPLATE_VA_2(TYPE, FMT, OP, CMP, a, b, ...)		TEST_EXPAND(ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, __VA_ARGS__))
@@ -225,12 +258,15 @@ extern "C" {
 #define ASSERT_TEMPLATE_VA_8(TYPE, FMT, OP, CMP, a, b, ...)		TEST_EXPAND(ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, __VA_ARGS__))
 #define ASSERT_TEMPLATE_VA_9(TYPE, FMT, OP, CMP, a, b, ...)		TEST_EXPAND(ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, __VA_ARGS__))
 
-#define _ASSERT_INTERNAL_HELPER_EQ(a, b)						((a) == (b))
-#define _ASSERT_INTERNAL_HELPER_NE(a, b)						((a) != (b))
-#define _ASSERT_INTERNAL_HELPER_LT(a, b)						((a) < (b))
-#define _ASSERT_INTERNAL_HELPER_LE(a, b)						((a) <= (b))
-#define _ASSERT_INTERNAL_HELPER_GT(a, b)						((a) > (b))
-#define _ASSERT_INTERNAL_HELPER_GE(a, b)						((a) >= (b))
+#define _ASSERT_INTERNAL_HELPER_EQ(a, b)		((a) == (b))
+#define _ASSERT_INTERNAL_HELPER_NE(a, b)		((a) != (b))
+#define _ASSERT_INTERNAL_HELPER_LT(a, b)		((a) < (b))
+#define _ASSERT_INTERNAL_HELPER_LE(a, b)		((a) <= (b))
+#define _ASSERT_INTERNAL_HELPER_GT(a, b)		((a) > (b))
+#define _ASSERT_INTERNAL_HELPER_GE(a, b)		((a) >= (b))
+
+#define ASSERT(x)	\
+	((void)((x) || (ctest_internal_assert_fail(#x, __FILE__, __LINE__, __FUNCTION__),0)))
 
 #define ASSERT_EQ_D32(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(int32_t, "%"PRId32, ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
 #define ASSERT_NE_D32(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(int32_t, "%"PRId32, !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
@@ -274,12 +310,12 @@ extern "C" {
 #define ASSERT_GT_X64(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(uint64_t, "%#018"PRIx64, >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
 #define ASSERT_GE_X64(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(uint64_t, "%#018"PRIx64, >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
 
-#define ASSERT_EQ_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
-#define ASSERT_NE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
-#define ASSERT_LT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", <,  _ASSERT_INTERNAL_HELPER_LT, a, b, ##__VA_ARGS__)
-#define ASSERT_LE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", <=, _ASSERT_INTERNAL_HELPER_LE, a, b, ##__VA_ARGS__)
-#define ASSERT_GT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
-#define ASSERT_GE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
+#define ASSERT_EQ_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
+#define ASSERT_NE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
+#define ASSERT_LT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, <,  _ASSERT_INTERNAL_HELPER_LT, a, b, ##__VA_ARGS__)
+#define ASSERT_LE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, <=, _ASSERT_INTERNAL_HELPER_LE, a, b, ##__VA_ARGS__)
+#define ASSERT_GT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
+#define ASSERT_GE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PRIsize, >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
 
 #define ASSERT_EQ_PTR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const void*, "%p", ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
 #define ASSERT_NE_PTR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const void*, "%p", !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
