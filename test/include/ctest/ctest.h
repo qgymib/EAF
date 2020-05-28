@@ -63,6 +63,20 @@ extern "C" {
 		exp
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#	define TEST_PREFIX_SIZE	"I"
+#else
+#	define TEST_PREFIX_SIZE	"z"
+#endif
+
+#if defined(_MSC_VER)
+#	define TEST_UNUSED(x)	TEST_MSVC_WARNNING_GUARD(x, 4100)
+#elif defined(__GNUC__) || defined(__clang__)
+#	define TEST_UNUSED(x)	__attribute__((unused)) x
+#else
+#	define TEST_UNUSED(x)	x
+#endif
+
 #ifdef _MSC_VER // Microsoft compilers
 #   define GET_ARG_COUNT(...)  INTERNAL_EXPAND_ARGS_PRIVATE(INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
 #   define INTERNAL_ARGS_AUGMENTER(...) unused, __VA_ARGS__
@@ -91,29 +105,69 @@ extern "C" {
 	static void TEST_CLASS_TEARDOWN_##suit_name(void)
 
 /**
- * 测试用例
- * @param suit_name		suit name
- * @param case_name		case name
+ * @brief Get parameterized data
+ * @return	The data you defined
  */
-#define TEST_F(suit_name, case_name)	\
-	static void TEST_##suit_name##_##case_name(void);\
-	TEST_INITIALIZER(TEST_INIT_##suit_name##_##case_name) {\
-		static ctest_case_t _case_##suit_name##_##case_name = {\
-			{ { NULL, NULL }, { NULL, NULL, NULL } },\
-			{ 0, #suit_name, #case_name,\
-				{\
-					TEST_CLASS_SETUP_##suit_name,\
-					TEST_##suit_name##_##case_name,\
-					TEST_CLASS_TEARDOWN_##suit_name\
-				}\
-			},\
-		};\
-		ctest_register_case(&_case_##suit_name##_##case_name);\
-	}\
-	static void TEST_##suit_name##_##case_name(void)
+#define TEST_GET_PARAM()	\
+	(_test_parameterized_data[ctest_internal_parameterized_index()])
 
 /**
- * 测试用例
+ * @brief Define parameterized data for fixture
+ * @param[in] fixture_name	Which fixture you want to parameterized
+ * @param[in] TYPe			Data type
+ * @param[in] ...			Data values
+ */
+#define TEST_PARAMETERIZED_DEFINE(fixture_name, TYPE, ...)	\
+	typedef TYPE _parameterized_type_##fixture_name;\
+	static TYPE _parameterized_data_##fixture_name[] = { __VA_ARGS__ }
+
+/**
+ * @brief Parameterized Test
+ * @param[in] fixture_name	The name of fixture
+ * @param[in] case_name		The name of test case
+ */
+#define TEST_P(fixture_name, case_name)	\
+	static void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name* _test_parameterized_data);\
+	TEST_INITIALIZER(TEST_INIT_##fixture_name##_##case_name) {\
+		static ctest_case_t _case_##fixture_name##_##case_name = {\
+			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
+			{ ctest_case_type_parameterized, 0, #fixture_name, #case_name }, /* .info */\
+			{\
+				TEST_CLASS_SETUP_##fixture_name,\
+				TEST_CLASS_TEARDOWN_##fixture_name,\
+				(uintptr_t)TEST_##fixture_name##_##case_name,\
+				sizeof(_parameterized_data_##fixture_name) / sizeof(_parameterized_data_##fixture_name[0]),\
+				_parameterized_data_##fixture_name,\
+			},\
+		};\
+		ctest_register_case(&_case_##fixture_name##_##case_name);\
+	}\
+	static void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name* _test_parameterized_data)
+
+/**
+ * @brief Test Fixture
+ * @param[in] fixture_name	The name of fixture
+ * @param[in] case_name		The name of test case
+ */
+#define TEST_F(fixture_name, case_name)	\
+	static void TEST_##fixture_name##_##case_name(void);\
+	TEST_INITIALIZER(TEST_INIT_##fixture_name##_##case_name) {\
+		static ctest_case_t _case_##fixture_name##_##case_name = {\
+			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
+			{ ctest_case_type_fixture, 0, #fixture_name, #case_name }, /* .info */\
+			{\
+				TEST_CLASS_SETUP_##fixture_name,\
+				TEST_CLASS_TEARDOWN_##fixture_name,\
+				(uintptr_t)TEST_##fixture_name##_##case_name,\
+				0, NULL\
+			},\
+		};\
+		ctest_register_case(&_case_##fixture_name##_##case_name);\
+	}\
+	static void TEST_##fixture_name##_##case_name(void)
+
+/**
+ * @brief Simple Test
  * @param suit_name		suit name
  * @param case_name		case name
  */
@@ -121,11 +175,10 @@ extern "C" {
 	static void TEST_##suit_name##_##case_name(void);\
 	TEST_INITIALIZER(TEST_INIT_##case_name) {\
 		static ctest_case_t _case_##suit_name##_##case_name = {\
-			{ { NULL, NULL }, { NULL, NULL, NULL } },\
-			{ 0, #suit_name, #case_name,\
-				{\
-					NULL, TEST_##suit_name##_##case_name, NULL\
-				}\
+			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
+			{ ctest_case_type_suit, 0, #suit_name, #case_name }, /* .info */\
+			{\
+				NULL, NULL, (uintptr_t)TEST_##suit_name##_##case_name, 0, NULL\
 			},\
 		};\
 		ctest_register_case(&_case_##suit_name##_##case_name);\
@@ -145,7 +198,7 @@ extern "C" {
 
 #define ASSERT_TEMPLATE(TYPE, FMT, OP, CMP, a, b, u_fmt, ...)	\
 	do {\
-		TYPE _a = a; TYPE _b = b;\
+		TYPE _a = (TYPE)a; TYPE _b = (TYPE)b;\
 		if (CMP(_a, _b)) {\
 			break;\
 		}\
@@ -221,12 +274,12 @@ extern "C" {
 #define ASSERT_GT_X64(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(uint64_t, "%#018"PRIx64, >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
 #define ASSERT_GE_X64(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(uint64_t, "%#018"PRIx64, >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
 
-#define ASSERT_EQ_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
-#define ASSERT_NE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
-#define ASSERT_LT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", <,  _ASSERT_INTERNAL_HELPER_LT, a, b, ##__VA_ARGS__)
-#define ASSERT_LE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", <=, _ASSERT_INTERNAL_HELPER_LE, a, b, ##__VA_ARGS__)
-#define ASSERT_GT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
-#define ASSERT_GE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%zu", >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
+#define ASSERT_EQ_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
+#define ASSERT_NE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
+#define ASSERT_LT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", <,  _ASSERT_INTERNAL_HELPER_LT, a, b, ##__VA_ARGS__)
+#define ASSERT_LE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", <=, _ASSERT_INTERNAL_HELPER_LE, a, b, ##__VA_ARGS__)
+#define ASSERT_GT_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", >,  _ASSERT_INTERNAL_HELPER_GT, a, b, ##__VA_ARGS__)
+#define ASSERT_GE_SIZE(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(size_t, "%"TEST_PREFIX_SIZE"u", >=, _ASSERT_INTERNAL_HELPER_GE, a, b, ##__VA_ARGS__)
 
 #define ASSERT_EQ_PTR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const void*, "%p", ==, _ASSERT_INTERNAL_HELPER_EQ, a, b, ##__VA_ARGS__)
 #define ASSERT_NE_PTR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const void*, "%p", !=, _ASSERT_INTERNAL_HELPER_NE, a, b, ##__VA_ARGS__)
@@ -280,6 +333,13 @@ extern "C" {
 #define ASSERT_EQ_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", ==, ctest_internal_assert_helper_str_eq,  a, b, ##__VA_ARGS__)
 #define ASSERT_NE_STR(a, b, ...)		ASSERT_TEMPLATE_VA(__VA_ARGS__)(const char*, "%s", !=, !ctest_internal_assert_helper_str_eq, a, b, ##__VA_ARGS__)
 
+typedef enum ctest_case_type
+{
+	ctest_case_type_suit,
+	ctest_case_type_fixture,
+	ctest_case_type_parameterized,
+}ctest_case_type_t;
+
 typedef struct ctest_list_node
 {
 	struct ctest_list_node*		p_after;				/**< next node */
@@ -294,22 +354,34 @@ typedef struct ctest_map_node
 }ctest_map_node_t;
 
 typedef void(*ctest_procedure_fn)(void);
+typedef void(*ctest_parameterized_fn)(void*);
 
 typedef struct ctest_case
 {
 	struct
 	{
-		ctest_list_node_t		queue;					/**< 侵入式节点 */
-		ctest_map_node_t		table;					/**< 侵入式节点 */
+		ctest_list_node_t			queue;					/**< list node */
+		ctest_map_node_t			table;					/**< map node */
 	}node;
 
 	struct
 	{
-		unsigned long			mask;					/**< 内部标记 */
-		const char*				suit_name;				/**< 用例集名称 */
-		const char*				case_name;				/**< 用例名称 */
-		ctest_procedure_fn		proc[3];				/**< 用例体 */
-	}data;
+		ctest_case_type_t			type;					/**< case type */
+		unsigned					mask;					/**< internal mask */
+		const char*					suit_name;				/**< suit name */
+		const char*					case_name;				/**< case name */
+	}info;
+
+	struct
+	{
+		ctest_procedure_fn			setup;					/**< setup */
+		ctest_procedure_fn			teardown;				/**< teardown */
+
+		uintptr_t					body;					/**< test body */
+
+		size_t						n_dat;					/**< parameterized data size */
+		void*						p_dat;					/**< parameterized data */
+	}stage;
 }ctest_case_t;
 
 /**
@@ -354,6 +426,7 @@ int ctest_internal_assert_helper_float_ge(float a, float b);
 int ctest_internal_assert_helper_double_eq(double a, double b);
 int ctest_internal_assert_helper_double_le(double a, double b);
 int ctest_internal_assert_helper_double_ge(double a, double b);
+size_t ctest_internal_parameterized_index(void);
 
 /************************************************************************/
 /* LOG                                                                  */
@@ -363,7 +436,7 @@ int ctest_internal_assert_helper_double_ge(double a, double b);
  * @brief 简单日志
  */
 #define TEST_LOG(fmt, ...)	\
-	printf("[%s:%d %s] " fmt "\n", ctest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+	TEST_EXPAND(printf("[%s:%d %s] " fmt "\n", ctest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__))
 
 const char* ctest_pretty_file(const char* file);
 
