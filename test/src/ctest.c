@@ -939,7 +939,7 @@ typedef struct test_ctx
 {
 	struct
 	{
-		ctest_list_t			case_list;						/** 用例表 */
+		ctest_list_t		case_list;						/** 用例表 */
 		ctest_map_t			case_table;						/** 用例表 */
 		unsigned long		tid;							/** 线程ID */
 	}info;
@@ -1420,7 +1420,7 @@ static void _test_show_report(void)
 	_test_print_colorful(print_green, "[==========]");
 	printf(" %u/%u test case%s ran.",
 		g_test_ctx.counter.result.total,
-		ctest_list_size(&g_test_ctx.info.case_list),
+		(unsigned)ctest_list_size(&g_test_ctx.info.case_list),
 		g_test_ctx.counter.result.total > 1 ? "s" : "");
 	if (g_test_ctx.mask.print_time)
 	{
@@ -1794,8 +1794,8 @@ static void _test_run_test_loop(void)
 
 	_test_print_colorful(print_yellow, "[==========]");
 	printf(" total %u test%s registered.\n",
-		g_test_ctx.info.case_list.size,
-		g_test_ctx.info.case_list.size > 1 ? "s" : "");
+		(unsigned)ctest_list_size(&g_test_ctx.info.case_list),
+		ctest_list_size(&g_test_ctx.info.case_list) > 1 ? "s" : "");
 
 	ctest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
 
@@ -2119,10 +2119,7 @@ void ctest_internal_assert_failure(void)
 
 void ctest_skip_test(void)
 {
-	if (g_test_ctx.runtime.cur_stage != stage_setup)
-	{
-		return;
-	}
+	ASSERT(g_test_ctx.runtime.cur_stage == stage_setup);
 	SET_MASK(g_test_ctx.runtime.cur_case->info.mask, MASK_SKIPPED);
 }
 

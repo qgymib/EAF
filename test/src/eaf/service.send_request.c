@@ -61,7 +61,7 @@ static void _test_send_request_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _
 	eaf_msg_dec_ref(rsp);
 }
 
-TEST_CLASS_SETUP(eaf_service)
+TEST_FIXTURE_SETUP(eaf_service)
 {
 	_s_ret_val = 0;
 	ASSERT_NE_PTR(s_service_send_request_sem = eaf_sem_create(0), NULL);
@@ -102,7 +102,7 @@ TEST_CLASS_SETUP(eaf_service)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(eaf_service)
+TEST_FIXTURE_TEAREDOWN(eaf_service)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);

@@ -26,7 +26,7 @@ static int _test_eaf_map_on_cmp(const eaf_map_node_t* key1, const eaf_map_node_t
 	return n1->data.value < n2->data.value ? -1 : 1;
 }
 
-TEST_CLASS_SETUP(eaf_map)
+TEST_FIXTURE_SETUP(eaf_map)
 {
 	eaf_map_init(&s_eaf_map_table, _test_eaf_map_on_cmp, NULL);
 
@@ -40,7 +40,7 @@ TEST_CLASS_SETUP(eaf_map)
 	ASSERT_EQ_SIZE(eaf_map_size(&s_eaf_map_table), EAF_ARRAY_SIZE(s_eaf_map_node));
 }
 
-TEST_CLASS_TEAREDOWN(eaf_map)
+TEST_FIXTURE_TEAREDOWN(eaf_map)
 {
 	// do nothing
 }

@@ -202,7 +202,7 @@ static void _test_eaf_hook_on_req(uint32_t from, uint32_t to, struct eaf_msg* ms
 	};
 }
 
-TEST_CLASS_SETUP(eaf_hook)
+TEST_FIXTURE_SETUP(eaf_hook)
 {
 	memset(&s_eaf_hook, 0, sizeof(s_eaf_hook));
 	s_eaf_hook.sem = eaf_sem_create(0);
@@ -215,7 +215,7 @@ TEST_CLASS_SETUP(eaf_hook)
 	ASSERT_EQ_D32(test_eaf_quick_setup(&quick_cfg), 0);
 }
 
-TEST_CLASS_TEAREDOWN(eaf_hook)
+TEST_FIXTURE_TEAREDOWN(eaf_hook)
 {
 	test_eaf_quick_cleanup();
 	eaf_sem_destroy(s_eaf_hook.sem);

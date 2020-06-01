@@ -2,11 +2,11 @@
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
 
-TEST_CLASS_SETUP(powerpack_hash)
+TEST_FIXTURE_SETUP(powerpack_hash)
 {
 }
 
-TEST_CLASS_TEAREDOWN(powerpack_hash)
+TEST_FIXTURE_TEAREDOWN(powerpack_hash)
 {
 }
 

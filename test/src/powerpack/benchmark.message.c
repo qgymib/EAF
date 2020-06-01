@@ -61,7 +61,7 @@ static void _test_powerpack_benchmark_message_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(benchmark_message)
+TEST_FIXTURE_SETUP(benchmark_message)
 {
 	s_powerpack_benchmark_message_total = 1000000;
 	s_powerpack_benchmark_message_count = 0;
@@ -109,7 +109,7 @@ TEST_CLASS_SETUP(benchmark_message)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(benchmark_message)
+TEST_FIXTURE_TEAREDOWN(benchmark_message)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);

@@ -13,7 +13,7 @@ typedef struct test_eaf_list_node
 static test_eaf_list_node_t s_eaf_list_node[8];
 static eaf_list_t			s_eaf_list_queue;
 
-TEST_CLASS_SETUP(eaf_list)
+TEST_FIXTURE_SETUP(eaf_list)
 {
 	eaf_list_init(&s_eaf_list_queue);
 
@@ -25,7 +25,7 @@ TEST_CLASS_SETUP(eaf_list)
 	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node));
 }
 
-TEST_CLASS_TEAREDOWN(eaf_list)
+TEST_FIXTURE_TEAREDOWN(eaf_list)
 {
 	// do nothing
 }

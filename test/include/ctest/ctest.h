@@ -1,12 +1,25 @@
 /**
  * @file
- * CTest header file.
  */
 #ifndef __CTEST_CTEST_H__
 #define __CTEST_CTEST_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @mainpage CTest
+ * CTest is a test framework for C. It's was inspired by GoogleTest originally.
+ *
+ * CTest has following features:
+ * + C89 / C99 / C11 compatible.
+ * + GCC / Clang / MSVC compatible.
+ * + x86 / x86_64 / arm / arm64 compatible.
+ * + No dynamic memory alloc at runtime.
+ * + Tests are automatically registered when declared.
+ * + Support parameterized tests.
+ * + Support inline hook.
+ */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +31,7 @@ extern "C" {
 /************************************************************************/
 
 /**
- * @defgroup CTest
+ * @defgroup CTest CTest
  * @{
  */
 
@@ -28,20 +41,20 @@ extern "C" {
  */
 
 /**
- * @brief Setup test suit
+ * @brief Setup test fixture
  * @note `fixture_name' must be globally unique
  * @param [in] fixture_name		The name of fixture
  */
-#define TEST_CLASS_SETUP(fixture_name)	\
-	void TEST_CLASS_SETUP_##fixture_name(void)
+#define TEST_FIXTURE_SETUP(fixture_name)	\
+	void TEST_FIXTURE_SETUP_##fixture_name(void)
 
 /**
  * @brief TearDown test suit
  * @note `fixture_name' must be globally unique
  * @param [in] fixture_name		The name of fixture
  */
-#define TEST_CLASS_TEAREDOWN(fixture_name)	\
-	void TEST_CLASS_TEARDOWN_##fixture_name(void)
+#define TEST_FIXTURE_TEAREDOWN(fixture_name)	\
+	void TEST_FIXTURE_TEARDOWN_##fixture_name(void)
 
 /**
  * Group: SetupAndTeardown
@@ -72,8 +85,22 @@ extern "C" {
 
 /**
  * @brief Parameterized Test
+ *
+ * A parameterized test will run many cycles, which was defined by
+ * #TEST_PARAMETERIZED_DEFINE().
+ *
+ * You can get the parameter by #TEST_GET_PARAM(). Each cycle the #TEST_GET_PARAM()
+ * will return the matching data defined in #TEST_PARAMETERIZED_DEFINE()
+ *
+ * @note If you declare a Parameterized Test but do not want to use #TEST_GET_PARAM(),
+ *   you may get a compile time warning like `unused parameter _test_parameterized_data`.
+ *   To suppress this warning, just place `(void)TEST_GET_PARAM()` in the begin
+ *   of your test body.
+ *
  * @param [in] fixture_name		The name of fixture
  * @param [in] case_name		The name of test case
+ * @see TEST_GET_PARAM()
+ * @see TEST_PARAMETERIZED_DEFINE()
  */
 #define TEST_P(fixture_name, case_name)	\
 	void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name*);\
@@ -82,8 +109,8 @@ extern "C" {
 			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
 			{ ctest_case_type_parameterized, 0, #fixture_name, #case_name }, /* .info */\
 			{\
-				TEST_CLASS_SETUP_##fixture_name,\
-				TEST_CLASS_TEARDOWN_##fixture_name,\
+				TEST_FIXTURE_SETUP_##fixture_name,\
+				TEST_FIXTURE_TEARDOWN_##fixture_name,\
 				(uintptr_t)TEST_##fixture_name##_##case_name,\
 				sizeof(_parameterized_data_##fixture_name) / sizeof(_parameterized_data_##fixture_name[0]),\
 				_parameterized_data_##fixture_name,\
@@ -106,8 +133,8 @@ extern "C" {
 			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
 			{ ctest_case_type_fixture, 0, #fixture_name, #case_name }, /* .info */\
 			{\
-				TEST_CLASS_SETUP_##fixture_name,\
-				TEST_CLASS_TEARDOWN_##fixture_name,\
+				TEST_FIXTURE_SETUP_##fixture_name,\
+				TEST_FIXTURE_TEARDOWN_##fixture_name,\
 				(uintptr_t)TEST_##fixture_name##_##case_name,\
 				0, NULL\
 			},\
@@ -141,7 +168,7 @@ extern "C" {
  */
 
 /**
- * @defgroup Assertion
+ * @defgroup Assertion Assertion
  * @{
  */
 
@@ -1153,8 +1180,8 @@ const char* ctest_get_current_suit_name(void);
 const char* ctest_get_current_case_name(void);
 
 /**
- * @brief Skip current test case
- * @note This function only has affect in setup stage
+ * @brief Skip current test case.
+ * @note This function only has affect in setup stage.
  * @see TEST_CLASS_SETUP
  */
 void ctest_skip_test(void);
@@ -1169,7 +1196,7 @@ void ctest_skip_test(void);
 /************************************************************************/
 
 /**
- * @addtogroup Log
+ * @defgroup Log Log
  * @{
  */
 
@@ -1190,7 +1217,7 @@ void ctest_skip_test(void);
 /************************************************************************/
 
 /**
- * @addtogroup Timestamp
+ * @defgroup Timestamp Timestamp
  * @{
  */
 
@@ -1239,7 +1266,7 @@ typedef struct ctest_stub ctest_stub_t;
 
 /**
  * @brief Do inline hook
- * @param [in] fn_orig		The origianl function
+ * @param [in] fn_orig		The original function
  * @param [in] fn_stub		The hook function
  * @return					The patch handler
  */
@@ -1260,7 +1287,7 @@ void ctest_unpatch(ctest_stub_t* handler);
 /************************************************************************/
 
 /**
- * @defgroup List
+ * @defgroup List List
  * @{
  */
 
@@ -1335,7 +1362,7 @@ void ctest_list_push_back(ctest_list_t* handler, ctest_list_node_t* node);
 /************************************************************************/
 
 /**
-* @defgroup Map
+* @defgroup Map Map
 * @{
 */
 
@@ -1421,7 +1448,7 @@ size_t ctest_map_size(const ctest_map_t* handler);
 /************************************************************************/
 
 /**
- * @defgroup Internal
+ * @defgroup Internal Internal
  * @{
  */
 
@@ -1548,7 +1575,7 @@ size_t ctest_map_size(const ctest_map_t* handler);
 		void f(void) __attribute__((constructor)); \
 		void f(void)
 #else
-#	error "INITIALIZER not support on your arch"
+#	error "INITIALIZER not support on your compiler"
 #endif
 
 /**

@@ -3,11 +3,11 @@
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
 
-TEST_CLASS_SETUP(powerpack_ringbuffer)
+TEST_FIXTURE_SETUP(powerpack_ringbuffer)
 {
 }
 
-TEST_CLASS_TEAREDOWN(powerpack_ringbuffer)
+TEST_FIXTURE_TEAREDOWN(powerpack_ringbuffer)
 {
 }
 

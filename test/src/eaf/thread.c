@@ -11,13 +11,13 @@ static void _test_eaf_thread(void* arg)
 	eaf_sem_post(s_eaf_thread_sem);
 }
 
-TEST_CLASS_SETUP(eaf_thread)
+TEST_FIXTURE_SETUP(eaf_thread)
 {
 	s_eaf_thread_sem = eaf_sem_create(0);
 	ASSERT_NE_PTR(s_eaf_thread_sem, NULL);
 }
 
-TEST_CLASS_TEAREDOWN(eaf_thread)
+TEST_FIXTURE_TEAREDOWN(eaf_thread)
 {
 	eaf_sem_destroy(s_eaf_thread_sem);
 }

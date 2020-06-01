@@ -38,7 +38,7 @@ static void _test_powerpack_timer_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(powerpack_timer)
+TEST_FIXTURE_SETUP(powerpack_timer)
 {
 	s_sleep_time = 50;
 	ASSERT_NE_PTR(s_powerpack_timer_sem = eaf_sem_create(0), NULL);
@@ -70,7 +70,7 @@ TEST_CLASS_SETUP(powerpack_timer)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(powerpack_timer)
+TEST_FIXTURE_TEAREDOWN(powerpack_timer)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);

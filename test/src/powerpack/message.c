@@ -62,7 +62,7 @@ static void _test_powerpack_message_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(powerpack_message)
+TEST_FIXTURE_SETUP(powerpack_message)
 {
 	s_powerpack_message_val_req_exp = 33;
 	s_powerpack_message_val_rsp_exp = 66;
@@ -108,7 +108,7 @@ TEST_CLASS_SETUP(powerpack_message)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(powerpack_message)
+TEST_FIXTURE_TEAREDOWN(powerpack_message)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);

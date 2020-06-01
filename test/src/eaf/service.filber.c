@@ -65,7 +65,7 @@ static void _test_filber_s2_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(eaf_filber)
+TEST_FIXTURE_SETUP(eaf_filber)
 {
 	memset(_s_nodes, 0, sizeof(_s_nodes));
 	eaf_list_init(&_s_ret_list);
@@ -107,7 +107,7 @@ TEST_CLASS_SETUP(eaf_filber)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(eaf_filber)
+TEST_FIXTURE_TEAREDOWN(eaf_filber)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);
