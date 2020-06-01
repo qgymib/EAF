@@ -306,6 +306,11 @@ static ctest_map_node_t* etest_map_next(const etest_map_t* handler, const ctest_
 	return parent;
 }
 
+static size_t ctest_map_size(const etest_map_t* handler)
+{
+	return handler->size;
+}
+
 /************************************************************************/
 /* argument parser                                                      */
 /************************************************************************/
@@ -925,6 +930,8 @@ typedef int test_bool;
 #define test_true		1
 #define test_false		0
 
+#define MAX_FIXTURE_SIZE	31
+
 typedef enum print_color
 {
 	print_default,
@@ -1541,17 +1548,19 @@ static void _test_setup_arg_pattern(const char* user_pattern)
 	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
 }
 
-static size_t _etest_calculate_max_class_length(void)
+static unsigned _etest_calculate_max_class_length(unsigned* number_of_fixture)
 {
 	size_t tmp_len;
 	size_t max_length = 0;
-	const char* last_class_name = NULL;
+	unsigned cnt_fixture = 0;
+	const char* last_class_name = "";
 
 	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
 	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
-		if (last_class_name == case_data->info.suit_name)
+		if (last_class_name == case_data->info.suit_name
+			|| strcmp(last_class_name, case_data->info.suit_name) == 0)
 		{
 			continue;
 		}
@@ -1561,25 +1570,43 @@ static size_t _etest_calculate_max_class_length(void)
 		{
 			max_length = tmp_len;
 		}
+		cnt_fixture++;
 	}
 
-	return max_length;
+	*number_of_fixture = cnt_fixture;
+	return (unsigned)max_length;
 }
 
 static void _etest_list_tests(void)
 {
-	unsigned c_class = 0;
-	unsigned c_test = 0;
 	const char* last_class_name = "";
 	const char* print_class_name = "";
-	unsigned max_class_length = (unsigned)_etest_calculate_max_class_length();
-	if (max_class_length > 32)
+
+	unsigned cnt_fixture = 0;
+	unsigned cnt_test = ctest_map_size(&g_test_ctx.info.case_table);
+	unsigned max_fixture_length = _etest_calculate_max_class_length(&cnt_fixture);
+	if (max_fixture_length > MAX_FIXTURE_SIZE)
 	{
-		max_class_length = 32;
+		max_fixture_length = MAX_FIXTURE_SIZE;
 	}
 
+	/* generate fixture info */
+	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%u fixture%s", cnt_fixture, cnt_fixture > 1 ? "s" : "");
+	unsigned fixture_length = strlen(g_test_ctx2.strbuf);
+	if (fixture_length > MAX_FIXTURE_SIZE)
+	{
+		fixture_length = MAX_FIXTURE_SIZE;
+	}
+
+	/* calculate fixture length and case length */
+	if (max_fixture_length > fixture_length)
+	{
+		fixture_length = max_fixture_length;
+	}
+	unsigned item_length = 80 - fixture_length - 4;
+
 	printf("===============================================================================\n");
-	printf("%-*.*s | test case\n", max_class_length, max_class_length, "class");
+	printf("%*.*s | case item\n", fixture_length, fixture_length, "fixture");
 	printf("-------------------------------------------------------------------------------\n");
 
 	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
@@ -1592,19 +1619,15 @@ static void _etest_list_tests(void)
 		{
 			last_class_name = case_data->info.suit_name;
 			print_class_name = last_class_name;
-			c_class++;
 		}
 
-		printf("%-*.*s | %s\n", max_class_length, max_class_length, print_class_name, case_data->info.case_name);
+		printf("%*.*s | %-.*s\n", fixture_length, fixture_length, print_class_name, item_length, case_data->info.case_name);
 		print_class_name = "";
-
-		c_test++;
 	}
 
 	printf("-------------------------------------------------------------------------------\n");
-	printf("total: %u class%s, %u test%s\n",
-		c_class, c_class > 1 ? "es" : "",
-		c_test, c_test > 1 ? "s" : "");
+	printf("%*.*s | %u case item%s\n", fixture_length, fixture_length, g_test_ctx2.strbuf,
+		cnt_test, cnt_test > 1 ? "s" : "");
 	printf("===============================================================================\n");
 }
 
@@ -1685,26 +1708,26 @@ static int _test_setup(int argc, char* argv[])
 	(void)argc;
 	enum test_opt
 	{
-		etest_list_tests = 1,
-		etest_filter,
-		etest_also_run_disabled_tests,
-		etest_repeat,
-		etest_shuffle,
-		etest_random_seed,
-		etest_print_time,
-		etest_break_on_failure,
+		ctest_list_tests = 1,
+		ctest_filter,
+		ctest_also_run_disabled_tests,
+		ctest_repeat,
+		ctest_shuffle,
+		ctest_random_seed,
+		ctest_print_time,
+		ctest_break_on_failure,
 		help,
 	};
 
 	test_optparse_long_opt_t longopts[] = {
-		{ "etest_list_tests",				etest_list_tests,				OPTPARSE_OPTIONAL },
-		{ "etest_filter",					etest_filter,					OPTPARSE_OPTIONAL },
-		{ "etest_also_run_disabled_tests",	etest_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
-		{ "etest_repeat",					etest_repeat,					OPTPARSE_OPTIONAL },
-		{ "etest_shuffle",					etest_shuffle,					OPTPARSE_OPTIONAL },
-		{ "etest_random_seed",				etest_random_seed,				OPTPARSE_OPTIONAL },
-		{ "etest_print_time",				etest_print_time,				OPTPARSE_OPTIONAL },
-		{ "etest_break_on_failure",			etest_break_on_failure,			OPTPARSE_OPTIONAL },
+		{ "ctest_list_tests",				ctest_list_tests,				OPTPARSE_OPTIONAL },
+		{ "ctest_filter",					ctest_filter,					OPTPARSE_OPTIONAL },
+		{ "ctest_also_run_disabled_tests",	ctest_also_run_disabled_tests,	OPTPARSE_OPTIONAL },
+		{ "ctest_repeat",					ctest_repeat,					OPTPARSE_OPTIONAL },
+		{ "ctest_shuffle",					ctest_shuffle,					OPTPARSE_OPTIONAL },
+		{ "ctest_random_seed",				ctest_random_seed,				OPTPARSE_OPTIONAL },
+		{ "ctest_print_time",				ctest_print_time,				OPTPARSE_OPTIONAL },
+		{ "ctest_break_on_failure",			ctest_break_on_failure,			OPTPARSE_OPTIONAL },
 		{ "help",							help,							OPTPARSE_OPTIONAL },
 		{ 0,								0,								OPTPARSE_NONE },
 	};
@@ -1715,28 +1738,28 @@ static int _test_setup(int argc, char* argv[])
 	int option;
 	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
 		switch (option) {
-		case etest_list_tests:
+		case ctest_list_tests:
 			_etest_list_tests();
 			return -1;
-		case etest_filter:
+		case ctest_filter:
 			_test_setup_arg_pattern(options.optarg);
 			break;
-		case etest_also_run_disabled_tests:
+		case ctest_also_run_disabled_tests:
 			g_test_ctx.mask.also_run_disabled_tests = 1;
 			break;
-		case etest_repeat:
+		case ctest_repeat:
 			_test_setup_arg_repeat(options.optarg);
 			break;
-		case etest_shuffle:
+		case ctest_shuffle:
 			g_test_ctx.mask.shuffle = 1;
 			break;
-		case etest_random_seed:
+		case ctest_random_seed:
 			_test_setup_arg_random_seed(options.optarg);
 			break;
-		case etest_print_time:
+		case ctest_print_time:
 			_test_setup_arg_print_time(options.optarg);
 			break;
-		case etest_break_on_failure:
+		case ctest_break_on_failure:
 			g_test_ctx.mask.break_on_failure = 1;
 			break;
 		case help:
