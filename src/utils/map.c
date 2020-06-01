@@ -142,14 +142,12 @@ eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler)
 	return eaf_map_low_last(&handler->map_low);
 }
 
-eaf_map_node_t* eaf_map_next(_In_ const eaf_map_t* handler, _In_  const eaf_map_node_t* node)
+eaf_map_node_t* eaf_map_next(_In_  const eaf_map_node_t* node)
 {
-	(void)handler;
 	return eaf_map_low_next(node);
 }
 
-eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_t* handler, _In_ const eaf_map_node_t* node)
+eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node)
 {
-	(void)handler;
 	return eaf_map_low_prev(node);
 }

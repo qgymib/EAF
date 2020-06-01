@@ -120,21 +120,17 @@ eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler);
 
 /**
  * @brief Get an iterator next to the given one.
- * @param handler	The pointer to the map
  * @param node		Current iterator
  * @return			Next iterator
  */
-eaf_map_node_t* eaf_map_next(_In_ const eaf_map_t* handler,
-	_In_ const eaf_map_node_t* node);
+eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node);
 
 /**
  * @brief Get an iterator before the given one.
- * @param handler	The pointer to the map
  * @param node		Current iterator
  * @return			Previous iterator
  */
-eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_t* handler,
-	_In_  const eaf_map_node_t* node);
+eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node);
 
 #ifdef __cplusplus
 };

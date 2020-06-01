@@ -131,7 +131,7 @@ void eaf_powerpack_message_exit(void)
 	while (it)
 	{
 		eaf_map_node_t* tmp = it;
-		it = eaf_map_next(&g_powerpack_message_ctx->table, it);
+		it = eaf_map_next(it);
 		eaf_map_erase(&g_powerpack_message_ctx->table, tmp);
 
 		powerpack_message_record_t* rec = EAF_CONTAINER_OF(tmp, powerpack_message_record_t, node);

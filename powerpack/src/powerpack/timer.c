@@ -85,7 +85,7 @@ void eaf_powerpack_timer_exit(void)
 	while (it != NULL)
 	{
 		eaf_map_node_t* tmp = it;
-		it = eaf_map_next(&g_powerpack_timer_ctx->table, it);
+		it = eaf_map_next(it);
 		eaf_map_erase(&g_powerpack_timer_ctx->table, tmp);
 
 		powerpack_timer_record_t* rec = EAF_CONTAINER_OF(it, powerpack_timer_record_t, node.table);

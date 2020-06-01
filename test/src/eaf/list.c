@@ -112,7 +112,7 @@ TEST_F(eaf_list, insert_before)
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1]);
 
-		it = eaf_list_prev(&s_eaf_list_queue, it);
+		it = eaf_list_prev(it);
 		ASSERT_NE_PTR(it, NULL);
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &tmp_node_2);
@@ -139,7 +139,7 @@ TEST_F(eaf_list, insert_after)
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &s_eaf_list_node[0]);
 
-		it = eaf_list_next(&s_eaf_list_queue, it);
+		it = eaf_list_next(it);
 		ASSERT_NE_PTR(it, NULL);
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &tmp_node_1);
@@ -163,7 +163,7 @@ TEST_F(eaf_list, erase)
 	ASSERT_EQ_SIZE(eaf_list_size(&s_eaf_list_queue), EAF_ARRAY_SIZE(s_eaf_list_node) - 1);
 
 	eaf_list_node_t* it = eaf_list_begin(&s_eaf_list_queue);
-	for (; it != NULL; it = eaf_list_next(&s_eaf_list_queue, it))
+	for (; it != NULL; it = eaf_list_next(it))
 	{
 		test_eaf_list_node_t* data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_NE_PTR(data, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) / 2]);
@@ -180,7 +180,7 @@ TEST_F(eaf_list, pop_front)
 	ASSERT_EQ_PTR(data, &s_eaf_list_node[0]);
 
 	eaf_list_node_t* it = eaf_list_begin(&s_eaf_list_queue);
-	for (; it != NULL; it = eaf_list_next(&s_eaf_list_queue, it))
+	for (; it != NULL; it = eaf_list_next(it))
 	{
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_NE_PTR(data, &s_eaf_list_node[0]);
@@ -203,7 +203,7 @@ TEST_F(eaf_list, pop_back)
 	ASSERT_EQ_PTR(data, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1]);
 
 	eaf_list_node_t* it = eaf_list_begin(&s_eaf_list_queue);
-	for (; it != NULL; it = eaf_list_next(&s_eaf_list_queue, it))
+	for (; it != NULL; it = eaf_list_next(it))
 	{
 		data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_NE_PTR(data, &s_eaf_list_node[EAF_ARRAY_SIZE(s_eaf_list_node) - 1]);
@@ -220,7 +220,7 @@ TEST_F(eaf_list, next)
 {
 	size_t i = 0;
 	eaf_list_node_t* it = eaf_list_begin(&s_eaf_list_queue);
-	for (; it != NULL; it = eaf_list_next(&s_eaf_list_queue, it), i++)
+	for (; it != NULL; it = eaf_list_next(it), i++)
 	{
 		test_eaf_list_node_t* data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &s_eaf_list_node[i]);
@@ -232,7 +232,7 @@ TEST_F(eaf_list, prev)
 {
 	int i = EAF_ARRAY_SIZE(s_eaf_list_node) - 1;
 	eaf_list_node_t* it = eaf_list_end(&s_eaf_list_queue);
-	for (; it != NULL; it = eaf_list_prev(&s_eaf_list_queue, it), i--)
+	for (; it != NULL; it = eaf_list_prev(it), i--)
 	{
 		test_eaf_list_node_t* data = EAF_CONTAINER_OF(it, test_eaf_list_node_t, node);
 		ASSERT_EQ_PTR(data, &s_eaf_list_node[i]);

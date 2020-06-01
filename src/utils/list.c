@@ -85,15 +85,13 @@ eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler)
 	return handler->tail;
 }
 
-eaf_list_node_t* eaf_list_next(_In_ const eaf_list_t* handler, _In_ const eaf_list_node_t* node)
+eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node)
 {
-	(void)handler;
 	return node->p_after;
 }
 
-eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_t* handler, _In_ const eaf_list_node_t* node)
+eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node)
 {
-	(void)handler;
 	return node->p_before;
 }
 

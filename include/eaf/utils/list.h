@@ -137,12 +137,10 @@ eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler);
 
 /**
 * @brief Get next node.
-* @param handler	Pointer to list
 * @param node		Current node
 * @return			The next node
 */
-eaf_list_node_t* eaf_list_next(_In_ const eaf_list_t* handler,
-	_In_ const eaf_list_node_t* node);
+eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node);
 
 /**
  * @brief Get previous node.
@@ -150,8 +148,7 @@ eaf_list_node_t* eaf_list_next(_In_ const eaf_list_t* handler,
  * @param node		current node
  * @return			previous node
  */
-eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_t* handler,
-	_In_ const eaf_list_node_t* node);
+eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node);
 
 #ifdef __cplusplus
 }

@@ -258,9 +258,8 @@ ctest_map_node_t* ctest_map_begin(const ctest_map_t* handler)
 	return n;
 }
 
-ctest_map_node_t* ctest_map_next(const ctest_map_t* handler, const ctest_map_node_t* node)
+ctest_map_node_t* ctest_map_next(const ctest_map_node_t* node)
 {
-	(void)handler;
 	ctest_map_node_t* parent;
 
 	if (RB_EMPTY_NODE(node))
@@ -613,9 +612,8 @@ ctest_list_node_t* ctest_list_begin(const ctest_list_t* handler)
 	return handler->head;
 }
 
-ctest_list_node_t* ctest_list_next(const ctest_list_t* handler, const ctest_list_node_t* node)
+ctest_list_node_t* ctest_list_next(const ctest_list_node_t* node)
 {
-	(void)handler;
 	return node->p_after;
 }
 
@@ -930,9 +928,9 @@ typedef union float_point
 
 typedef enum test_case_stage
 {
-	stage_setup = 0,
-	stage_run = 1,
-	stage_teardown = 2,
+	stage_setup,
+	stage_run,
+	stage_teardown,
 }test_case_stage_t;
 
 typedef struct test_ctx
@@ -1000,7 +998,7 @@ typedef struct test_ctx
 
 	struct
 	{
-		size_t			kMaxUlps;
+		size_t				kMaxUlps;
 		struct
 		{
 			size_t			kBitCount_64;
@@ -1028,19 +1026,95 @@ typedef struct test_ctx2
 	jmp_buf					jmpbuf;							/** 跳转地址 */
 }test_ctx2_t;
 
-static int _etest_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
-static test_ctx2_t			g_test_ctx2;					// 不需要初始化
+static int _test_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
+static test_ctx2_t			g_test_ctx2;								// 不需要初始化
 static test_ctx_t			g_test_ctx = {
-	{ TEST_LIST_INITIALIZER, CTEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
-	{ 0, NULL, NULL, 0, stage_setup },						// .runtime
-	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },	// .timestamp
-	{ { 0, 0, 0, 0, 0 }, { 1, 0 } },						// .counter
-	{ 0, 1, 0, 0 },											// .mask
-	{ NULL, NULL, 0, 0 },									// .filter
-	{ 0, { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 } },		// .precision
+	{ { NULL, NULL, 0 }, { NULL, { _test_on_cmp_case, NULL }, 0 }, 0 },	// .info
+	{ 0, NULL, NULL, 0, stage_setup },									// .runtime
+	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },				// .timestamp
+	{ { 0, 0, 0, 0, 0 }, { 1, 0 } },									// .counter
+	{ 0, 1, 0, 0 },														// .mask
+	{ NULL, NULL, 0, 0 },												// .filter
+	{ 4, { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 } },					// .precision
 };
 
-static int _etest_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg)
+#if defined(_MSC_VER)
+
+static LARGE_INTEGER _test_get_file_time_offset(void)
+{
+	SYSTEMTIME s;
+	FILETIME f;
+	LARGE_INTEGER t;
+
+	s.wYear = 1970;
+	s.wMonth = 1;
+	s.wDay = 1;
+	s.wHour = 0;
+	s.wMinute = 0;
+	s.wSecond = 0;
+	s.wMilliseconds = 0;
+	SystemTimeToFileTime(&s, &f);
+	t.QuadPart = f.dwHighDateTime;
+	t.QuadPart <<= 32;
+	t.QuadPart |= f.dwLowDateTime;
+
+	return t;
+}
+
+// Returns the character attribute for the given color.
+static WORD _test_get_color_attribute(print_color_t color)
+{
+	switch (color)
+	{
+	case print_red:
+		return FOREGROUND_RED;
+	case print_green:
+		return FOREGROUND_GREEN;
+	case print_yellow:
+		return FOREGROUND_RED | FOREGROUND_GREEN;
+	default:
+		return 0;
+	}
+}
+
+static int _test_get_bit_offset(WORD color_mask)
+{
+	if (color_mask == 0) return 0;
+
+	int bitOffset = 0;
+	while ((color_mask & 1) == 0)
+	{
+		color_mask >>= 1;
+		++bitOffset;
+	}
+	return bitOffset;
+}
+
+static WORD _test_get_new_color(print_color_t color, WORD old_color_attrs)
+{
+	// Let's reuse the BG
+	static const WORD background_mask = BACKGROUND_BLUE | BACKGROUND_GREEN |
+		BACKGROUND_RED | BACKGROUND_INTENSITY;
+	static const WORD foreground_mask = FOREGROUND_BLUE | FOREGROUND_GREEN |
+		FOREGROUND_RED | FOREGROUND_INTENSITY;
+	const WORD existing_bg = old_color_attrs & background_mask;
+
+	WORD new_color =
+		_test_get_color_attribute(color) | existing_bg | FOREGROUND_INTENSITY;
+	const int bg_bitOffset = _test_get_bit_offset(background_mask);
+	const int fg_bitOffset = _test_get_bit_offset(foreground_mask);
+
+	if (((new_color & background_mask) >> bg_bitOffset) ==
+		((new_color & foreground_mask) >> fg_bitOffset))
+	{
+		new_color ^= FOREGROUND_INTENSITY;  // invert intensity
+	}
+	return new_color;
+}
+
+#endif
+
+static int _test_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg)
 {
 	(void)arg;
 	const ctest_case_t* t_case_1 = CONTAINER_OF(key1, ctest_case_t, node.table);
@@ -1064,29 +1138,6 @@ static unsigned long _test_rand(void)
 	g_test_ctx.runtime.seed = 6364136223846793005ULL * g_test_ctx.runtime.seed + 1;
 	return g_test_ctx.runtime.seed >> 33;
 }
-
-#if defined(_MSC_VER)
-LARGE_INTEGER getFILETIMEoffset()
-{
-	SYSTEMTIME s;
-	FILETIME f;
-	LARGE_INTEGER t;
-
-	s.wYear = 1970;
-	s.wMonth = 1;
-	s.wDay = 1;
-	s.wHour = 0;
-	s.wMinute = 0;
-	s.wSecond = 0;
-	s.wMilliseconds = 0;
-	SystemTimeToFileTime(&s, &f);
-	t.QuadPart = f.dwHighDateTime;
-	t.QuadPart <<= 32;
-	t.QuadPart |= f.dwLowDateTime;
-
-	return t;
-}
-#endif
 
 /**
 * 检查str是否符合pat
@@ -1159,60 +1210,6 @@ static const char* _test_get_ansi_color_code(print_color_t color)
 	return NULL;
 }
 
-#if defined(_MSC_VER)
-
-// Returns the character attribute for the given color.
-static WORD GetColorAttribute(print_color_t color)
-{
-	switch (color)
-	{
-	case print_red:
-		return FOREGROUND_RED;
-	case print_green:
-		return FOREGROUND_GREEN;
-	case print_yellow:
-		return FOREGROUND_RED | FOREGROUND_GREEN;
-	default:
-		return 0;
-	}
-}
-
-static int GetBitOffset(WORD color_mask)
-{
-	if (color_mask == 0) return 0;
-
-	int bitOffset = 0;
-	while ((color_mask & 1) == 0)
-	{
-		color_mask >>= 1;
-		++bitOffset;
-	}
-	return bitOffset;
-}
-
-static WORD GetNewColor(print_color_t color, WORD old_color_attrs)
-{
-	// Let's reuse the BG
-	static const WORD background_mask = BACKGROUND_BLUE | BACKGROUND_GREEN |
-		BACKGROUND_RED | BACKGROUND_INTENSITY;
-	static const WORD foreground_mask = FOREGROUND_BLUE | FOREGROUND_GREEN |
-		FOREGROUND_RED | FOREGROUND_INTENSITY;
-	const WORD existing_bg = old_color_attrs & background_mask;
-
-	WORD new_color =
-		GetColorAttribute(color) | existing_bg | FOREGROUND_INTENSITY;
-	const int bg_bitOffset = GetBitOffset(background_mask);
-	const int fg_bitOffset = GetBitOffset(foreground_mask);
-
-	if (((new_color & background_mask) >> bg_bitOffset) ==
-		((new_color & foreground_mask) >> fg_bitOffset))
-	{
-		new_color ^= FOREGROUND_INTENSITY;  // invert intensity
-	}
-	return new_color;
-}
-#endif
-
 static void _test_print_colorful(print_color_t color, const char* fmt, ...)
 {
 	va_list args;
@@ -1231,7 +1228,7 @@ static void _test_print_colorful(print_color_t color, const char* fmt, ...)
 	CONSOLE_SCREEN_BUFFER_INFO buffer_info;
 	GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
 	const WORD old_color_attrs = buffer_info.wAttributes;
-	const WORD new_color = GetNewColor(color, old_color_attrs);
+	const WORD new_color = _test_get_new_color(color, old_color_attrs);
 
 	// We need to flush the stream buffers into the console before each
 	// SetConsoleTextAttribute call lest it affect the text that is already
@@ -1384,7 +1381,7 @@ static void _test_reset_all_test(void)
 	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
 
 	ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = ctest_list_next(&g_test_ctx.info.case_list, it))
+	for (; it != NULL; it = ctest_list_next(it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		case_data->info.mask = 0;
@@ -1396,7 +1393,7 @@ static void _test_reset_all_test(void)
 static void _test_show_report_failed(void)
 {
 	ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = ctest_list_next(&g_test_ctx.info.case_list, it))
+	for (; it != NULL; it = ctest_list_next(it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		if (!HAS_MASK(case_data->info.mask, MASK_FAILURE))
@@ -1524,7 +1521,7 @@ static void _test_setup_arg_pattern(const char* user_pattern)
 	} while ((str_it = strchr(str_it + 1, ':')) != NULL);
 }
 
-static unsigned _etest_calculate_max_class_length(unsigned* number_of_fixture)
+static unsigned _test_calculate_max_class_length(unsigned* number_of_fixture)
 {
 	size_t tmp_len;
 	size_t max_length = 0;
@@ -1532,7 +1529,7 @@ static unsigned _etest_calculate_max_class_length(unsigned* number_of_fixture)
 	const char* last_class_name = "";
 
 	ctest_map_node_t* it = ctest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = ctest_map_next(&g_test_ctx.info.case_table, it))
+	for (; it != NULL; it = ctest_map_next(it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		if (last_class_name == case_data->info.suit_name
@@ -1553,14 +1550,14 @@ static unsigned _etest_calculate_max_class_length(unsigned* number_of_fixture)
 	return (unsigned)max_length;
 }
 
-static void _etest_list_tests(void)
+static void _test_list_tests(void)
 {
 	const char* last_class_name = "";
 	const char* print_class_name = "";
 
 	unsigned cnt_fixture = 0;
 	unsigned cnt_test = ctest_map_size(&g_test_ctx.info.case_table);
-	unsigned max_fixture_length = _etest_calculate_max_class_length(&cnt_fixture);
+	unsigned max_fixture_length = _test_calculate_max_class_length(&cnt_fixture);
 	if (max_fixture_length > MAX_FIXTURE_SIZE)
 	{
 		max_fixture_length = MAX_FIXTURE_SIZE;
@@ -1586,7 +1583,7 @@ static void _etest_list_tests(void)
 	printf("-------------------------------------------------------------------------------\n");
 
 	ctest_map_node_t* it = ctest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = ctest_map_next(&g_test_ctx.info.case_table, it))
+	for (; it != NULL; it = ctest_map_next(it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		/* some compiler will make same string with different address */
@@ -1634,8 +1631,6 @@ static void _test_setup_precision(void)
 	assert(sizeof(((double_point_t*)NULL)->bits_) == sizeof(((double_point_t*)NULL)->value_));
 	assert(sizeof(((float_point_t*)NULL)->bits_) == sizeof(((float_point_t*)NULL)->value_));
 
-	g_test_ctx.precision.kMaxUlps = 4;
-
 	// double
 	{
 		g_test_ctx.precision._double.kBitCount_64 = 8 * sizeof(((double_point_t*)NULL)->value_);
@@ -1670,7 +1665,9 @@ static void _test_shuffle_cases(void)
 
 		unsigned i = 0;
 		ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
-		for (; i < idx; i++, it = ctest_list_next(&g_test_ctx.info.case_list, it));
+		for (; i < idx; i++, it = ctest_list_next(it))
+		{
+		}
 
 		ctest_list_erase(&g_test_ctx.info.case_list, it);
 		ctest_list_push_back(&copy_case_list, it);
@@ -1715,7 +1712,7 @@ static int _test_setup(int argc, char* argv[])
 	while ((option = test_optparse_long(&options, longopts, NULL)) != -1) {
 		switch (option) {
 		case ctest_list_tests:
-			_etest_list_tests();
+			_test_list_tests();
 			return -1;
 		case ctest_filter:
 			_test_setup_arg_pattern(options.optarg);
@@ -1801,7 +1798,7 @@ static void _test_run_test_loop(void)
 
 	g_test_ctx.runtime.cur_it = ctest_list_begin(&g_test_ctx.info.case_list);
 	for (; g_test_ctx.runtime.cur_it != NULL;
-		g_test_ctx.runtime.cur_it = ctest_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
+		g_test_ctx.runtime.cur_it = ctest_list_next(g_test_ctx.runtime.cur_it))
 	{
 		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, ctest_case_t, node.queue);
 		_test_run_case();
@@ -1846,7 +1843,8 @@ static int _test_double_point_is_nan(const double_point_t* p)
 
 static uint32_t _test_float_point_sign_and_magnitude_to_biased(const uint32_t sam)
 {
-	if (g_test_ctx.precision._float.kSignBitMask_32 & sam) {
+	if (g_test_ctx.precision._float.kSignBitMask_32 & sam)
+	{
 		// sam represents a negative number.
 		return ~sam + 1;
 	}
@@ -1857,7 +1855,8 @@ static uint32_t _test_float_point_sign_and_magnitude_to_biased(const uint32_t sa
 
 static uint64_t _test_double_point_sign_and_magnitude_to_biased(const uint64_t sam)
 {
-	if (g_test_ctx.precision._double.kSignBitMask_64 & sam) {
+	if (g_test_ctx.precision._double.kSignBitMask_64 & sam)
+	{
 		// sam represents a negative number.
 		return ~sam + 1;
 	}
@@ -1894,7 +1893,8 @@ int ctest_timestamp_get(ctest_timestamp_t* ts)
 	static int              initialized = 0;
 	static BOOL             usePerformanceCounter = 0;
 
-	if (!initialized) {
+	if (!initialized)
+	{
 		LARGE_INTEGER performanceFrequency;
 		initialized = 1;
 		usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
@@ -1905,7 +1905,7 @@ int ctest_timestamp_get(ctest_timestamp_t* ts)
 		}
 		else
 		{
-			offset = getFILETIMEoffset();
+			offset = _test_get_file_time_offset();
 			frequencyToMicroseconds = 10.;
 		}
 	}
@@ -1972,10 +1972,7 @@ int ctest_timestamp_dif(const ctest_timestamp_t* t1, const ctest_timestamp_t* t2
 
 void ctest_register_case(ctest_case_t* data)
 {
-	if (ctest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
-	{
-		return;
-	}
+	ASSERT(ctest_map_insert(&g_test_ctx.info.case_table, &data->node.table) == 0);
 	ctest_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
 }
 

@@ -1324,11 +1324,10 @@ ctest_list_node_t* ctest_list_begin(const ctest_list_t* handler);
 
 /**
  * @brief Get next node.
- * @param [in] handler	Pointer to list
  * @param [in] node		Current node
  * @return				The next node
  */
-ctest_list_node_t* ctest_list_next(const ctest_list_t* handler, const ctest_list_node_t* node);
+ctest_list_node_t* ctest_list_next(const ctest_list_node_t* node);
 
 /**
  * @brief Get the number of nodes in the list.
@@ -1426,11 +1425,10 @@ ctest_map_node_t* ctest_map_begin(const ctest_map_t* handler);
 
 /**
  * @brief Get an iterator next to the given one.
- * @param [in] handler	The pointer to the map
  * @param [in] node		Current iterator
  * @return				Next iterator
  */
-ctest_map_node_t* ctest_map_next(const ctest_map_t* handler, const ctest_map_node_t* node);
+ctest_map_node_t* ctest_map_next(const ctest_map_node_t* node);
 
 /**
  * @brief Get the number of nodes in the map.
