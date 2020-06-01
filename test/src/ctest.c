@@ -1271,12 +1271,49 @@ fin:
 	va_end(args);
 }
 
+static void _test_fixture_run_setup(void)
+{
+	if (g_test_ctx.runtime.cur_case->stage.setup != NULL)
+	{
+		g_test_ctx.runtime.cur_case->stage.setup();
+	}
+}
+
+static void _test_fixture_run_body(void)
+{
+	if (g_test_ctx.runtime.cur_case->info.type != ctest_case_type_parameterized)
+	{
+		((ctest_procedure_fn)g_test_ctx.runtime.cur_case->stage.body)();
+	}
+	else
+	{
+		for (g_test_ctx.runtime.cur_idx = 0;
+			g_test_ctx.runtime.cur_idx < g_test_ctx.runtime.cur_case->stage.n_dat;
+			g_test_ctx.runtime.cur_idx++)
+		{
+			((ctest_parameterized_fn)g_test_ctx.runtime.cur_case->stage.body)(g_test_ctx.runtime.cur_case->stage.p_dat);
+		}
+	}
+}
+
+static void _test_fixture_run_teardown(void)
+{
+	if (g_test_ctx.runtime.cur_case->stage.teardown != NULL)
+	{
+		g_test_ctx.runtime.cur_case->stage.teardown();
+	}
+}
+
 /**
 * run test case.
 * the target case was set to `g_test_ctx.runtime.cur_case`
 */
 static void _test_run_case(void)
 {
+	/* reset resource */
+	g_test_ctx.runtime.cur_idx = 0;
+	g_test_ctx.runtime.cur_case->info.mask = 0;
+
 	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%s.%s",
 		g_test_ctx.runtime.cur_case->info.suit_name,
 		g_test_ctx.runtime.cur_case->info.case_name);
@@ -1298,8 +1335,6 @@ static void _test_run_case(void)
 	_test_print_colorful(print_green, "[ RUN      ]");
 	_test_print_colorful(print_default, " %s\n", g_test_ctx2.strbuf);
 
-	g_test_ctx.runtime.cur_idx = 0;
-
 	int ret;
 	if ((ret = setjmp(g_test_ctx2.jmpbuf)) != 0)
 	{
@@ -1309,30 +1344,14 @@ static void _test_run_case(void)
 
 	/* setup */
 	g_test_ctx.runtime.cur_stage = stage_setup;
-	if (g_test_ctx.runtime.cur_case->stage.setup != NULL)
-	{
-		g_test_ctx.runtime.cur_case->stage.setup();
-	}
+	_test_fixture_run_setup();
 
 	/* record start time */
 	ASSERT(ctest_timestamp_get(&g_test_ctx.timestamp.tv_case_start) == 0);
 
 	/* run test case */
 	g_test_ctx.runtime.cur_stage = stage_run;
-
-	if (g_test_ctx.runtime.cur_case->info.type != ctest_case_type_parameterized)
-	{
-		((ctest_procedure_fn)g_test_ctx.runtime.cur_case->stage.body)();
-	}
-	else
-	{
-		for (g_test_ctx.runtime.cur_idx = 0;
-			g_test_ctx.runtime.cur_idx < g_test_ctx.runtime.cur_case->stage.n_dat;
-			g_test_ctx.runtime.cur_idx++)
-		{
-			((ctest_parameterized_fn)g_test_ctx.runtime.cur_case->stage.body)(g_test_ctx.runtime.cur_case->stage.p_dat);
-		}
-	}
+	_test_fixture_run_body();
 
 procedure_teardown:
 	if (g_test_ctx.runtime.cur_stage == stage_teardown)
@@ -1345,10 +1364,7 @@ procedure_teardown:
 
 	/* teardown */
 	g_test_ctx.runtime.cur_stage = stage_teardown;
-	if (g_test_ctx.runtime.cur_case->stage.teardown != NULL)
-	{
-		g_test_ctx.runtime.cur_case->stage.teardown();
-	}
+	_test_fixture_run_teardown();
 
 procedure_teardown_fin:
 	ctest_timestamp_dif(&g_test_ctx.timestamp.tv_case_start, &g_test_ctx.timestamp.tv_case_end, &g_test_ctx.timestamp.tv_diff);
@@ -1361,7 +1377,7 @@ procedure_teardown_fin:
 	else if (HAS_MASK(g_test_ctx.runtime.cur_case->info.mask, MASK_SKIPPED))
 	{
 		g_test_ctx.counter.result.skipped++;
-		_test_print_colorful(print_green, "[      SKIP]");
+		_test_print_colorful(print_yellow, "[   SKIP   ]");
 	}
 	else
 	{
@@ -1440,7 +1456,7 @@ static void _test_show_report(void)
 	}
 	if (g_test_ctx.counter.result.skipped != 0)
 	{
-		_test_print_colorful(print_green, "[  SKIPPED ]");
+		_test_print_colorful(print_yellow, "[ BYPASSED ]");
 		printf(" %u test%s.\n",
 			g_test_ctx.counter.result.skipped,
 			g_test_ctx.counter.result.skipped > 1 ? "s" : "");
@@ -2012,7 +2028,7 @@ fin:
 }
 
 TEST_NORETURN
-void ctest_internal_assert_fail(const char *expr, const char *file, int line, const char *func)
+void ctest_unwrap_assert_fail(const char *expr, const char *file, int line, const char *func)
 {
 	fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", expr, file, func, line);
 	fflush(NULL);
@@ -2096,15 +2112,19 @@ size_t ctest_internal_parameterized_index(void)
 }
 
 TEST_NORETURN
-void ctest_internal_set_as_failure(void)
+void ctest_internal_assert_failure(void)
 {
+	ASSERT(g_test_ctx.runtime.cur_stage != stage_teardown);
 	longjmp(g_test_ctx2.jmpbuf, MASK_FAILURE);
 }
 
-TEST_NORETURN
 void ctest_skip_test(void)
 {
-	longjmp(g_test_ctx2.jmpbuf, MASK_SKIPPED);
+	if (g_test_ctx.runtime.cur_stage != stage_setup)
+	{
+		return;
+	}
+	SET_MASK(g_test_ctx.runtime.cur_case->info.mask, MASK_SKIPPED);
 }
 
 void ctest_internal_flush(void)
