@@ -1228,7 +1228,7 @@ int ctest_timestamp_dif(const ctest_timestamp_t* t1, const ctest_timestamp_t* t2
 /************************************************************************/
 
 /**
- * @addtogroup Inline hook
+ * @defgroup InlineHook Inline hook
  * @{
  */
 
@@ -1256,11 +1256,172 @@ void ctest_unpatch(ctest_stub_t* handler);
  */
 
 /************************************************************************/
+/* list                                                                 */
+/************************************************************************/
+
+/**
+ * @defgroup List
+ * @{
+ */
+
+/**
+ * @brief List node
+ */
+typedef struct ctest_list_node
+{
+	struct ctest_list_node*		p_after;				/**< next node */
+	struct ctest_list_node*		p_before;				/**< previous node */
+}ctest_list_node_t;
+
+/**
+* @brief List handler
+*/
+typedef struct ctest_list
+{
+	ctest_list_node_t*		head;							/**< Head node */
+	ctest_list_node_t*		tail;							/**< Tail node */
+	size_t					size;							/**< Amount of nodes */
+}ctest_list_t;
+
+/**
+ * @brief List initializer helper
+ */
+#define TEST_LIST_INITIALIZER		{ NULL, NULL, 0 }
+
+/**
+ * @brief Get the last node.
+ * @param [in] handler	Pointer to list
+ * @return				The first node
+ */
+ctest_list_node_t* ctest_list_begin(const ctest_list_t* handler);
+
+/**
+ * @brief Get next node.
+ * @param [in] handler	Pointer to list
+ * @param [in] node		Current node
+ * @return				The next node
+ */
+ctest_list_node_t* ctest_list_next(const ctest_list_t* handler, const ctest_list_node_t* node);
+
+/**
+ * @brief Get the number of nodes in the list.
+ * @param [in] handler	Pointer to list
+ * @return				The number of nodes
+ */
+size_t ctest_list_size(const ctest_list_t* handler);
+
+/**
+ * @brief Delete a exist node
+ * @warning The node must already in the list.
+ * @param [in] handler	Pointer to list
+ * @param [in] node		The node you want to delete
+ */
+void ctest_list_erase(ctest_list_t* handler, ctest_list_node_t* node);
+
+/**
+ * @brief Insert a node to the tail of the list.
+ * @warning the node must not exist in any list.
+ * @param [in] handler	Pointer to list
+ * @param [in] node		Pointer to a new node
+ */
+void ctest_list_push_back(ctest_list_t* handler, ctest_list_node_t* node);
+
+/**
+ * @}
+ */
+
+/************************************************************************/
+/* map                                                                  */
+/************************************************************************/
+
+/**
+* @defgroup Map
+* @{
+*/
+
+/**
+ * @brief Map node
+ */
+typedef struct ctest_map_node
+{
+	struct ctest_map_node*		__rb_parent_color;		/**< father node | color */
+	struct ctest_map_node*		rb_right;				/**< right child node */
+	struct ctest_map_node*		rb_left;				/**< left child node */
+}ctest_map_node_t;
+
+/**
+ * @brief Compare function
+ * @param [in] key1		KEY1
+ * @param [in] key2		KEY2
+ * @param [in] arg		User defined argument
+ * @return				Compare result
+ */
+typedef int(*ctest_map_cmp_fn)(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
+
+/**
+ * @brief Map handler
+ */
+typedef struct ctest_map
+{
+	ctest_map_node_t*		rb_root;	/**< Root node */
+
+	struct
+	{
+		ctest_map_cmp_fn	cmp;		/**< Compare function */
+		void*				arg;		/**< User defined data for compare function */
+	}cmp;
+
+	size_t					size;		/**< Data size */
+}ctest_map_t;
+
+/**
+ * @brief Map initializer helper
+ * @param [in] fn		Compare function
+ * @param [in] arg		User defined argument
+ */
+#define CTEST_MAP_INITIALIZER(fn, arg)		{ NULL, { fn, arg }, 0 }
+
+/**
+ * @brief Insert the node into map.
+ * @warning the node must not exist in any map.
+ * @param [in] handler	The pointer to the map
+ * @param [in] node		The node
+ * @return				0 if success, -1 otherwise
+ */
+int ctest_map_insert(ctest_map_t* handler, ctest_map_node_t* node);
+
+/**
+ * @brief Returns an iterator to the beginning
+ * @param [in] handler	The pointer to the map
+ * @return				An iterator
+ */
+ctest_map_node_t* ctest_map_begin(const ctest_map_t* handler);
+
+/**
+ * @brief Get an iterator next to the given one.
+ * @param [in] handler	The pointer to the map
+ * @param [in] node		Current iterator
+ * @return				Next iterator
+ */
+ctest_map_node_t* ctest_map_next(const ctest_map_t* handler, const ctest_map_node_t* node);
+
+/**
+ * @brief Get the number of nodes in the map.
+ * @param [in] handler	The pointer to the map
+ * @return				The number of nodes
+ */
+size_t ctest_map_size(const ctest_map_t* handler);
+
+/**
+* @}
+*/
+
+/************************************************************************/
 /* internal interface                                                   */
 /************************************************************************/
 
 /**
- * @addtogroup Internal
+ * @defgroup Internal
  * @{
  */
 
@@ -1444,19 +1605,6 @@ typedef enum ctest_case_type
 	ctest_case_type_fixture,
 	ctest_case_type_parameterized,
 }ctest_case_type_t;
-
-typedef struct ctest_list_node
-{
-	struct ctest_list_node*		p_after;				/**< next node */
-	struct ctest_list_node*		p_before;				/**< previous node */
-}ctest_list_node_t;
-
-typedef struct ctest_map_node
-{
-	struct ctest_map_node*		__rb_parent_color;		/**< father node | color */
-	struct ctest_map_node*		rb_right;				/**< right child node */
-	struct ctest_map_node*		rb_left;				/**< left child node */
-}ctest_map_node_t;
 
 typedef void(*ctest_procedure_fn)(void);
 typedef void(*ctest_parameterized_fn)(void*);

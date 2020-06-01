@@ -37,22 +37,6 @@
 #define RB_EMPTY_NODE(node)  \
 	((node)->__rb_parent_color == (ctest_map_node_t*)(node))
 
-typedef int(*etest_map_cmp_fn)(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
-
-typedef struct etest_map
-{
-	ctest_map_node_t*		rb_root;	/** 根元素节点 */
-
-	struct
-	{
-		etest_map_cmp_fn	cmp;		/** 对比函数 */
-		void*				arg;		/** 自定义参数 */
-	}cmp;
-
-	size_t					size;		/** 当前元素容量 */
-}etest_map_t;
-#define ETEST_MAP_INITIALIZER(fn, arg)		{ NULL, { fn, arg }, 0 }
-
 static void _etest_map_link_node(ctest_map_node_t* node, ctest_map_node_t* parent, ctest_map_node_t** rb_link)
 {
 	node->__rb_parent_color = parent;
@@ -73,7 +57,7 @@ static void rb_set_parent_color(ctest_map_node_t *rb, ctest_map_node_t *p, int c
 }
 
 static void __rb_change_child(ctest_map_node_t* old_node, ctest_map_node_t* new_node,
-	ctest_map_node_t* parent, etest_map_t* root)
+	ctest_map_node_t* parent, ctest_map_t* root)
 {
 	if (parent)
 	{
@@ -98,7 +82,7 @@ static void __rb_change_child(ctest_map_node_t* old_node, ctest_map_node_t* new_
 * - old gets assigned new as a parent and 'color' as a color.
 */
 static void __rb_rotate_set_parents(ctest_map_node_t* old, ctest_map_node_t* new_node,
-	etest_map_t* root, int color)
+	ctest_map_t* root, int color)
 {
 	ctest_map_node_t* parent = rb_parent(old);
 	new_node->__rb_parent_color = old->__rb_parent_color;
@@ -106,7 +90,7 @@ static void __rb_rotate_set_parents(ctest_map_node_t* old, ctest_map_node_t* new
 	__rb_change_child(old, new_node, parent, root);
 }
 
-static void _etest_map_insert(ctest_map_node_t* node, etest_map_t* root)
+static void _etest_map_insert(ctest_map_node_t* node, ctest_map_t* root)
 {
 	ctest_map_node_t* parent = rb_red_parent(node), *gparent, *tmp;
 
@@ -227,12 +211,12 @@ static void _etest_map_insert(ctest_map_node_t* node, etest_map_t* root)
 	}
 }
 
-static void _etest_map_insert_color(ctest_map_node_t* node, etest_map_t* root)
+static void _etest_map_insert_color(ctest_map_node_t* node, ctest_map_t* root)
 {
 	_etest_map_insert(node, root);
 }
 
-static int etest_map_insert(etest_map_t* handler, ctest_map_node_t* node)
+int ctest_map_insert(ctest_map_t* handler, ctest_map_node_t* node)
 {
 	ctest_map_node_t **new_node = &(handler->rb_root), *parent = NULL;
 
@@ -263,7 +247,7 @@ static int etest_map_insert(etest_map_t* handler, ctest_map_node_t* node)
 	return 0;
 }
 
-static ctest_map_node_t* etest_map_begin(const etest_map_t* handler)
+ctest_map_node_t* ctest_map_begin(const ctest_map_t* handler)
 {
 	ctest_map_node_t* n = handler->rb_root;
 
@@ -274,7 +258,7 @@ static ctest_map_node_t* etest_map_begin(const etest_map_t* handler)
 	return n;
 }
 
-static ctest_map_node_t* etest_map_next(const etest_map_t* handler, const ctest_map_node_t* node)
+ctest_map_node_t* ctest_map_next(const ctest_map_t* handler, const ctest_map_node_t* node)
 {
 	(void)handler;
 	ctest_map_node_t* parent;
@@ -306,7 +290,7 @@ static ctest_map_node_t* etest_map_next(const etest_map_t* handler, const ctest_
 	return parent;
 }
 
-static size_t ctest_map_size(const etest_map_t* handler)
+size_t ctest_map_size(const ctest_map_t* handler)
 {
 	return handler->size;
 }
@@ -600,15 +584,7 @@ static void test_optparse_init(test_optparse_t *options, char **argv)
 /* list                                                                 */
 /************************************************************************/
 
-typedef struct test_list
-{
-	ctest_list_node_t*		head;							/** 头结点 */
-	ctest_list_node_t*		tail;							/** 尾节点 */
-	unsigned				size;							/** 节点数量 */
-}test_list_t;
-#define TEST_LIST_INITIALIZER		{ NULL, NULL, 0 }
-
-static void _test_list_set_once(test_list_t* handler, ctest_list_node_t* node)
+static void _test_list_set_once(ctest_list_t* handler, ctest_list_node_t* node)
 {
 	handler->head = node;
 	handler->tail = node;
@@ -617,7 +593,7 @@ static void _test_list_set_once(test_list_t* handler, ctest_list_node_t* node)
 	handler->size = 1;
 }
 
-static void _test_list_push_back(test_list_t* handler, ctest_list_node_t* node)
+void ctest_list_push_back(ctest_list_t* handler, ctest_list_node_t* node)
 {
 	if (handler->head == NULL)
 	{
@@ -632,23 +608,23 @@ static void _test_list_push_back(test_list_t* handler, ctest_list_node_t* node)
 	handler->size++;
 }
 
-static ctest_list_node_t* _test_list_begin(const test_list_t* handler)
+ctest_list_node_t* ctest_list_begin(const ctest_list_t* handler)
 {
 	return handler->head;
 }
 
-static ctest_list_node_t* _test_list_next(const test_list_t* handler, const ctest_list_node_t* node)
+ctest_list_node_t* ctest_list_next(const ctest_list_t* handler, const ctest_list_node_t* node)
 {
 	(void)handler;
 	return node->p_after;
 }
 
-static unsigned _test_list_size(const test_list_t* handler)
+size_t ctest_list_size(const ctest_list_t* handler)
 {
 	return handler->size;
 }
 
-static void _test_list_erase(test_list_t* handler, ctest_list_node_t* node)
+void ctest_list_erase(ctest_list_t* handler, ctest_list_node_t* node)
 {
 	handler->size--;
 
@@ -963,8 +939,8 @@ typedef struct test_ctx
 {
 	struct
 	{
-		test_list_t			case_list;						/** 用例表 */
-		etest_map_t			case_table;						/** 用例表 */
+		ctest_list_t			case_list;						/** 用例表 */
+		ctest_map_t			case_table;						/** 用例表 */
 		unsigned long		tid;							/** 线程ID */
 	}info;
 
@@ -1055,7 +1031,7 @@ typedef struct test_ctx2
 static int _etest_on_cmp_case(const ctest_map_node_t* key1, const ctest_map_node_t* key2, void* arg);
 static test_ctx2_t			g_test_ctx2;					// 不需要初始化
 static test_ctx_t			g_test_ctx = {
-	{ TEST_LIST_INITIALIZER, ETEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
+	{ TEST_LIST_INITIALIZER, CTEST_MAP_INITIALIZER(_etest_on_cmp_case, NULL), 0 },							// .info
 	{ 0, NULL, NULL, 0, stage_setup },						// .runtime
 	{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },	// .timestamp
 	{ { 0, 0, 0, 0, 0 }, { 1, 0 } },						// .counter
@@ -1407,8 +1383,8 @@ static void _test_reset_all_test(void)
 	memset(&g_test_ctx.counter.result, 0, sizeof(g_test_ctx.counter.result));
 	memset(&g_test_ctx.timestamp, 0, sizeof(g_test_ctx.timestamp));
 
-	ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
+	ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
+	for (; it != NULL; it = ctest_list_next(&g_test_ctx.info.case_list, it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		case_data->info.mask = 0;
@@ -1419,8 +1395,8 @@ static void _test_reset_all_test(void)
 
 static void _test_show_report_failed(void)
 {
-	ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-	for (; it != NULL; it = _test_list_next(&g_test_ctx.info.case_list, it))
+	ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
+	for (; it != NULL; it = ctest_list_next(&g_test_ctx.info.case_list, it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.queue);
 		if (!HAS_MASK(case_data->info.mask, MASK_FAILURE))
@@ -1444,7 +1420,7 @@ static void _test_show_report(void)
 	_test_print_colorful(print_green, "[==========]");
 	printf(" %u/%u test case%s ran.",
 		g_test_ctx.counter.result.total,
-		_test_list_size(&g_test_ctx.info.case_list),
+		ctest_list_size(&g_test_ctx.info.case_list),
 		g_test_ctx.counter.result.total > 1 ? "s" : "");
 	if (g_test_ctx.mask.print_time)
 	{
@@ -1555,8 +1531,8 @@ static unsigned _etest_calculate_max_class_length(unsigned* number_of_fixture)
 	unsigned cnt_fixture = 0;
 	const char* last_class_name = "";
 
-	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
+	ctest_map_node_t* it = ctest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = ctest_map_next(&g_test_ctx.info.case_table, it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		if (last_class_name == case_data->info.suit_name
@@ -1609,8 +1585,8 @@ static void _etest_list_tests(void)
 	printf("%*.*s | case item\n", fixture_length, fixture_length, "fixture");
 	printf("-------------------------------------------------------------------------------\n");
 
-	ctest_map_node_t* it = etest_map_begin(&g_test_ctx.info.case_table);
-	for (; it != NULL; it = etest_map_next(&g_test_ctx.info.case_table, it))
+	ctest_map_node_t* it = ctest_map_begin(&g_test_ctx.info.case_table);
+	for (; it != NULL; it = ctest_map_next(&g_test_ctx.info.case_table, it))
 	{
 		ctest_case_t* case_data = CONTAINER_OF(it, ctest_case_t, node.table);
 		/* some compiler will make same string with different address */
@@ -1686,18 +1662,18 @@ static void _test_setup_precision(void)
 */
 static void _test_shuffle_cases(void)
 {
-	test_list_t copy_case_list = TEST_LIST_INITIALIZER;
+	ctest_list_t copy_case_list = TEST_LIST_INITIALIZER;
 
-	while (_test_list_size(&g_test_ctx.info.case_list) != 0)
+	while (ctest_list_size(&g_test_ctx.info.case_list) != 0)
 	{
-		unsigned idx = _test_rand() % _test_list_size(&g_test_ctx.info.case_list);
+		unsigned idx = _test_rand() % ctest_list_size(&g_test_ctx.info.case_list);
 
 		unsigned i = 0;
-		ctest_list_node_t* it = _test_list_begin(&g_test_ctx.info.case_list);
-		for (; i < idx; i++, it = _test_list_next(&g_test_ctx.info.case_list, it));
+		ctest_list_node_t* it = ctest_list_begin(&g_test_ctx.info.case_list);
+		for (; i < idx; i++, it = ctest_list_next(&g_test_ctx.info.case_list, it));
 
-		_test_list_erase(&g_test_ctx.info.case_list, it);
-		_test_list_push_back(&copy_case_list, it);
+		ctest_list_erase(&g_test_ctx.info.case_list, it);
+		ctest_list_push_back(&copy_case_list, it);
 	}
 
 	g_test_ctx.info.case_list = copy_case_list;
@@ -1823,9 +1799,9 @@ static void _test_run_test_loop(void)
 
 	ctest_timestamp_get(&g_test_ctx.timestamp.tv_total_start);
 
-	g_test_ctx.runtime.cur_it = _test_list_begin(&g_test_ctx.info.case_list);
+	g_test_ctx.runtime.cur_it = ctest_list_begin(&g_test_ctx.info.case_list);
 	for (; g_test_ctx.runtime.cur_it != NULL;
-		g_test_ctx.runtime.cur_it = _test_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
+		g_test_ctx.runtime.cur_it = ctest_list_next(&g_test_ctx.info.case_list, g_test_ctx.runtime.cur_it))
 	{
 		g_test_ctx.runtime.cur_case = CONTAINER_OF(g_test_ctx.runtime.cur_it, ctest_case_t, node.queue);
 		_test_run_case();
@@ -1996,11 +1972,11 @@ int ctest_timestamp_dif(const ctest_timestamp_t* t1, const ctest_timestamp_t* t2
 
 void ctest_register_case(ctest_case_t* data)
 {
-	if (etest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
+	if (ctest_map_insert(&g_test_ctx.info.case_table, &data->node.table) < 0)
 	{
 		return;
 	}
-	_test_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
+	ctest_list_push_back(&g_test_ctx.info.case_list, &data->node.queue);
 }
 
 int ctest_run_tests(int argc, char* argv[])
