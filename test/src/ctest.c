@@ -1556,8 +1556,8 @@ static void _test_list_tests(void)
 	const char* print_class_name = "";
 
 	unsigned cnt_fixture = 0;
-	unsigned cnt_test = ctest_map_size(&g_test_ctx.info.case_table);
-	unsigned max_fixture_length = _test_calculate_max_class_length(&cnt_fixture);
+	int cnt_test = (int)ctest_map_size(&g_test_ctx.info.case_table);
+	int max_fixture_length = (int)_test_calculate_max_class_length(&cnt_fixture);
 	if (max_fixture_length > MAX_FIXTURE_SIZE)
 	{
 		max_fixture_length = MAX_FIXTURE_SIZE;
@@ -1565,7 +1565,7 @@ static void _test_list_tests(void)
 
 	/* generate fixture info */
 	snprintf(g_test_ctx2.strbuf, sizeof(g_test_ctx2.strbuf), "%u fixture%s", cnt_fixture, cnt_fixture > 1 ? "s" : "");
-	unsigned fixture_length = strlen(g_test_ctx2.strbuf);
+	int fixture_length = (int)strlen(g_test_ctx2.strbuf);
 	if (fixture_length > MAX_FIXTURE_SIZE)
 	{
 		fixture_length = MAX_FIXTURE_SIZE;
