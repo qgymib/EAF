@@ -117,17 +117,17 @@ static void _benchmark_yield_teardown(void)
 	eaf_sem_destroy(s_benchmark_yield_sem_s2);
 }
 
-TEST_CLASS_SETUP(benchmark)
+TEST_CLASS_SETUP(benchmark_yield)
 {
 	_benchmark_yield_setup(1000000);
 }
 
-TEST_CLASS_TEAREDOWN(benchmark)
+TEST_CLASS_TEAREDOWN(benchmark_yield)
 {
 	_benchmark_yield_teardown();
 }
 
-TEST_F(benchmark, DISABLED_yield_1000000)
+TEST_F(benchmark_yield, DISABLED_yield_1000000)
 {
 	/* send to s1 */
 	{

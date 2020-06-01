@@ -61,7 +61,7 @@ static void _test_powerpack_benchmark_message_on_exit(void)
 {
 }
 
-TEST_CLASS_SETUP(benchmark)
+TEST_CLASS_SETUP(benchmark_message)
 {
 	s_powerpack_benchmark_message_total = 1000000;
 	s_powerpack_benchmark_message_count = 0;
@@ -109,7 +109,7 @@ TEST_CLASS_SETUP(benchmark)
 	ASSERT_EQ_D32(eaf_load(), 0);
 }
 
-TEST_CLASS_TEAREDOWN(benchmark)
+TEST_CLASS_TEAREDOWN(benchmark_message)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);
@@ -118,7 +118,7 @@ TEST_CLASS_TEAREDOWN(benchmark)
 	eaf_sem_destroy(s_powerpack_benchmark_message_sem);
 }
 
-TEST_F(benchmark, DISABLED_powerpack_message_1000000)
+TEST_F(benchmark_message, DISABLED_powerpack_message_1000000)
 {
 	{
 		eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S1_REQ, 0, NULL);
