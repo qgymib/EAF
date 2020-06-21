@@ -19,3 +19,13 @@ TEST_F(powerpack_hash, bkdr_32)
 	ASSERT_EQ_STR(str_a, str_b);
 	ASSERT_EQ_U32(eaf_hash32_bkdr(str_a, strlen(str_a), seed), eaf_hash32_bkdr(str_b, strlen(str_b), seed));
 }
+
+TEST_F(powerpack_hash, bkdr_64)
+{
+	const char* str_a = __FUNCTION__;
+	const char* str_b = __FUNCTION__;
+	uint64_t seed = __LINE__;
+
+	ASSERT_EQ_STR(str_a, str_b);
+	ASSERT_EQ_U64(eaf_hash64_bkdr(str_a, strlen(str_a), seed), eaf_hash64_bkdr(str_b, strlen(str_b), seed));
+}

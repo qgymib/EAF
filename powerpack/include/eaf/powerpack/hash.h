@@ -20,6 +20,16 @@ extern "C" {
 uint32_t eaf_hash32_bkdr(_In_ const void* data, _In_ size_t size,
 	_In_ uint32_t seed);
 
+/**
+ * @brief Make 64 bits hash with BKDR algorithm
+ * @param[in] data	The data
+ * @param[in] size	Data size in byte
+ * @param[in] seed	Initialize seed
+ * @return			Hash result in 64 bits
+ */
+uint64_t eaf_hash64_bkdr(_In_ const void* data, _In_ size_t size,
+	_In_ uint64_t seed);
+
 #ifdef __cplusplus
 }
 #endif
