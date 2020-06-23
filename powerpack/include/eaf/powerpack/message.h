@@ -45,9 +45,9 @@ extern "C" {
 			break;\
 		}\
 		{\
-			MSVC_PUSH_WARNNING(4204)\
+			EAF_MSVC_PUSH_WARNNING(4204)\
 			*(TYPE*)eaf_msg_get_data(req, NULL) = (TYPE){ __VA_ARGS__ };\
-			MSVC_POP_WARNNING()\
+			EAF_MSVC_POP_WARNNING()\
 		}\
 		eaf_send_req_sync(rsp, _eaf_local->id, to, req, 1);\
 		if (rsp == NULL) {\
