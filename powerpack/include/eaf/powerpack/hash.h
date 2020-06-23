@@ -7,6 +7,27 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Hash Hash
+ *
+ * Here is a example for how to use hash functions
+ *
+ * @code
+ void example(void)
+ {
+     // the data
+     const char* str = "hello world";
+     // calculate hash
+     uint32_t hval = eaf_hash32_bkdr(str, strlen(str), 0);
+     // print hash result
+     printf("hval: %"PRIx32"\n", hval);
+ }
+ * @endcode
+ *
+ * @{
+ */
+
 #include <stdint.h>
 #include "eaf/eaf.h"
 
@@ -29,6 +50,10 @@ uint32_t eaf_hash32_bkdr(_In_ const void* data, _In_ size_t size,
  */
 uint64_t eaf_hash64_bkdr(_In_ const void* data, _In_ size_t size,
 	_In_ uint64_t seed);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 
 void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp, _Inout_opt_ void* arg)
 {
-	handler->map_low = EAF_MAP_LOW_INIT;
+	handler->map_low = EAF_MAP_LOW_INITIALIZER;
 	handler->cmp.cmp = cmp;
 	handler->cmp.arg = arg;
 	handler->size = 0;

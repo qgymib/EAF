@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Core
+ * @defgroup EAF-Message Message
+ * @{
+ */
+
 #include <stdint.h>
 #include <stddef.h>
 #include "eaf/utils/define.h"
@@ -152,6 +158,10 @@ EAF_API void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt);
  * @return			Receipt
  */
 EAF_API int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Message Message
+ * @{
+ */
+
 #include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 
@@ -72,6 +78,10 @@ extern "C" {
  */
 void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local,
 	_Inout_opt_ void* arg);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

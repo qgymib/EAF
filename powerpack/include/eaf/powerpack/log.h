@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Log Log
+ * @{
+ */
+
 #include "eaf/utils/define.h"
 
 /**
@@ -18,7 +24,7 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_TRACE(mod, fmt, ...) \
+#define EAF_LOG_TRACE(mod, fmt, ...) \
 	eaf_log(eaf_log_level_trace, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
@@ -31,7 +37,7 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_DEBUG(mod, fmt, ...) \
+#define EAF_LOG_DEBUG(mod, fmt, ...) \
 	eaf_log(eaf_log_level_debug, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
@@ -44,7 +50,7 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_INFO(mod, fmt, ...)  \
+#define EAF_LOG_INFO(mod, fmt, ...)  \
 	eaf_log(eaf_log_level_info, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
@@ -56,7 +62,7 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_WARN(mod, fmt, ...)  \
+#define EAF_LOG_WARN(mod, fmt, ...)  \
 	eaf_log(eaf_log_level_warn, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
@@ -69,7 +75,7 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_ERROR(mod, fmt, ...) \
+#define EAF_LOG_ERROR(mod, fmt, ...) \
 	eaf_log(eaf_log_level_error, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
@@ -81,10 +87,11 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define LOG_FATAL(mod, fmt, ...) \
+#define EAF_LOG_FATAL(mod, fmt, ...) \
 	eaf_log(eaf_log_level_fatal, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
+ * @private
  * @brief Log level
  */
 typedef enum eaf_log_level
@@ -98,6 +105,7 @@ typedef enum eaf_log_level
 }eaf_log_level_t;
 
 /**
+ * @private
  * @brief Log
  * @param[in] level		Log level
  * @param[in] file		The file
@@ -110,6 +118,10 @@ typedef enum eaf_log_level
 void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	_In_ const char* func, _In_ int line, _In_ const char* mod,
 	_In_ const char* fmt, ...);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

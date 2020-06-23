@@ -153,6 +153,7 @@ void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt
 	eaf_msg_t* req = (eaf_msg_t*)arg;
 	assert(eaf_msg_get_type(req) == eaf_msg_type_req);
 
+	/* create record */
 	powerpack_message_record_t* record = malloc(sizeof(powerpack_message_record_t));
 	if (record == NULL)
 	{
@@ -164,12 +165,12 @@ void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt
 	record->data.req = req;
 	record->data.defcnt = local->unsafe[0].ww.w2;
 
+	/* save record */
 	int ret;
 	eaf_lock_enter(g_powerpack_message_ctx->objlock);
-	do 
 	{
 		ret = eaf_map_insert(&g_powerpack_message_ctx->table, &record->node);
-	} while (0);
+	}
 	eaf_lock_leave(g_powerpack_message_ctx->objlock);
 	if (ret < 0)
 	{
@@ -191,10 +192,9 @@ void eaf_powerpack_message_commit(_Inout_ eaf_service_local_t* local, _Inout_opt
 
 err_send:
 	eaf_lock_enter(g_powerpack_message_ctx->objlock);
-	do 
 	{
 		eaf_map_erase(&g_powerpack_message_ctx->table, &record->node);
-	} while (0);
+	}
 	eaf_lock_leave(g_powerpack_message_ctx->objlock);
 err_table:
 	free(record);

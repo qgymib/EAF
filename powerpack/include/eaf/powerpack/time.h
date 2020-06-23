@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Time Time
+ * @{
+ */
+
 #include "eaf/utils/define.h"
 #include <stdint.h>
 
@@ -48,6 +54,10 @@ int eaf_gettimeofday(_Out_ eaf_clock_time_t* tv);
  * @return			#eaf_errno
  */
 int eaf_getsystemtime(_Out_ eaf_calendar_time_t* tv);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

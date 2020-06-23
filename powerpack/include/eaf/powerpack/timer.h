@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Timer Timer
+ * @{
+ */
+
 #include "eaf/eaf.h"
 
 /**
@@ -20,12 +26,16 @@ extern "C" {
 	} while (0)
 
 /**
- * @brief (Internal) Make service sleep
- * @note This function should only for internal usage.
+ * @private
+ * @brief Make service sleep
  * @param[in,out] local	Service local storage
  * @param[in,out] arg	Sleep timeout
  */
 void eaf_powerpack_sleep_commit(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

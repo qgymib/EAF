@@ -14,12 +14,31 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Utils
+ * @defgroup EAF-List List
+ * @{
+ */
+
 #include <stddef.h>
 #include "eaf/utils/define.h"
 
 /**
+ * @brief Static initializer for #eaf_list_t
+ * @see eaf_list_t
+ */
+#define EAF_LIST_INITIALIZER		{ NULL, NULL, 0 }
+
+/**
+ * @brief Static initializer for #eaf_list_node_t
+ * @see eaf_list_node_t
+ */
+#define EAF_LIST_NODE_INITIALIZER	{ NULL, NULL }
+
+/**
  * @brief The list node.
  * This node must put in your struct.
+ * @see EAF_LIST_NODE_INITIALIZER
  */
 typedef struct eaf_list_node
 {
@@ -29,6 +48,7 @@ typedef struct eaf_list_node
 
 /**
  * @brief Double Linked List
+ * @see EAF_LIST_INITIALIZER
  */
 typedef struct eaf_list
 {
@@ -38,26 +58,16 @@ typedef struct eaf_list
 }eaf_list_t;
 
 /**
- * @brief Double Linked List Node Initializer.
- */
-#define EAF_LIST_NODE_INITIALIZER	{ NULL, NULL }
-
-/**
- * @brief Double Linked List Initializer.
- */
-#define EAF_LIST_INITIALIZER		{ NULL, NULL, 0 }
-
-/**
  * @brief Initialize Double Linked List.
- * @param handler	Pointer to list
+ * @param[out] handler	Pointer to list
  */
 EAF_API void eaf_list_init(_Out_ eaf_list_t* handler);
 
 /**
  * @brief Insert a node to the head of the list.
  * @warning the node must not exist in any list.
- * @param handler	Pointer to list
- * @param node		Pointer to a new node
+ * @param[in,out] handler	Pointer to list
+ * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node);
@@ -65,8 +75,8 @@ EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
 /**
  * @brief Insert a node to the tail of the list.
  * @warning the node must not exist in any list.
- * @param handler	Pointer to list
- * @param node		Pointer to a new node
+ * @param[in,out] handler	Pointer to list
+ * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node);
@@ -74,9 +84,9 @@ EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
 /**
  * @brief Insert a node in front of a given node.
  * @warning the node must not exist in any list.
- * @param handler	Pointer to list
- * @param pos		Pointer to a exist node
- * @param node		Pointer to a new node
+ * @param[in,out] handler	Pointer to list
+ * @param[in,out] pos		Pointer to a exist node
+ * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
@@ -84,9 +94,9 @@ EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
 /**
  * @brief Insert a node right after a given node.
  * @warning the node must not exist in any list.
- * @param handler	Pointer to list
- * @param pos		Pointer to a exist node
- * @param node		Pointer to a new node
+ * @param[in,out] handler	Pointer to list
+ * @param[in,out] pos		Pointer to a exist node
+ * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
 	_Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
@@ -94,61 +104,64 @@ EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
 /**
  * @brief Delete a exist node
  * @warning The node must already in the list.
- * @param handler	Pointer to list
- * @param node		The node you want to delete
+ * @param[in,out] handler	Pointer to list
+ * @param[in,out] node		The node you want to delete
  */
 EAF_API void eaf_list_erase(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node);
 
 /**
  * @brief Get the number of nodes in the list.
- * @param handler	Pointer to list
- * @return			The number of nodes
+ * @param[in] handler	Pointer to list
+ * @return				The number of nodes
  */
 EAF_API size_t eaf_list_size(_In_ const eaf_list_t* handler);
 
 /**
  * @brief Get the first node and remove it from the list.
- * @param handler	Pointer to list
- * @return			The first node
+ * @param[in,out] handler	Pointer to list
+ * @return					The first node
  */
 EAF_API eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler);
 
 /**
  * @brief Get the last node and remove it from the list.
- * @param handler	Pointer to list
- * @return			The last node
+ * @param[in,out] handler	Pointer to list
+ * @return					The last node
  */
 EAF_API eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler);
 
 /**
  * @brief Get the last node.
- * @param handler	Pointer to list
- * @return			The first node
+ * @param[in] handler	Pointer to list
+ * @return				The first node
  */
 EAF_API eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler);
 
 /**
  * @brief Get the last node.
- * @param handler	The handler of list
- * @return			The last node
+ * @param[in] handler	The handler of list
+ * @return				The last node
  */
 EAF_API eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler);
 
 /**
 * @brief Get next node.
-* @param node		Current node
+* @param[in] node	Current node
 * @return			The next node
 */
 EAF_API eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node);
 
 /**
  * @brief Get previous node.
- * @param handler	the handler of list
- * @param node		current node
+ * @param[in] node	current node
  * @return			previous node
  */
 EAF_API eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

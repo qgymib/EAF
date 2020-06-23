@@ -8,13 +8,34 @@
 extern "C" {
 #endif	/* __cplusplus */
 
+/**
+ * @ingroup EAF-Utils
+ * @defgroup EAF-Map Map
+ * @{
+ */
+
 #include <stddef.h>
 #include "eaf/utils/map_low.h"
 #include "eaf/utils/define.h"
 
 /**
+ * @brief Static initializer for #eaf_map_t
+ * @see eaf_map_t
+ * @param[in] cmp	Compare function
+ * @param[in] arg	Argument for compare function
+ */
+#define EAF_MAP_INITIALIZER(cmp, arg)	((eaf_map_t){ EAF_MAP_LOW_INITIALIZER, { cmp, arg }, 0 })
+
+/**
+ * @brief Static initializer for #eaf_map_node_t
+ * @see eaf_map_node_t
+ */
+#define EAF_MAP_NODE_INITIALIZER		EAF_MAP_LOW_NODE_INITIALIZER
+
+/**
  * @brief The node for map
  * @see eaf_map_t
+ * @see EAF_MAP_NODE_INITIALIZER
  */
 typedef eaf_map_low_node_t eaf_map_node_t;
 
@@ -30,6 +51,7 @@ typedef int(*eaf_map_cmp_fn)(_In_ const eaf_map_node_t* key1,
 
 /**
  * @brief Map implemented as red-black tree
+ * @see EAF_MAP_INITIALIZER
  */
 typedef struct eaf_map
 {
@@ -131,6 +153,10 @@ EAF_API eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node);
  * @return			Previous iterator
  */
 EAF_API eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 };

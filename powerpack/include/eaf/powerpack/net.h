@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Net Net
+ * @{
+ */
+
 #include "eaf/eaf.h"
 
 /**
@@ -70,6 +76,10 @@ int eaf_powerpack_net_socket_wait_setup(_In_ uint32_t id,
  */
 void eaf_powerpack_net_socket_wait_commit(_Inout_ eaf_service_local_t* local,
 	_Inout_opt_ void* arg);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

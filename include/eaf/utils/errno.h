@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Utils
+ * @defgroup EAF-Errno Errno
+ * @{
+ */
+
 #include "eaf/utils/define.h"
 
 /**
@@ -33,10 +39,14 @@ typedef enum eaf_errno
  * passed in the argument `err`. If error code not defined, `NULL` will be
  * returned.
  * 
- * @param err	error code
- * @return		description
+ * @param[in] err	Error code
+ * @return			Description
  */
 EAF_API const char* eaf_strerror(_In_ int err);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

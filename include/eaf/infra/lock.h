@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Infra
+ * @defgroup EAF-Lock Lock
+ * @{
+ */
+
 #include "eaf/utils/define.h"
 
 /**
@@ -47,6 +53,10 @@ EAF_API void eaf_lock_enter(_Inout_ eaf_lock_t* handler);
  * @param[in,out] handler	The lock
  */
 EAF_API void eaf_lock_leave(_Inout_ eaf_lock_t* handler);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

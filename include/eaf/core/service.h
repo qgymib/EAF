@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Core
+ * @defgroup EAF-Service Service
+ * @{
+ */
+
 #include <stdint.h>
 #include "eaf/core/internal/service.h"
 #include "eaf/core/message.h"
@@ -341,6 +347,10 @@ EAF_API uint32_t eaf_service_self(void);
  * @return			Service state
  */
 EAF_API eaf_service_state_t eaf_service_get_state(_In_ uint32_t id);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

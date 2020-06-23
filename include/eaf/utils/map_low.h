@@ -11,13 +11,26 @@
 extern "C" {
 #endif	/* __cplusplus */
 
+/**
+ * @ingroup EAF-Utils
+ * @defgroup EAF-MapLow MapLow
+ * @{
+ */
+
 #include <stddef.h>
 #include "eaf/utils/define.h"
 
 /**
- * @brief eaf_map_low initializer.
+ * @brief Static initializer for #eaf_map_low_t
+ * @see eaf_map_low_t
  */
-#define EAF_MAP_LOW_INIT	((eaf_map_low_t){ NULL })
+#define EAF_MAP_LOW_INITIALIZER			((eaf_map_low_t){ NULL })
+
+/**
+ * @brief Static initializer for #eaf_map_low_node_t
+ * @see eaf_map_low_node_t
+ */
+#define EAF_MAP_LOW_NODE_INITIALIZER	((eaf_map_low_node_t){ NULL, NULL, NULL })
 
 /**
  * @brief find helper
@@ -88,6 +101,7 @@ extern "C" {
 
 /**
  * @brief eaf_map_low node
+ * @see EAF_MAP_LOW_NODE_INITIALIZER
  */
 typedef struct eaf_map_low_node
 {
@@ -98,6 +112,7 @@ typedef struct eaf_map_low_node
 
 /**
  * @brief red-black tree
+ * @see EAF_MAP_LOW_INITIALIZER
  */
 typedef struct eaf_map_low
 {
@@ -165,6 +180,10 @@ EAF_API void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
  */
 EAF_API void eaf_map_low_erase(_Inout_ eaf_map_low_t* root,
 	_Inout_ eaf_map_low_node_t* node);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 };

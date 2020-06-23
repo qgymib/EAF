@@ -7,16 +7,47 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup EAF EAF
+ * @{
+ */
+/**
+ * @ingroup EAF
+ * @defgroup EAF-Core Core
+ * @{
+ */
 #include "eaf/core/message.h"
 #include "eaf/core/service.h"
+/**
+ * @}
+ */
+/**
+ * @ingroup EAF
+ * @defgroup EAF-Infra Infra
+ * @{
+ */
 #include "eaf/infra/lock.h"
 #include "eaf/infra/semaphore.h"
 #include "eaf/infra/thread.h"
+/**
+ * @}
+ */
+/**
+ * @ingroup EAF
+ * @defgroup EAF-Utils Utils
+ * @{
+ */
 #include "eaf/utils/define.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/list.h"
 #include "eaf/utils/map.h"
 #include "eaf/utils/map_low.h"
+/**
+ * @}
+ */
+/**
+ * @}
+ */
 
 /** @mainpage EAF - Embedded Application Framework
  *

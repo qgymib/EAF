@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Infra
+ * @defgroup EAF-Semaphore Semaphore
+ * @{
+ */
+
 #include "eaf/utils/define.h"
 
 /**
@@ -41,6 +47,10 @@ EAF_API int eaf_sem_pend(_Inout_ eaf_sem_t* handler, _In_ unsigned long timeout)
  * @return				#eaf_errno
  */
 EAF_API int eaf_sem_post(_Inout_ eaf_sem_t* handler);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

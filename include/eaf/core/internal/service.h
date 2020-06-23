@@ -7,10 +7,17 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Service
+ * @defgroup EAF-Service-Internal Internal
+ * @{
+ */
+
 #include <stddef.h>
 #include "eaf/utils/define.h"
 
 /**
+ * @def EAF_COROUTINE_YIELD_TOKEN
  * @brief switch-case label
  */
 #if defined(_MSC_VER)
@@ -113,11 +120,17 @@ typedef struct eaf_group_local
 }eaf_group_local_t;
 
 /**
+ * @private
  * @brief Get service local storage and group local storage.
  * @param[out] local	A pointer to store group local storage
  * @return				Service local storage
  */
-EAF_API eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
+EAF_API eaf_service_local_t* eaf_service_get_local(
+	_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,10 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup PowerPack PowerPack
+ * @{
+ */
 #include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 #include "eaf/powerpack/hash.h"
@@ -16,9 +20,12 @@ extern "C" {
 #include "eaf/powerpack/ringbuffer.h"
 #include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
+/**
+ * @}
+ */
 
 /**
- * @brief Powerpack configuration
+ * @brief PowerPack configuration
  */
 typedef struct eaf_powerpack_cfg
 {
@@ -27,15 +34,15 @@ typedef struct eaf_powerpack_cfg
 }eaf_powerpack_cfg_t;
 
 /**
-* @brief Setup powerpack
-* @param[in] cfg	Configuration
-* @return			#eaf_errno
-*/
+ * @brief Setup PowerPack
+ * @param[in] cfg	Configuration
+ * @return			#eaf_errno
+ */
 int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg);
 
 /**
-* @brief must be called after #eaf_cleanup
-*/
+ * @brief must be called after #eaf_cleanup
+ */
 void eaf_powerpack_exit(void);
 
 #ifdef __cplusplus

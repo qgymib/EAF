@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup EAF-Infra
+ * @defgroup EAF-Thread Thread
+ * @{
+ */
+
 #include <stddef.h>
 #include "eaf/utils/define.h"
 
@@ -56,20 +62,24 @@ typedef void(*eaf_thread_fn)(_Inout_opt_ void* arg);
  * @param[in,out] arg	User defined arg
  * @return				Thread handler
  */
-eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
+EAF_API eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
 	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg);
 
 /**
  * @brief Wait for thread exit and destroy it
  * @param[in] handler	Thread handler
  */
-void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler);
+EAF_API void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler);
 
 /**
  * @brief Get current thread id.
  * @return			thread id
  */
-unsigned long eaf_thread_id(void);
+EAF_API unsigned long eaf_thread_id(void);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
