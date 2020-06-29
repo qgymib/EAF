@@ -46,13 +46,16 @@ extern "C" {
 
 /**
  * @brief Service states
- *
+ * @code
  * INIT1
- *  /|\       |--------|
+ *  /|\
+ *   |        |--------|
  *  \|/      \|/       |
  * INIT0 --> IDLE --> BUSY --> PEND
- *   |       \|/      /|\       |
- *   | ----> EXIT      |--------|
+ *   |        |       /|\       |
+ *   |       \|/       |--------|
+ *   | ----> EXIT
+ * @endcode
  */
 typedef enum eaf_service_state
 {
@@ -122,6 +125,57 @@ typedef struct eaf_group_table
 typedef struct eaf_hook
 {
 	/**
+	 * @brief Hook a service is going to init
+	 * @see eaf_entrypoint_t::on_init
+	 * @param[in] id	Service ID
+	 */
+	void(*on_service_init_before)(_In_ uint32_t id);
+
+	/**
+	 * @brief Hook a service already init
+	 * @see eaf_entrypoint_t::on_init
+	 * @param[in] id	Service ID
+	 */
+	void(*on_service_init_after)(_In_ uint32_t id, _In_ int ret);
+
+	/**
+	 * @brief Hook a service is going to exit
+	 * @see eaf_entrypoint_t::on_exit
+	 * @param[in] id	Service ID
+	 */
+	void(*on_service_exit_before)(_In_ uint32_t id);
+
+	/**
+	 * @brief Hook a service already exit
+	 * @see eaf_entrypoint_t::on_exit
+	 * @param[in] id	Service ID
+	 */
+	void(*on_service_exit_after)(_In_ uint32_t id);
+
+	/**
+	 * @brief Hook a service just enter yield state.
+	 * @see eaf_yield
+	 * @see eaf_yield_ext()
+	 * @param[in] srv_id	Service ID
+	 */
+	void(*on_service_yield)(_In_ uint32_t srv_id);
+
+	/**
+	 * @brief Hook a service will leave yield state.
+	 * @see eaf_resume()
+	 * @param[in] srv_id	Service ID
+	 */
+	void(*on_service_resume)(_In_ uint32_t srv_id);
+
+	/**
+	 * @brief Hook a service is going to register
+	 * @see eaf_register()
+	 * @param[in] srv_id	Service ID
+	 * @return				#eaf_errno
+	 */
+	int(*on_service_register)(_In_ uint32_t srv_id);
+
+	/**
 	 * @brief Hook when a message is going to be send.
 	 *
 	 * This hook is called when user want to send a request/response.
@@ -135,7 +189,7 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_msg_send)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_send)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook when destination cannot found.
@@ -146,7 +200,7 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_dst_not_found)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_dst_not_found)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook a service is going to handle message.
@@ -161,7 +215,7 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_pre_msg_process)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook a service is just handle message.
@@ -171,43 +225,19 @@ typedef struct eaf_hook
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
 	 */
-	void(*on_post_msg_process)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
-
-	/**
-	 * @brief Hook a service just enter yield state.
-	 * @see eaf_yield
-	 * @see eaf_yield_ext()
-	 * @param[in] srv_id	Service ID
-	 */
-	void(*on_post_yield)(_In_ uint32_t srv_id);
-
-	/**
-	 * @brief Hook a service will leave yield state.
-	 * @see eaf_resume()
-	 * @param[in] srv_id	Service ID
-	 */
-	void(*on_post_resume)(_In_ uint32_t srv_id);
-
-	/**
-	 * @brief Hook a service is going to register
-	 * @see eaf_register()
-	 * @param[in] srv_id	Service ID
-	 * @return				#eaf_errno
-	 */
-	int(*on_pre_register)(_In_ uint32_t srv_id);
+	void(*on_message_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook before #eaf_cleanup() take effect
 	 * @see eaf_cleanup()
-	 * @return				#eaf_errno
 	 */
-	int(*on_pre_cleanup)(void);
+	void(*on_cleanup_before)(void);
 
 	/**
 	 * @brief Hook after #eaf_cleanup() take effect
 	 * @see eaf_cleanup()
 	 */
-	void(*on_post_cleanup)(void);
+	void(*on_cleanup_after)(void);
 }eaf_hook_t;
 
 /**
@@ -231,7 +261,7 @@ EAF_API int eaf_resume(_In_ uint32_t srv_id);
  * @param[in] size	The size of service group table
  * @return			#eaf_errno
  */
-EAF_API int eaf_setup(_In_ const eaf_group_table_t* info /*static*/, _In_ size_t size);
+EAF_API int eaf_setup(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t size);
 
 /**
  * @brief Load EAF.
@@ -269,7 +299,7 @@ EAF_API int eaf_cleanup(void);
  * @param[in] entry		Service entry. Must be globally accessible.
  * @return				#eaf_errno
  */
-EAF_API int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
+EAF_API int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* /*static*/ entry);
 
 /**
  * @brief Send request
@@ -295,7 +325,7 @@ EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t
  * @param[in] size	sizeof(*hook)
  * @return			#eaf_errno
  */
-EAF_API int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size);
+EAF_API int eaf_inject(_In_ const eaf_hook_t* /* static */ hook, _In_ size_t size);
 
 /**
  * @brief Get caller's service id

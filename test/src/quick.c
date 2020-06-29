@@ -3,21 +3,58 @@
 #include "eaf/eaf.h"
 #include "quick.h"
 
+typedef struct test_quick_entry
+{
+	struct
+	{
+		unsigned			enable : 1;
+	}ability;
+	uint32_t				id;
+	eaf_message_table_t		msg_map[4];
+	eaf_entrypoint_t		entry;
+}test_quick_entry_t;
+
 typedef struct test_template_ctx
 {
-	test_quick_cfg_t		cfg;					/** User define configure */
-	eaf_entrypoint_t		entry[4];				/**< total 4 services */
+	int						running;
+	test_quick_entry_t		entry[4];				/**< total 4 services */
 
 	eaf_group_table_t		group[2];				/**< 2 thread */
 	eaf_service_table_t		service_table[2][2];	/**< each thread has 2 services */
 }test_template_ctx_t;
 
-static test_template_ctx_t* g_test_template_ctx = NULL;
-static uint32_t				g_msgid_list[][4] = {
-	{ TEST_QUICK_S0_REQ1, TEST_QUICK_S0_REQ2, TEST_QUICK_S0_REQ3, TEST_QUICK_S0_REQ4 },
-	{ TEST_QUICK_S1_REQ1, TEST_QUICK_S1_REQ2, TEST_QUICK_S1_REQ3, TEST_QUICK_S1_REQ4 },
-	{ TEST_QUICK_S2_REQ1, TEST_QUICK_S2_REQ2, TEST_QUICK_S2_REQ3, TEST_QUICK_S2_REQ4 },
-	{ TEST_QUICK_S3_REQ1, TEST_QUICK_S3_REQ2, TEST_QUICK_S3_REQ3, TEST_QUICK_S3_REQ4 },
+static test_template_ctx_t	g_test_quick_ctx = {
+	0,	/* running */
+	{	/* entry */
+		{
+			{ 0 }, TEST_QUICK_S0,
+			{ { TEST_QUICK_S0_REQ1, NULL }, { TEST_QUICK_S0_REQ2, NULL }, { TEST_QUICK_S0_REQ3, NULL }, { TEST_QUICK_S0_REQ4, NULL } },
+			{ EAF_ARRAY_SIZE(g_test_quick_ctx.entry[0].msg_map), g_test_quick_ctx.entry[0].msg_map, NULL, NULL }
+		},
+		{
+			{ 0 }, TEST_QUICK_S1,
+			{ { TEST_QUICK_S1_REQ1, NULL }, { TEST_QUICK_S1_REQ2, NULL }, { TEST_QUICK_S1_REQ3, NULL }, { TEST_QUICK_S1_REQ4, NULL } },
+			{ EAF_ARRAY_SIZE(g_test_quick_ctx.entry[1].msg_map), g_test_quick_ctx.entry[1].msg_map, NULL, NULL }
+		},
+		{
+			{ 0 }, TEST_QUICK_S2,
+			{ { TEST_QUICK_S2_REQ1, NULL }, { TEST_QUICK_S2_REQ2, NULL }, { TEST_QUICK_S2_REQ3, NULL }, { TEST_QUICK_S2_REQ4, NULL } },
+			{ EAF_ARRAY_SIZE(g_test_quick_ctx.entry[2].msg_map), g_test_quick_ctx.entry[2].msg_map, NULL, NULL }
+		},
+		{
+			{ 0 }, TEST_QUICK_S3,
+			{ { TEST_QUICK_S3_REQ1, NULL }, { TEST_QUICK_S3_REQ2, NULL }, { TEST_QUICK_S3_REQ3, NULL }, { TEST_QUICK_S3_REQ4, NULL } },
+			{ EAF_ARRAY_SIZE(g_test_quick_ctx.entry[3].msg_map), g_test_quick_ctx.entry[3].msg_map, NULL, NULL }
+		},
+	},	/* entry */
+	{	/* group */
+		{ EAF_THREAD_ATTR_INITIALIZER, { 2, g_test_quick_ctx.service_table[0] } },
+		{ EAF_THREAD_ATTR_INITIALIZER, { 2, g_test_quick_ctx.service_table[1] } },
+	},	/* group */
+	{	/* service_table */
+		{ { TEST_QUICK_S0, 8 }, { TEST_QUICK_S1, 8 } },
+		{ { TEST_QUICK_S2, 8 }, { TEST_QUICK_S3, 8 } },
+	},	/* service_table */
 };
 
 static void _test_template_default_request(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
@@ -39,111 +76,110 @@ static int _test_template_default_init(void)
 
 static void _test_template_default_exit(void)
 {
+	// do nothing
 }
 
 static void _test_template_custom(const test_quick_cfg_t* cfg)
 {
-	memcpy(&g_test_template_ctx->cfg, cfg, sizeof(*cfg));
-
-	size_t i, j;
-	for (i = 0; i < EAF_ARRAY_SIZE(g_test_template_ctx->cfg.entry); i++)
+	size_t i;
+	for (i = 0; i < EAF_ARRAY_SIZE(cfg->entry); i++)
 	{
-		for (j = 0; j < EAF_ARRAY_SIZE(g_test_template_ctx->cfg.entry[0].msg_map); j++)
+		if (!cfg->entry[i].ability.enable)
 		{
-			if (g_test_template_ctx->cfg.entry[i].msg_map[j].msg_id == 0)
-			{
-				g_test_template_ctx->cfg.entry[i].msg_map[j].msg_id = g_msgid_list[i][j];
-			}
-			if (g_test_template_ctx->cfg.entry[i].msg_map[j].fn == NULL)
-			{
-				g_test_template_ctx->cfg.entry[i].msg_map[j].fn = _test_template_default_request;
-			}
+			continue;
 		}
 
-		if (g_test_template_ctx->cfg.entry[i].on_init == NULL)
+		g_test_quick_ctx.entry[i].ability.enable = 1;
+		if (cfg->entry[i].on_init != NULL)
 		{
-			g_test_template_ctx->cfg.entry[i].on_init = _test_template_default_init;
+			g_test_quick_ctx.entry[i].entry.on_init = cfg->entry[i].on_init;
 		}
-		if (g_test_template_ctx->cfg.entry[i].on_exit == NULL)
+		if (cfg->entry[i].on_exit != NULL)
 		{
-			g_test_template_ctx->cfg.entry[i].on_exit = _test_template_default_exit;
+			g_test_quick_ctx.entry[i].entry.on_exit = cfg->entry[i].on_exit;
 		}
+
+		size_t j;
+		for (j = 0; j < EAF_ARRAY_SIZE(cfg->entry[i].msg_map); j++)
+		{
+			if (cfg->entry[i].msg_map[j] != NULL)
+			{
+				g_test_quick_ctx.entry[i].msg_map[j].fn = cfg->entry[i].msg_map[j];
+			}
+		}
+	}
+}
+
+static void _test_quick_reset_default_config(void)
+{
+	size_t i;
+	for (i = 0; i < EAF_ARRAY_SIZE(g_test_quick_ctx.entry); i++)
+	{
+		size_t j;
+		for (j = 0; j < EAF_ARRAY_SIZE(g_test_quick_ctx.entry[j].msg_map); j++)
+		{
+			g_test_quick_ctx.entry[i].msg_map[j].fn = _test_template_default_request;
+		}
+
+		g_test_quick_ctx.entry[i].ability.enable = 0;
+		g_test_quick_ctx.entry[i].entry.on_init = _test_template_default_init;
+		g_test_quick_ctx.entry[i].entry.on_exit = _test_template_default_exit;
 	}
 }
 
 int test_eaf_quick_setup(const test_quick_cfg_t* cfg)
 {
-#define SETUP_SERVICE_ENTRY(idx)	\
-	g_test_template_ctx->entry[idx].on_init = g_test_template_ctx->cfg.entry[idx].on_init;\
-	g_test_template_ctx->entry[idx].on_exit = g_test_template_ctx->cfg.entry[idx].on_exit;\
-	g_test_template_ctx->entry[idx].msg_table = g_test_template_ctx->cfg.entry[idx].msg_map;\
-	g_test_template_ctx->entry[idx].msg_table_size = EAF_ARRAY_SIZE(g_test_template_ctx->cfg.entry[idx].msg_map);\
-	if ((ret = eaf_register(TEST_QUICK_S##idx, &g_test_template_ctx->entry[idx])) < 0) {\
-		return ret;\
-	}
-
 	int ret;
-	if (g_test_template_ctx != NULL)
+	if (g_test_quick_ctx.running)
 	{
 		return eaf_errno_duplicate;
 	}
 
-	if ((g_test_template_ctx = calloc(1, sizeof(test_template_ctx_t))) == NULL)
-	{
-		return eaf_errno_memory;
-	}
-
+	_test_quick_reset_default_config();
 	if (cfg != NULL)
 	{
 		_test_template_custom(cfg);
 	}
 
-	// config thread 1 {{{
-	g_test_template_ctx->service_table[0][0].srv_id = TEST_QUICK_S0;
-	g_test_template_ctx->service_table[0][0].msgq_size = 8;
-	g_test_template_ctx->service_table[0][1].srv_id = TEST_QUICK_S1;
-	g_test_template_ctx->service_table[0][1].msgq_size = 8;
-	g_test_template_ctx->group[0].service.size = 2;
-	g_test_template_ctx->group[0].service.table = g_test_template_ctx->service_table[0];
-	// }}}
-
-	// config thread 2 {{{
-	g_test_template_ctx->service_table[1][0].srv_id = TEST_QUICK_S2;
-	g_test_template_ctx->service_table[1][0].msgq_size = 8;
-	g_test_template_ctx->service_table[1][1].srv_id = TEST_QUICK_S3;
-	g_test_template_ctx->service_table[1][1].msgq_size = 8;
-	g_test_template_ctx->group[1].service.size = 2;
-	g_test_template_ctx->group[1].service.table = g_test_template_ctx->service_table[1];
-	// }}}
-
-	if ((ret = eaf_setup(g_test_template_ctx->group, EAF_ARRAY_SIZE(g_test_template_ctx->group))) < 0)
+	if ((ret = eaf_setup(g_test_quick_ctx.group, EAF_ARRAY_SIZE(g_test_quick_ctx.group))) < 0)
 	{
 		return ret;
 	}
 
-	if (g_test_template_ctx->cfg.before_load.fn != NULL)
+	if (cfg != NULL && cfg->before_load.fn != NULL)
 	{
-		g_test_template_ctx->cfg.before_load.fn(g_test_template_ctx->cfg.before_load.arg);
+		cfg->before_load.fn(cfg->before_load.arg);
 	}
 
-	SETUP_SERVICE_ENTRY(0);
-	SETUP_SERVICE_ENTRY(1);
-	SETUP_SERVICE_ENTRY(2);
-	SETUP_SERVICE_ENTRY(3);
+	size_t i;
+	for (i = 0; i < EAF_ARRAY_SIZE(g_test_quick_ctx.entry); i++)
+	{
+		if (!g_test_quick_ctx.entry[i].ability.enable)
+		{
+			continue;
+		}
+		if (eaf_register(g_test_quick_ctx.entry[i].id, &g_test_quick_ctx.entry[i].entry) < 0)
+		{
+			return -1;
+		}
+	}
 
-	return eaf_load();
+	if ((ret = eaf_load()) < 0)
+	{
+		return ret;
+	}
 
-#undef SETUP_SERVICE_ENTRY
+	g_test_quick_ctx.running = 1;
+	return 0;
 }
 
 void test_eaf_quick_cleanup(void)
 {
-	if (g_test_template_ctx == NULL)
+	if (!g_test_quick_ctx.running)
 	{
 		return;
 	}
 
 	eaf_cleanup();
-	free(g_test_template_ctx);
-	g_test_template_ctx = NULL;
+	g_test_quick_ctx.running = 0;
 }

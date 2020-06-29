@@ -63,12 +63,13 @@ extern "C" {
 	(((uintptr_t)(size) + ((uintptr_t)(align) - 1)) & ~((uintptr_t)(align) - 1))
 
 /**
- * @brief SAL
- *
+ * @defgroup SAL SAL
+ * @{
  * SAL provides a set of annotations to describe how a function uses
  * its parameters - the assumptions it makes about them, and the guarantees it
  * makes upon finishing.
  */
+
 #if defined(_MSC_VER)
 #include <sal.h>
 #else
@@ -136,6 +137,11 @@ extern "C" {
 #define _Post_invalid_
 
 #endif
+
+/**
+ * Group: SAL
+ * @}
+ */
 
 #ifdef __cplusplus
 }

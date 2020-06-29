@@ -20,6 +20,12 @@ typedef struct eaf_thread eaf_thread_t;
 #define EAF_THREAD_VALID_STACKSIZE		(0x01 << 0x02)	/**< make field `stacksize` valid */
 
 /**
+ * @brief Static initializer helper for #eaf_thread_attr_t
+ * @see eaf_thread_attr_t
+ */
+#define EAF_THREAD_ATTR_INITIALIZER		{ 0, { 0, 0, 0 } }
+
+/**
  * @brief Thread attribute
  * @see EAF_THREAD_VALID_PRIORITY
  * @see EAF_THREAD_VALID_AFFINITY

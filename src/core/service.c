@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include "eaf/core/service.h"
 #include "eaf/utils/list.h"
 #include "eaf/utils/errno.h"
@@ -33,61 +34,6 @@
 			return -1;\
 		} else if ((a) > (b)) {\
 			return 1;\
-		}\
-	} while (0)
-
-/**
- * @brief Clear control bits
- */
-#define CLEAR_CC0(group)	\
-	do {\
-		(group)->coroutine.local.cc[0] = 0;\
-	} while (0)
-
-/**
- * @brief Check control bit
- */
-#define CHECK_CC0(group, bmask)	\
-	((group)->coroutine.local.cc[0] & (bmask))
-
-/**
-* 获取当前正在运行的任务
-*/
-#define CUR_RUN(group)	\
-	((group)->coroutine.cur_run)
-
-/**
-* 设置当前正在运行的任务
-*/
-#define CUR_RUN_SET_BY_IDX(group, idx)	\
-	do {\
-		eaf_group_t* _group = group;\
-		CUR_RUN(_group) = &_group->service.table[idx];\
-	} while (0)
-
-/**
- * @brief Reset branch
- */
-#define RESET_BRANCH(service)	\
-	do {\
-		(service)->coroutine.local.branch = 0;\
-	} while (0)
-
-/**
- * @brief Reset branch
- */
-#define CUR_RUN_RESET_BRANCH(group)	\
-	RESET_BRANCH(CUR_RUN(group))
-
-/**
- * @brief Call user defined yield hook
- */
-#define CALL_YIELD_HOOK(group)	\
-	do {\
-		eaf_group_t* _group = group;\
-		if (_group->coroutine.local.yield.hook != NULL) {\
-			_group->coroutine.local.yield.hook(&(CUR_RUN(_group)->coroutine.local),\
-				_group->coroutine.local.yield.arg);\
 		}\
 	} while (0)
 
@@ -187,6 +133,111 @@ typedef struct eaf_ctx
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/**< Global runtime */
 
+static int _eaf_hook_message_before(eaf_msgq_record_t* msg)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_before == NULL)
+	{
+		return 0;
+	}
+
+	int ret;
+	if ((ret = g_eaf_ctx->hook->on_message_before(msg->data.from,
+		msg->data.to, &msg->data.msg->msg)) == 0)
+	{
+		return 0;
+	}
+
+	return ret;
+}
+
+static void _eaf_hook_message_after(eaf_msgq_record_t* msg)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_after == NULL)
+	{
+		return;
+	}
+
+	g_eaf_ctx->hook->on_message_after(msg->data.from, msg->data.to, &msg->data.msg->msg);
+}
+
+static void _eaf_hook_service_yield(uint32_t service)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_service_yield == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_service_yield(service);
+}
+
+static void _eaf_hook_service_resume(uint32_t service)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_service_resume == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_service_resume(service);
+}
+
+static int _eaf_hook_service_register(uint32_t id)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_service_register == NULL)
+	{
+		return 0;
+	}
+
+	return g_eaf_ctx->hook->on_service_register(id);
+}
+
+static void _eaf_hook_cleanup_before(void)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_cleanup_before == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_cleanup_before();
+}
+
+static void _eaf_hook_cleanup_after(const eaf_hook_t* hook)
+{
+	if (hook == NULL || hook->on_cleanup_after == NULL)
+	{
+		return;
+	}
+	hook->on_cleanup_after();
+}
+
+static void _eaf_hook_service_init_before(uint32_t id)
+{
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_service_init_before != NULL)
+	{
+		g_eaf_ctx->hook->on_service_init_before(id);
+	}
+}
+
+static void _eaf_hook_service_init_after(uint32_t id, int ret)
+{
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_service_init_after != NULL)
+	{
+		g_eaf_ctx->hook->on_service_init_after(id, ret);
+	}
+}
+
+static void _eaf_hook_service_exit_before(uint32_t id)
+{
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_service_exit_before != NULL)
+	{
+		g_eaf_ctx->hook->on_service_exit_before(id);
+	}
+}
+
+static void _eaf_hook_service_exit_after(uint32_t id)
+{
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_service_exit_after != NULL)
+	{
+		g_eaf_ctx->hook->on_service_exit_after(id);
+	}
+}
+
 static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
 {
 	size_t i;
@@ -232,11 +283,11 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 }
 
 /**
-* @brief Set service state
-* @param[in,out] group		Service group
-* @param[in,out] service	Service
-* @param[in] state		State
-*/
+ * @brief Set service state
+ * @param[in,out] group		Service group
+ * @param[in,out] service	Service
+ * @param[in] state		State
+ */
 static void _eaf_service_set_state_nolock(eaf_group_t* group,
 	eaf_service_t* service, eaf_service_state_t state)
 {
@@ -286,84 +337,57 @@ static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* servi
 	eaf_compat_lock_leave(&group->objlock);
 }
 
-static int _eaf_hook_pre_msg_process(eaf_msgq_record_t* msg)
+/**
+ * @brief Reset yield branch
+ */
+static void _eaf_service_reset_yield_branch(eaf_service_t* service)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_msg_process == NULL)
-	{
-		return 0;
-	}
-
-	int ret;
-	if ((ret = g_eaf_ctx->hook->on_pre_msg_process(msg->data.from,
-		msg->data.to, &msg->data.msg->msg)) == 0)
-	{
-		return 0;
-	}
-
-	return ret;
-}
-
-static void _eaf_hook_post_msg_process(eaf_msgq_record_t* msg)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_msg_process == NULL)
-	{
-		return;
-	}
-
-	g_eaf_ctx->hook->on_post_msg_process(msg->data.from, msg->data.to, &msg->data.msg->msg);
-}
-
-static void _eaf_hook_post_yield(uint32_t service)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_yield == NULL)
-	{
-		return;
-	}
-	g_eaf_ctx->hook->on_post_yield(service);
-}
-
-static void _eaf_hook_post_resume(uint32_t service)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_post_resume == NULL)
-	{
-		return;
-	}
-	g_eaf_ctx->hook->on_post_resume(service);
-}
-
-static int _eaf_hook_pre_register(uint32_t id)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_register == NULL)
-	{
-		return 0;
-	}
-
-	return g_eaf_ctx->hook->on_pre_register(id);
-}
-
-static int _eaf_hook_on_pre_cleanup(void)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_pre_cleanup == NULL)
-	{
-		return 0;
-	}
-	return g_eaf_ctx->hook->on_pre_cleanup();
-}
-
-static void _eaf_hook_on_post_cleanup(const eaf_hook_t* hook)
-{
-	if (hook == NULL || hook->on_post_cleanup == NULL)
-	{
-		return;
-	}
-	hook->on_post_cleanup();
+	service->coroutine.local.branch = 0;
 }
 
 static void _eaf_service_reset(eaf_service_t* service)
 {
-	RESET_BRANCH(service);
+	_eaf_service_reset_yield_branch(service);
 	_eaf_service_destroy_msg_record(service->msgq.cur_msg);
 	service->msgq.cur_msg = NULL;
+}
+
+/**
+ * @brief Get current running service
+ */
+static eaf_service_t* _eaf_group_get_cur_run(eaf_group_t* group)
+{
+	return group->coroutine.cur_run;
+}
+
+/**
+ * @brief Set current running service
+ */
+static void _eaf_group_set_cur_run(eaf_group_t* group, eaf_service_t* service)
+{
+	group->coroutine.cur_run = service;
+}
+
+/**
+ * @brief Call user defined yield hook
+ */
+static void _eaf_group_call_yield_hook(eaf_group_t* group)
+{
+	if (group->coroutine.local.yield.hook == NULL)
+	{
+		return;
+	}
+
+	eaf_service_t* service = _eaf_group_get_cur_run(group);
+	group->coroutine.local.yield.hook(&service->coroutine.local, group->coroutine.local.yield.arg);
+}
+
+/**
+ * @brief Check control bit
+ */
+static int _eaf_group_check_cc0(eaf_group_t* group, uint32_t mask)
+{
+	return group->coroutine.local.cc[0] & mask;
 }
 
 static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* service)
@@ -387,15 +411,15 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 	}
 
 	/* yield */
-	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
-		CALL_YIELD_HOOK(group);
-		_eaf_hook_post_yield(service->coroutine.local.id);
+		_eaf_group_call_yield_hook(group);
+		_eaf_hook_service_yield(service->coroutine.local.id);
 		return;
 	}
 
-	_eaf_hook_post_msg_process(msg);
+	_eaf_hook_message_after(msg);
 
 	/* normal end, reset branch */
 	_eaf_service_reset(service);
@@ -433,7 +457,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 	}
 
 	/* hook: on_pre_msg_process */
-	if (_eaf_hook_pre_msg_process(service->msgq.cur_msg) < 0)
+	if (_eaf_hook_message_before(service->msgq.cur_msg) < 0)
 	{
 		_eaf_service_reset(service);
 		return;
@@ -459,20 +483,22 @@ static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_
 }
 
 /**
-* 继续进行初始化
-*/
+ * 继续进行初始化
+ */
 static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 {
+	/* No need to call #_eaf_hook_service_init_before() because it's alyready done */
 	int ret = service->entry->on_init();
 
 	/* 检查是否执行yield */
-	if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 	{/* 若init阶段进行了yield */
 		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
-		CALL_YIELD_HOOK(group);
+		_eaf_group_call_yield_hook(group);
 		return 0;
 	}
-	RESET_BRANCH(service);
+	_eaf_service_reset_yield_branch(service);
+	_eaf_hook_service_init_after(service->coroutine.local.id, ret);
 
 	/* 初始化失败时返回错误 */
 	if (ret < 0)
@@ -485,6 +511,14 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 	return 0;
 }
 
+/**
+ * @brief Clear control bits
+ */
+static void _eaf_group_clear_cc0(eaf_group_t* group)
+{
+	group->coroutine.local.cc[0] = 0;
+}
+
 static int _eaf_service_thread_loop(eaf_group_t* group)
 {
 	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
@@ -495,8 +529,8 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 	}
 	eaf_compat_sem_pend(&group->msgq.sem, 0);
 
-	CUR_RUN(group) = service;
-	CLEAR_CC0(group);
+	_eaf_group_set_cur_run(group, service);
+	_eaf_group_clear_cc0(group);
 
 	if (service->state == eaf_service_state_init0)
 	{
@@ -508,7 +542,7 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 }
 
 /**
-* 获取当前线程对应的服务组
+* @brief 获取当前线程对应的服务组
 * @return		服务组
 */
 static eaf_group_t* _eaf_get_current_group(void)
@@ -516,38 +550,48 @@ static eaf_group_t* _eaf_get_current_group(void)
 	return eaf_thread_storage_get(&g_eaf_ctx->tls);
 }
 
+/**
+ * Init this service group.
+ * @param [in] group	Service Group
+ * @param [out] idx		The index if failure
+ * @return				The number of service init, or -1 if failed
+ */
 static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 {
 	int counter = 0;
 	for (*idx = 0; *idx < group->service.size; *idx += 1)
 	{
-		CUR_RUN_SET_BY_IDX(group, *idx);
+		eaf_service_t* service = &group->service.table[*idx];
+		_eaf_group_set_cur_run(group, service);
 
-		if (CUR_RUN(group)->entry == NULL || CUR_RUN(group)->entry->on_init == NULL)
+		if (service->entry == NULL || service->entry->on_init == NULL)
 		{
 			continue;
 		}
 
-		CLEAR_CC0(group);
-		int ret = CUR_RUN(group)->entry->on_init();
+		_eaf_group_clear_cc0(group);
+
+		_eaf_hook_service_init_before(service->coroutine.local.id);
+		int ret = service->entry->on_init();
 
 		/* 检查是否执行yield */
-		if (CHECK_CC0(group, EAF_SERVICE_CC0_YIELD))
+		if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 		{/* 若init阶段进行了yield */
-			_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_init1);
+			_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
 
 			/* call user hook */
-			CALL_YIELD_HOOK(group);
+			_eaf_group_call_yield_hook(group);
 
 			/*
-			* need to consider it as init success,
-			* because if no service finish init process here, this thread will be exited.
-			*/
+			 * need to consider it as init success,
+			 * because if no service finish init process here, this thread will be exited.
+			 */
 			counter++;
 
 			continue;
 		}
-		CUR_RUN_RESET_BRANCH(group);
+		_eaf_service_reset_yield_branch(service);
+		_eaf_hook_service_init_after(service->coroutine.local.id, ret);
 
 		/* 若初始化失败则返回错误 */
 		if (ret < 0)
@@ -555,11 +599,36 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 			return -1;
 		}
 
-		_eaf_group_finish_service_init_lock(group, CUR_RUN(group));
+		_eaf_group_finish_service_init_lock(group, service);
 		counter++;
 	}
 
 	return counter;
+}
+
+/**
+ * @brief Exit group in reverse
+ * @param[in] group		Group
+ * @param[in] max_idx	The max idx. This index it self should not be exit
+ */
+static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
+{
+	assert(max_idx < INT_MAX);
+
+	int i;
+	for (i = (int)max_idx - 1; i >= 0; i--)
+	{
+		eaf_service_t* service = &group->service.table[i];
+		_eaf_group_set_cur_run(group, service);
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
+
+		if (service->entry != NULL && service->entry->on_exit != NULL)
+		{
+			_eaf_hook_service_exit_before(service->coroutine.local.id);
+			service->entry->on_exit();
+			_eaf_hook_service_exit_after(service->coroutine.local.id);
+		}
+	}
 }
 
 /**
@@ -568,7 +637,6 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 */
 static void _eaf_service_thread(void* arg)
 {
-	size_t i;
 	size_t init_idx = 0;
 	eaf_group_t* group = arg;
 
@@ -581,7 +649,7 @@ static void _eaf_service_thread(void* arg)
 	/* 等待就绪 */
 	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
 	{
-		eaf_compat_sem_pend(&group->msgq.sem, (unsigned)-1);
+		eaf_compat_sem_pend(&group->msgq.sem, (unsigned long)-1);
 	}
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -607,17 +675,7 @@ static void _eaf_service_thread(void* arg)
 	}
 
 cleanup:
-	for (i = 0; i < init_idx; i++)
-	{
-		CUR_RUN_SET_BY_IDX(group, i);
-		_eaf_service_set_state_lock(group, CUR_RUN(group), eaf_service_state_exit);
-
-		if (group->service.table[i].entry != NULL
-			&& group->service.table[i].entry->on_exit != NULL)
-		{
-			CUR_RUN(group)->entry->on_exit();
-		}
-	}
+	_eaf_group_exit(group, init_idx);
 }
 
 static void _eaf_cleanup_service(eaf_service_t* service)
@@ -717,17 +775,17 @@ static eaf_service_t* _eaf_get_current_service(eaf_group_t** group)
 	{
 		*group = ret;
 	}
-	return ret != NULL ? CUR_RUN(ret) : NULL;
+	return ret != NULL ? _eaf_group_get_cur_run(ret) : NULL;
 }
 
 static int _eaf_hook_dst_not_found(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_dst_not_found == NULL)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_dst_not_found == NULL)
 	{
 		return eaf_errno_notfound;
 	}
 
-	return g_eaf_ctx->hook->on_dst_not_found(from, to, msg);
+	return g_eaf_ctx->hook->on_message_dst_not_found(from, to, msg);
 }
 
 static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
@@ -938,11 +996,7 @@ int eaf_cleanup(void)
 		return eaf_errno_state;
 	}
 
-	int ret;
-	if ((ret = _eaf_hook_on_pre_cleanup()) < 0)
-	{
-		return ret;
-	}
+	_eaf_hook_cleanup_before();
 
 	/* change state */
 	g_eaf_ctx->state = eaf_ctx_state_exit;
@@ -962,7 +1016,7 @@ int eaf_cleanup(void)
 	EAF_FREE(g_eaf_ctx);
 	g_eaf_ctx = NULL;
 
-	_eaf_hook_on_post_cleanup(hook);
+	_eaf_hook_cleanup_after(hook);
 	return eaf_errno_success;
 }
 
@@ -999,7 +1053,7 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 	}
 
 	int ret;
-	if ((ret = _eaf_hook_pre_register(id)) < 0)
+	if ((ret = _eaf_hook_service_register(id)) < 0)
 	{
 		return ret;
 	}
@@ -1017,9 +1071,9 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 	}
 
 	/* hook callback */
-	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_msg_send != NULL)
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_message_send != NULL)
 	{
-		if ((ret = g_eaf_ctx->hook->on_msg_send(from, to, req)) != 0)
+		if ((ret = g_eaf_ctx->hook->on_message_send(from, to, req)) != 0)
 		{
 			return ret;
 		}
@@ -1037,9 +1091,9 @@ int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 	}
 
 	/* hook callback */
-	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_msg_send != NULL)
+	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_message_send != NULL)
 	{
-		if ((ret = g_eaf_ctx->hook->on_msg_send(from, to, rsp)) != 0)
+		if ((ret = g_eaf_ctx->hook->on_message_send(from, to, rsp)) != 0)
 		{
 			return ret;
 		}
@@ -1057,7 +1111,7 @@ int eaf_resume(_In_ uint32_t srv_id)
 		return eaf_errno_notfound;
 	}
 
-	_eaf_hook_post_resume(srv_id);
+	_eaf_hook_service_resume(srv_id);
 
 	int ret = eaf_errno_success;
 	eaf_compat_lock_enter(&group->objlock);

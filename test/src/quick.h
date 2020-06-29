@@ -32,7 +32,11 @@ typedef struct test_quick_cfg
 {
 	struct
 	{
-		eaf_message_table_t		msg_map[4];				/**< Each service has 4 messages */
+		struct
+		{
+			unsigned			enable : 1;
+		}ability;
+		eaf_msg_handle_fn		msg_map[4];				/**< Each service has 4 messages */
 		int						(*on_init)(void);		/**< Initialize callback */
 		void					(*on_exit)(void);		/**< Exit callback */
 	}entry[4];
