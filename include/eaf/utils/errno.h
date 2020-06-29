@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief All known EAF error codes.
@@ -36,7 +36,7 @@ typedef enum eaf_errno
  * @param err	error code
  * @return		description
  */
-const char* eaf_strerror(_In_ int err);
+EAF_API const char* eaf_strerror(_In_ int err);
 
 #ifdef __cplusplus
 }

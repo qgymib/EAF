@@ -11,7 +11,7 @@ extern "C" {
 #include "eaf/core/internal/service.h"
 #include "eaf/core/message.h"
 #include "eaf/infra/thread.h"
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief Coroutine body
@@ -215,7 +215,7 @@ typedef struct eaf_hook
  * @param[in] srv_id	Service ID
  * @return				#eaf_errno
  */
-int eaf_resume(_In_ uint32_t srv_id);
+EAF_API int eaf_resume(_In_ uint32_t srv_id);
 
 /**
  * @brief Setup EAF
@@ -231,7 +231,7 @@ int eaf_resume(_In_ uint32_t srv_id);
  * @param[in] size	The size of service group table
  * @return			#eaf_errno
  */
-int eaf_setup(_In_ const eaf_group_table_t* info /*static*/, _In_ size_t size);
+EAF_API int eaf_setup(_In_ const eaf_group_table_t* info /*static*/, _In_ size_t size);
 
 /**
  * @brief Load EAF.
@@ -244,7 +244,7 @@ int eaf_setup(_In_ const eaf_group_table_t* info /*static*/, _In_ size_t size);
  *
  * @return			#eaf_errno
  */
-int eaf_load(void);
+EAF_API int eaf_load(void);
 
 /**
  * @brief Tear down EAF.
@@ -254,7 +254,7 @@ int eaf_load(void);
  *
  * @return			#eaf_errno
  */
-int eaf_cleanup(void);
+EAF_API int eaf_cleanup(void);
 
 /**
  * @brief Register service
@@ -269,7 +269,7 @@ int eaf_cleanup(void);
  * @param[in] entry		Service entry. Must be globally accessible.
  * @return				#eaf_errno
  */
-int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
+EAF_API int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*static*/);
 
 /**
  * @brief Send request
@@ -278,7 +278,7 @@ int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* entry /*stat
  * @param[in,out] req	The request
  * @return				#eaf_errno
  */
-int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
+EAF_API int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
 
 /**
  * @brief Send response
@@ -287,7 +287,7 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
  * @param[in,out] rsp	The response
  * @return				#eaf_errno
  */
-int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
+EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
 
 /**
  * @brief Inject a system wide hook
@@ -295,13 +295,13 @@ int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
  * @param[in] size	sizeof(*hook)
  * @return			#eaf_errno
  */
-int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size);
+EAF_API int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size);
 
 /**
  * @brief Get caller's service id
  * @return			Service ID
  */
-uint32_t eaf_service_self(void);
+EAF_API uint32_t eaf_service_self(void);
 
 /**
  * @brief Get service state
@@ -310,7 +310,7 @@ uint32_t eaf_service_self(void);
  * @param[in] id	Service ID
  * @return			Service state
  */
-eaf_service_state_t eaf_service_get_state(_In_ uint32_t id);
+EAF_API eaf_service_state_t eaf_service_get_state(_In_ uint32_t id);
 
 #ifdef __cplusplus
 }

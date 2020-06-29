@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief Lock instance
@@ -28,25 +28,25 @@ typedef enum eaf_lock_attr
  * @param[in] attr	Attribute
  * @return			Lock handler
  */
-eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr);
+EAF_API eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr);
 
 /**
  * @brief Destroy a lock
  * @param[in,out] handler	the lock you want to destroy
  */
-void eaf_lock_destroy(_Post_invalid_ eaf_lock_t* handler);
+EAF_API void eaf_lock_destroy(_Post_invalid_ eaf_lock_t* handler);
 
 /**
  * @brief Enter critical section
  * @param[in,out] handler	The lock
  */
-void eaf_lock_enter(_Inout_ eaf_lock_t* handler);
+EAF_API void eaf_lock_enter(_Inout_ eaf_lock_t* handler);
 
 /**
  * @brief Leave critical section
  * @param[in,out] handler	The lock
  */
-void eaf_lock_leave(_Inout_ eaf_lock_t* handler);
+EAF_API void eaf_lock_leave(_Inout_ eaf_lock_t* handler);
 
 #ifdef __cplusplus
 }

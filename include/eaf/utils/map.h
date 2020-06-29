@@ -10,7 +10,7 @@ extern "C" {
 
 #include <stddef.h>
 #include "eaf/utils/map_low.h"
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief The node for map
@@ -50,7 +50,7 @@ typedef struct eaf_map
  * @param cmp		The compare function. Must not NULL
  * @param arg		User defined argument. Can be anything
  */
-void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp,
+EAF_API void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp,
 	_Inout_opt_ void* arg);
 
 /**
@@ -60,7 +60,7 @@ void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp,
  * @param node		The node
  * @return			0 if success, -1 otherwise
  */
-int eaf_map_insert(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* node);
+EAF_API int eaf_map_insert(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* node);
 
 /**
  * @brief Delete the node from the map.
@@ -68,14 +68,14 @@ int eaf_map_insert(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* node);
  * @param handler	The pointer to the map
  * @param node		The node
  */
-void eaf_map_erase(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* node);
+EAF_API void eaf_map_erase(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* node);
 
 /**
  * @brief Get the number of nodes in the map.
  * @param handler	The pointer to the map
  * @return			The number of nodes
  */
-size_t eaf_map_size(_In_ const eaf_map_t* handler);
+EAF_API size_t eaf_map_size(_In_ const eaf_map_t* handler);
 
 /**
  * @brief Finds element with specific key
@@ -83,7 +83,7 @@ size_t eaf_map_size(_In_ const eaf_map_t* handler);
  * @param key		The key
  * @return			An iterator point to the found node
  */
-eaf_map_node_t* eaf_map_find(_In_ const eaf_map_t* handler,
+EAF_API eaf_map_node_t* eaf_map_find(_In_ const eaf_map_t* handler,
 	_In_ const eaf_map_node_t* key);
 
 /**
@@ -92,7 +92,7 @@ eaf_map_node_t* eaf_map_find(_In_ const eaf_map_t* handler,
  * @param key		The key
  * @return			An iterator point to the found node
  */
-eaf_map_node_t* eaf_map_find_lower(_In_ const eaf_map_t* handler,
+EAF_API eaf_map_node_t* eaf_map_find_lower(_In_ const eaf_map_t* handler,
 	_In_ const eaf_map_node_t* key);
 
 /**
@@ -101,7 +101,7 @@ eaf_map_node_t* eaf_map_find_lower(_In_ const eaf_map_t* handler,
  * @param key		The key
  * @return			An iterator point to the found node
  */
-eaf_map_node_t* eaf_map_find_upper(_In_ const eaf_map_t* handler,
+EAF_API eaf_map_node_t* eaf_map_find_upper(_In_ const eaf_map_t* handler,
 	_In_ const eaf_map_node_t* key);
 
 /**
@@ -109,28 +109,28 @@ eaf_map_node_t* eaf_map_find_upper(_In_ const eaf_map_t* handler,
  * @param handler	The pointer to the map
  * @return			An iterator
  */
-eaf_map_node_t* eaf_map_begin(_In_ const eaf_map_t* handler);
+EAF_API eaf_map_node_t* eaf_map_begin(_In_ const eaf_map_t* handler);
 
 /**
  * @brief Returns an iterator to the end
  * @param handler	The pointer to the map
  * @return			An iterator
  */
-eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler);
+EAF_API eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler);
 
 /**
  * @brief Get an iterator next to the given one.
  * @param node		Current iterator
  * @return			Next iterator
  */
-eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node);
+EAF_API eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node);
 
 /**
  * @brief Get an iterator before the given one.
  * @param node		Current iterator
  * @return			Previous iterator
  */
-eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node);
+EAF_API eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node);
 
 #ifdef __cplusplus
 };

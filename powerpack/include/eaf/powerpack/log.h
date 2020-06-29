@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief Log: Trace

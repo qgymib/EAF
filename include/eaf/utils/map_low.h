@@ -12,7 +12,7 @@ extern "C" {
 #endif	/* __cplusplus */
 
 #include <stddef.h>
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief eaf_map_low initializer.
@@ -109,28 +109,28 @@ typedef struct eaf_map_low
  * @param root		The pointer to the map
  * @return			An iterator
  */
-eaf_map_low_node_t* eaf_map_low_first(_In_ const eaf_map_low_t* root);
+EAF_API eaf_map_low_node_t* eaf_map_low_first(_In_ const eaf_map_low_t* root);
 
 /**
  * @brief Returns an iterator to the end
  * @param root		The pointer to the map
  * @return			An iterator
  */
-eaf_map_low_node_t* eaf_map_low_last(_In_ const eaf_map_low_t* root);
+EAF_API eaf_map_low_node_t* eaf_map_low_last(_In_ const eaf_map_low_t* root);
 
 /**
  * @brief Get an iterator next to the given one.
  * @param node		Current iterator
  * @return			Next iterator
  */
-eaf_map_low_node_t* eaf_map_low_next(_In_ const eaf_map_low_node_t* node);
+EAF_API eaf_map_low_node_t* eaf_map_low_next(_In_ const eaf_map_low_node_t* node);
 
 /**
  * @brief Get an iterator before the given one.
  * @param node		Current iterator
  * @return			Previous iterator
  */
-eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node);
+EAF_API eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node);
 
 /**
  * @brief Inserting data into the tree.
@@ -145,7 +145,7 @@ eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node);
  * @param rb_link	Will be set to `node`
  * @see eaf_map_low_insert_color
  */
-void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
+EAF_API void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
 	_Inout_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link);
 
 /**
@@ -154,7 +154,7 @@ void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
  * @param root		The map
  * @see eaf_map_low_link_node
  */
-void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
+EAF_API void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
 	_Inout_ eaf_map_low_t* root);
 
 /**
@@ -163,7 +163,8 @@ void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
  * @param root		The pointer to the map
  * @param node		The node
  */
-void eaf_map_low_erase(_Inout_ eaf_map_low_t* root, _Inout_ eaf_map_low_node_t* node);
+EAF_API void eaf_map_low_erase(_Inout_ eaf_map_low_t* root,
+	_Inout_ eaf_map_low_node_t* node);
 
 #ifdef __cplusplus
 };

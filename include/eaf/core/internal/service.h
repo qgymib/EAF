@@ -8,7 +8,6 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-#include "eaf/utils/annotations.h"
 #include "eaf/utils/define.h"
 
 /**
@@ -118,7 +117,7 @@ typedef struct eaf_group_local
  * @param[out] local	A pointer to store group local storage
  * @return				Service local storage
  */
-eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
+EAF_API eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
 
 #ifdef __cplusplus
 }

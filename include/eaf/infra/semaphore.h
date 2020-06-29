@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief Semaphore instance
@@ -19,13 +19,13 @@ typedef struct eaf_sem eaf_sem_t;
  * @param[in] count	Initial count
  * @return			Semaphore handler
  */
-eaf_sem_t* eaf_sem_create(_In_ unsigned long count);
+EAF_API eaf_sem_t* eaf_sem_create(_In_ unsigned long count);
 
 /**
  * @brief Destroy a semaphore
  * @param[in] handler	Semaphore handler
  */
-void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler);
+EAF_API void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler);
 
 /**
  * @brief Decrements (locks) the semaphore pointed to by handler.
@@ -33,14 +33,14 @@ void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler);
  * @param[in] timeout	Timeout in milliseconds
  * @return				#eaf_errno
  */
-int eaf_sem_pend(_Inout_ eaf_sem_t* handler, _In_ unsigned long timeout);
+EAF_API int eaf_sem_pend(_Inout_ eaf_sem_t* handler, _In_ unsigned long timeout);
 
 /**
  * @brief Increments (unlocks) the semaphore pointed to by handler.
  * @param[in] handler	Semaphore handler
  * @return				#eaf_errno
  */
-int eaf_sem_post(_Inout_ eaf_sem_t* handler);
+EAF_API int eaf_sem_post(_Inout_ eaf_sem_t* handler);
 
 #ifdef __cplusplus
 }

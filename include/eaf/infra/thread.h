@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-#include "eaf/utils/annotations.h"
+#include "eaf/utils/define.h"
 
 /**
  * @brief Thread instance
