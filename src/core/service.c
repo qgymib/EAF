@@ -91,26 +91,6 @@
 		}\
 	} while (0)
 
-/**
- * @brief Service states
- *
- * INIT1
- *  /|\       |--------|
- *  \|/      \|/       |
- * INIT0 --> IDLE --> BUSY --> PEND
- *   |       \|/      /|\       |
- *   | ----> EXIT      |--------|
- */
-typedef enum eaf_service_state
-{
-	eaf_service_state_init0,					/**< Init0 */
-	eaf_service_state_init1,					/**< Init1 */
-	eaf_service_state_idle,						/**< No pending work */
-	eaf_service_state_busy,						/**< Busy */
-	eaf_service_state_pend,						/**< Wait for resume */
-	eaf_service_state_exit,						/**< Exit */
-}eaf_service_state_t;
-
 typedef enum eaf_ctx_state
 {
 	eaf_ctx_state_init,							/**< ³õÊ¼×´Ì¬ */
@@ -1148,4 +1128,19 @@ int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size)
 	}
 	g_eaf_ctx->hook = hook;
 	return eaf_errno_success;
+}
+
+eaf_service_state_t eaf_service_get_state(_In_ uint32_t id)
+{
+	eaf_service_t* service;
+	if (g_eaf_ctx == NULL)
+	{
+		return eaf_service_state_exit;
+	}
+
+	if ((service = _eaf_service_find_service(id, NULL)) == NULL)
+	{
+		return eaf_service_state_exit;
+	}
+	return service->state;
 }

@@ -1,6 +1,6 @@
 /** @file
-* EAF service defines.
-*/
+ * EAF service defines.
+ */
 #ifndef __EAF_CORE_SERVICE_H__
 #define __EAF_CORE_SERVICE_H__
 #ifdef __cplusplus
@@ -43,6 +43,26 @@ extern "C" {
  * @see eaf_resume
  */
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
+
+/**
+ * @brief Service states
+ *
+ * INIT1
+ *  /|\       |--------|
+ *  \|/      \|/       |
+ * INIT0 --> IDLE --> BUSY --> PEND
+ *   |       \|/      /|\       |
+ *   | ----> EXIT      |--------|
+ */
+typedef enum eaf_service_state
+{
+	eaf_service_state_init0,					/**< Init */
+	eaf_service_state_init1,					/**< Init but user yield */
+	eaf_service_state_idle,						/**< No pending work */
+	eaf_service_state_busy,						/**< Busy */
+	eaf_service_state_pend,						/**< Wait for resume */
+	eaf_service_state_exit,						/**< Exit */
+}eaf_service_state_t;
 
 /**
  * @brief Request table
@@ -270,18 +290,27 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
 int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
 
 /**
- * @brief Get caller's service id
- * @return			service id
- */
-uint32_t eaf_service_self(void);
-
-/**
  * @brief Inject a system wide hook
  * @param[in] hook	Hook, must be a global resource
  * @param[in] size	sizeof(*hook)
  * @return			#eaf_errno
  */
 int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size);
+
+/**
+ * @brief Get caller's service id
+ * @return			Service ID
+ */
+uint32_t eaf_service_self(void);
+
+/**
+ * @brief Get service state
+ * @note If EAF is not running or Service ID not found, #eaf_service_state_exit
+ *   is returned.
+ * @param[in] id	Service ID
+ * @return			Service state
+ */
+eaf_service_state_t eaf_service_get_state(_In_ uint32_t id);
 
 #ifdef __cplusplus
 }
