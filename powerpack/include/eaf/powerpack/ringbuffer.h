@@ -10,6 +10,9 @@ extern "C" {
 /**
  * @ingroup PowerPack
  * @defgroup PowerPack-RingBuffer RingBuffer
+ *
+ * This is a Multi-Producers Multi-Consumers ring buffer.
+ *
  * @{
  */
 
@@ -88,7 +91,7 @@ eaf_ringbuffer_token_t* eaf_ringbuffer_reserve(_Inout_ eaf_ringbuffer_t* handler
  * @brief Acquire a token for read.
  * @see eaf_ringbuffer_commit
  * @param[in,out] handler	The pointer to the ring buffer
- * @return					A token for read. This token must be commited by #eaf_ringbuffer_commit
+ * @return					A token for read. This token must be committed by #eaf_ringbuffer_commit
  */
 eaf_ringbuffer_token_t* eaf_ringbuffer_consume(_Inout_ eaf_ringbuffer_t* handler);
 
@@ -115,6 +118,10 @@ eaf_ringbuffer_token_t* eaf_ringbuffer_consume(_Inout_ eaf_ringbuffer_t* handler
  * > `CONSUMER_A` is able to discard `READ_A`, then next consumer will get
  * > `READ_A` which is older than `READ_B`. This condition must not happen.
  *
+ * @pre In the precondition, parameter `token' must be returned from either
+ *   #eaf_ringbuffer_consume or #eaf_ringbuffer_consume.
+ * @post In the postcondition, parameter `token' will be invalid to user if
+ *   return code is zero.
  * @param[in,out] handler	The pointer to the ring buffer
  * @param[in,out] token		The token going to be committed
  * @param[in] flags			#eaf_ringbuffer_flag
@@ -146,14 +153,18 @@ size_t eaf_ringbuffer_heap_cost(void);
 size_t eaf_ringbuffer_node_cost(_In_ size_t size);
 
 /**
- * @brief Traverse ring buffer
+ * @brief Get the begin node of ring buffer.
  * @param[in] handler	The ring buffer
- * @param[in] cb		User callback
- * @param[in,out] arg	User defined argument
- * @return				The amount of successful callback
+ * @return				The iterator
  */
-size_t eaf_ringbuffer_foreach(_In_ eaf_ringbuffer_t* handler,
-	_In_ int(*cb)(const eaf_ringbuffer_token_t* token, void* arg), _Inout_opt_ void* arg);
+eaf_ringbuffer_token_t* eaf_ringbuffer_begin(_In_ const eaf_ringbuffer_t* handler);
+
+/**
+ * @brief Get next token.
+ * @param[in] token		The ring buffer token
+ * @return				Next token
+ */
+eaf_ringbuffer_token_t* eaf_ringbuffer_next(_In_ const eaf_ringbuffer_token_t* token);
 
 /**
  * @}

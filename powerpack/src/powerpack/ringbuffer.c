@@ -564,19 +564,17 @@ size_t eaf_ringbuffer_count(eaf_ringbuffer_t* handler, eaf_ringbuffer_counter_t*
 	return handler->counter.committed + handler->counter.reading + handler->counter.writing;
 }
 
-size_t eaf_ringbuffer_foreach(eaf_ringbuffer_t* handler,
-	int(*cb)(const eaf_ringbuffer_token_t* token, void* arg), void* arg)
+eaf_ringbuffer_token_t* eaf_ringbuffer_begin(_In_ const eaf_ringbuffer_t* handler)
 {
-	size_t counter = 0;
-	ring_buffer_node_t* it = handler->node.TAIL;
-	for (; it != NULL; it = it->chain_time.p_newer)
-	{
-		if (cb(&it->token, arg) < 0)
-		{
-			break;
-		}
-		counter++;
-	}
+	return &(handler->node.TAIL->token);
+}
 
-	return counter;
+eaf_ringbuffer_token_t* eaf_ringbuffer_next(_In_ const eaf_ringbuffer_token_t* token)
+{
+	ring_buffer_node_t* node = EAF_CONTAINER_OF(token, ring_buffer_node_t, token);
+	if (node->chain_time.p_newer == NULL)
+	{
+		return NULL;
+	}
+	return &(node->chain_time.p_newer->token);
 }

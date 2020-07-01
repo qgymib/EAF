@@ -1131,17 +1131,6 @@ TEST_F(powerpack_ringbuffer, counter_full)
 	free(cache);
 }
 
-static int _powerpack_ringbuffer_foreach(const eaf_ringbuffer_token_t* token, void* arg)
-{
-	uint64_t* p_dat_ring = (uint64_t*)token->data;
-	uint64_t* p_dat_key = (uint64_t*)arg;
-
-	ASSERT_EQ_U64(*p_dat_key, *p_dat_ring);
-	*p_dat_key = *p_dat_key + 1;
-
-	return 0;
-}
-
 TEST_F(powerpack_ringbuffer, foreach)
 {
 	const size_t number_of_elements = 3;
@@ -1166,8 +1155,14 @@ TEST_F(powerpack_ringbuffer, foreach)
 
 	/* work through */
 	{
-		uint64_t tmp = 0;
-		ASSERT_EQ_SIZE(eaf_ringbuffer_foreach(rb, _powerpack_ringbuffer_foreach, &tmp), number_of_elements);
+		eaf_ringbuffer_token_t* token = eaf_ringbuffer_begin(rb);
+		ASSERT_NE_PTR(token, NULL);
+
+		for (i = 0; token != NULL; token = eaf_ringbuffer_next(token), i++)
+		{
+			ASSERT_EQ_U64(*(uint64_t*)token->data, i);
+		}
+		ASSERT_EQ_U32(i, number_of_elements);
 	}
 
 	free(cache);
