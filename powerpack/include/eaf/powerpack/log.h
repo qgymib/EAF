@@ -91,6 +91,14 @@ extern "C" {
 	eaf_log(eaf_log_level_fatal, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
 
 /**
+ * @brief Dump data as hex
+ * @param[in] data	A pointer to data
+ * @param[in] size	The size of data
+ */
+#define EAF_DUMP(data, size)	\
+	eaf_dump_data_pretty(#data, __FILE__, __FUNCTION__, __LINE__, data, size)
+
+/**
  * @private
  * @brief Log level
  */
@@ -118,6 +126,27 @@ typedef enum eaf_log_level
 void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	_In_ const char* func, _In_ int line, _In_ const char* mod,
 	_In_ const char* fmt, ...);
+
+/**
+ * @brief Dump hex data
+ * @param[in] data	The data pointer
+ * @param[in] size	The data size
+ * @param[in] width	The amount of bytes one line contains
+ */
+void eaf_dump_data(_In_ const void* data, _In_ size_t size, _In_ size_t width);
+
+/**
+ * @private
+ * @brief Dump hex data with extra info
+ * @param[in] name	The name of data
+ * @param[in] file	The file name
+ * @param[in] func	The function name
+ * @param[in] line	The line
+ * @param[in] data	The data
+ * @param[in] size	The data size
+ */
+void eaf_dump_data_pretty(_In_ const char* name, _In_ const char* file,
+	_In_ const char* func, _In_ int line, _In_ const void* data, _In_ size_t size);
 
 /**
  * @}
