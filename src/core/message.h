@@ -23,7 +23,7 @@ extern "C" {
  */
 #define EAF_MSG_IS_REQ(msg)	((msg)->info.dynamics.encs & EAF_MSG_ENCS_REQ)
 
-#define EAF_MSG_ENCS_REQ	(0x01 << 0x00)	/**< ENCS: REQ */
+#define EAF_MSG_ENCS_REQ	(0x01 << 15)	/**< ENCS: REQ */
 
 #if defined(_MSC_VER)
 #	pragma warning(push)

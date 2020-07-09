@@ -67,9 +67,10 @@ typedef struct eaf_msg
 			 *
 			 * bit     | usage
 			 * ------- | -----
-			 * 00      | Request or response
-			 * 01 - 31 | not used
-			 * 32 - 63 | receipt
+			 * 00 - 14 | receipt
+			 * 15 - 15 | Request or response
+			 * 16 - 31 | not used
+			 * 31 - 63 | token
 			 *
 			 * @warning User must NOT modify this field.
 			 */
@@ -155,7 +156,7 @@ EAF_API eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg)
  * @brief Set receipt
  * @note End-user should not use this function.
  * @param[in,out] msg	The message
- * @param[in] receipt	Receipt
+ * @param[in] receipt	#eaf_errno_t
  */
 EAF_API void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt)
 	EAF_ATTRIBUTE_NONNULL(1);
@@ -163,10 +164,24 @@ EAF_API void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt)
 /**
  * @brief Get receipt
  * @param[in] msg	The message
- * @return			Receipt
+ * @return			#eaf_errno_t
  */
 EAF_API int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg)
 	EAF_ATTRIBUTE_NONNULL(1);
+
+/**
+ * @brief Set token
+ * @param[in,out] msg	The message
+ * @param[in] token		User token
+ */
+EAF_API void eaf_msg_set_token(_Inout_ eaf_msg_t* msg, _In_ int token);
+
+/**
+ * @brief Get token
+ * @param[in] msg	The message
+ * @return			User token
+ */
+EAF_API int eaf_msg_get_token(_In_ const eaf_msg_t* msg);
 
 /**
  * @}

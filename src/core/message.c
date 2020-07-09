@@ -118,12 +118,24 @@ eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg)
 
 void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt)
 {
-	msg->info.dynamics.encs &= 0xFFFFFFFF;	// clear previous receipt
-	msg->info.dynamics.encs |= ((uint64_t)receipt) << 32;
+	receipt = receipt < 0 ? -receipt : receipt;
+
+	msg->info.dynamics.encs &= 0xFFFFFFFFFFFF8000ULL;	// clear previous receipt
+	msg->info.dynamics.encs |= receipt & 0x7FFF;
 }
 
 int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg)
 {
-	uint32_t receipt = msg->info.dynamics.encs >> 32;
-	return (int)receipt;
+	return -(int)(msg->info.dynamics.encs & 0x7FFF);
+}
+
+void eaf_msg_set_token(_Inout_ eaf_msg_t* msg, _In_ int token)
+{
+	msg->info.dynamics.encs &= 0xFFFFFFFF;	// clear previous token
+	msg->info.dynamics.encs |= (uint64_t)token << 32;
+}
+
+int eaf_msg_get_token(_In_ const eaf_msg_t* msg)
+{
+	return (int)(msg->info.dynamics.encs >> 32);
 }
