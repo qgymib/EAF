@@ -23,6 +23,7 @@ extern "C" {
 #include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 #include "eaf/powerpack/hash.h"
+#include "eaf/powerpack/iocp.h"
 #include "eaf/powerpack/log.h"
 #include "eaf/powerpack/message.h"
 #include "eaf/powerpack/monitor.h"

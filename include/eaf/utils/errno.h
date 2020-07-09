@@ -17,6 +17,7 @@ extern "C" {
 
 /**
  * @brief All known EAF error codes.
+ * @note The range of error: -32767 <= ERR <= 0
  */
 typedef enum eaf_errno
 {
