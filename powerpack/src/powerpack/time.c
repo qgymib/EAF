@@ -1,11 +1,64 @@
 #include "eaf/eaf.h"
 #include "time.h"
+#include "uv.h"
 
 #if defined(_MSC_VER)
 #include <Windows.h>
 #else
 #include <sys/time.h>
 #include <time.h>
+#endif
+
+#define USEC_IN_SEC		(1 * 1000 * 1000)
+
+#if defined(_MSC_VER)
+
+typedef struct time_getclocktime_static_ctx
+{
+	LARGE_INTEGER	offset;
+	double			frequencyToMicroseconds;
+	BOOL			usePerformanceCounter;
+}time_getclocktime_static_ctx_t;
+
+static time_getclocktime_static_ctx_t	g_getclocktime_ctx;
+
+static LARGE_INTEGER _time_get_file_time_offset(void)
+{
+	SYSTEMTIME s;
+	FILETIME f;
+	LARGE_INTEGER t;
+
+	s.wYear = 1970;
+	s.wMonth = 1;
+	s.wDay = 1;
+	s.wHour = 0;
+	s.wMinute = 0;
+	s.wSecond = 0;
+	s.wMilliseconds = 0;
+	SystemTimeToFileTime(&s, &f);
+	t.QuadPart = f.dwHighDateTime;
+	t.QuadPart <<= 32;
+	t.QuadPart |= f.dwLowDateTime;
+
+	return t;
+}
+
+static void _time_getclocktime_init_once(void)
+{
+	LARGE_INTEGER performanceFrequency;
+	g_getclocktime_ctx.usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
+	if (g_getclocktime_ctx.usePerformanceCounter)
+	{
+		QueryPerformanceCounter(&g_getclocktime_ctx.offset);
+		g_getclocktime_ctx.frequencyToMicroseconds = (double)performanceFrequency.QuadPart / 1000000.;
+	}
+	else
+	{
+		g_getclocktime_ctx.offset = _time_get_file_time_offset();
+		g_getclocktime_ctx.frequencyToMicroseconds = 10.;
+	}
+}
+
 #endif
 
 int eaf_gettimeofday(_Inout_ eaf_clock_time_t* tv)
@@ -97,4 +150,130 @@ int eaf_getsystemtime(_Inout_ eaf_calendar_time_t* tv)
 
 	return eaf_errno_success;
 #endif
+}
+
+int eaf_getclocktime(_Out_ eaf_clock_time_t* ts)
+{
+#if defined(_MSC_VER)
+
+	LARGE_INTEGER t;
+	FILETIME f;
+	double microseconds;
+	
+	static uv_once_t get_clocktime_once = UV_ONCE_INIT;
+	uv_once(&get_clocktime_once, _time_getclocktime_init_once);
+
+	if (g_getclocktime_ctx.usePerformanceCounter)
+	{
+		QueryPerformanceCounter(&t);
+	}
+	else
+	{
+		GetSystemTimeAsFileTime(&f);
+		t.QuadPart = f.dwHighDateTime;
+		t.QuadPart <<= 32;
+		t.QuadPart |= f.dwLowDateTime;
+	}
+
+	t.QuadPart -= g_getclocktime_ctx.offset.QuadPart;
+	microseconds = (double)t.QuadPart / g_getclocktime_ctx.frequencyToMicroseconds;
+	t.QuadPart = (LONGLONG)microseconds;
+	ts->tv_sec = t.QuadPart / 1000000;
+	ts->tv_usec = t.QuadPart % 1000000;
+	return 0;
+
+#else
+	struct timespec tmp_ts;
+	if (clock_gettime(CLOCK_MONOTONIC, &tmp_ts) < 0)
+	{
+		return -1;
+	}
+
+	ts->sec = tmp_ts.tv_sec;
+	ts->usec = tmp_ts.tv_nsec / 1000;
+	return 0;
+#endif
+}
+
+int eaf_clocktime_diff(_In_ const eaf_clock_time_t* t1,
+	_In_ const eaf_clock_time_t* t2, _Out_opt_ eaf_clock_time_t* diff)
+{
+	eaf_clock_time_t tmp_dif;
+	const eaf_clock_time_t* large_t = (t1->tv_sec > t2->tv_sec) ?
+	t1 : (t1->tv_sec < t2->tv_sec ? t2 : (t1->tv_usec > t2->tv_usec ? t1 : t2));
+	const eaf_clock_time_t* little_t = large_t == t1 ? t2 : t1;
+
+	tmp_dif.tv_sec = large_t->tv_sec - little_t->tv_sec;
+	if (large_t->tv_usec < little_t->tv_usec)
+	{
+		tmp_dif.tv_usec = little_t->tv_usec - large_t->tv_usec;
+		tmp_dif.tv_sec--;
+	}
+	else
+	{
+		tmp_dif.tv_usec = large_t->tv_usec - little_t->tv_usec;
+	}
+
+	if (diff != NULL)
+	{
+		*diff = tmp_dif;
+	}
+
+	if (tmp_dif.tv_sec == 0 && tmp_dif.tv_usec == 0)
+	{
+		return 0;
+	}
+	return t1 == little_t ? -1 : 1;
+}
+
+int eaf_clocktime_add(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
+{
+	/**
+	 * How to check overflow:
+	 * Consider two unsigned 32bits value: v1 and v2.
+	 * If (v1 + v2 < v1 || v1 + v2 < v2), then overflow happen.
+	 */
+
+	/* store result temporary */
+	eaf_clock_time_t tmp = *dst;
+
+	/* add seconds first */
+	tmp.tv_sec += src->tv_sec;
+	if (tmp.tv_sec < dst->tv_sec || tmp.tv_sec < src->tv_sec)
+	{// check overflow
+		return -1;
+	}
+
+	uint64_t extra_sec = 0;
+	/* format result microseconds */
+	while (tmp.tv_usec >= USEC_IN_SEC)
+	{
+		tmp.tv_usec -= USEC_IN_SEC;
+		extra_sec++;
+	}
+	/* format source microseconds */
+	uint32_t orig_usec = src->tv_usec;
+	while (orig_usec >= USEC_IN_SEC)
+	{
+		orig_usec -= USEC_IN_SEC;
+		extra_sec++;
+	}
+
+	/* now we can add microseconds */
+	tmp.tv_usec += orig_usec;
+	if (tmp.tv_usec >= USEC_IN_SEC)
+	{
+		extra_sec++;
+		tmp.tv_usec -= USEC_IN_SEC;
+	}
+
+	uint64_t orig_sec = tmp.tv_sec;
+	tmp.tv_sec += extra_sec;
+	if (tmp.tv_sec < orig_sec || tmp.tv_sec < extra_sec)
+	{// check overflow
+		return -1;
+	}
+
+	*dst = tmp;
+	return 0;
 }

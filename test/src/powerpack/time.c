@@ -25,3 +25,39 @@ TEST_F(powerpack_time, getsystemtime)
 	eaf_calendar_time_t tv;
 	ASSERT_EQ_D32(eaf_getsystemtime(&tv), 0);
 }
+
+TEST_F(powerpack_time, getclocktime)
+{
+	eaf_clock_time_t t1;
+	ASSERT_EQ_D32(eaf_getclocktime(&t1), 0);
+}
+
+TEST_F(powerpack_time, clocktime_diff)
+{
+	eaf_clock_time_t t1;
+	ASSERT_EQ_D32(eaf_getclocktime(&t1), 0);
+
+	ASSERT_EQ_D32(eaf_clocktime_diff(&t1, &t1, NULL), 0);
+
+	eaf_thread_sleep(10);
+
+	eaf_clock_time_t t2;
+	ASSERT_EQ_D32(eaf_getclocktime(&t2), 0);
+
+	eaf_clock_time_t dif;
+	ASSERT_LT_D32(eaf_clocktime_diff(&t1, &t2, &dif), 0);
+	ASSERT_GT_D32(eaf_clocktime_diff(&t2, &t1, &dif), 0);
+
+	ASSERT_NE_U64(dif.tv_sec, 0);
+	ASSERT_NE_U32(dif.tv_usec, 0);
+}
+
+TEST_F(powerpack_time, clocktime_add)
+{
+	eaf_clock_time_t t1 = { 1, 0 };
+	eaf_clock_time_t t2 = { 1, 0 };
+
+	ASSERT_EQ_D32(eaf_clocktime_add(&t1, &t2), 0);
+	ASSERT_EQ_U64(t1.tv_sec, 2);
+	ASSERT_EQ_U32(t1.tv_usec, 0);
+}
