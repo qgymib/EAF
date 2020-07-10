@@ -189,8 +189,8 @@ int eaf_getclocktime(_Out_ eaf_clock_time_t* ts)
 		return -1;
 	}
 
-	ts->sec = tmp_ts.tv_sec;
-	ts->usec = tmp_ts.tv_nsec / 1000;
+	ts->tv_sec = tmp_ts.tv_sec;
+	ts->tv_usec = tmp_ts.tv_nsec / 1000;
 	return 0;
 #endif
 }
