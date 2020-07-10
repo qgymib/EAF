@@ -35,3 +35,8 @@ unsigned long eaf_thread_id(void)
 {
 	return eaf_compat_thread_id();
 }
+
+EAF_API void eaf_thread_sleep(unsigned msec)
+{
+	eaf_compat_thread_sleep(msec);
+}

@@ -78,6 +78,12 @@ EAF_API void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler);
 EAF_API unsigned long eaf_thread_id(void);
 
 /**
+ * @brief Causes the calling thread to sleep for msec milliseconds.
+ * @param[in] msec	milliseconds
+ */
+EAF_API void eaf_thread_sleep(unsigned msec);
+
+/**
  * @}
  */
 
