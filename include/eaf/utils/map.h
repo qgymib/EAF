@@ -24,7 +24,7 @@ extern "C" {
  * @param[in] cmp	Compare function
  * @param[in] arg	Argument for compare function
  */
-#define EAF_MAP_INITIALIZER(cmp, arg)	((eaf_map_t){ EAF_MAP_LOW_INITIALIZER, { cmp, arg }, 0 })
+#define EAF_MAP_INITIALIZER(cmp, arg)	{ EAF_MAP_LOW_INITIALIZER, { cmp, arg }, 0 }
 
 /**
  * @brief Static initializer for #eaf_map_node_t

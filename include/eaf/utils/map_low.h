@@ -24,13 +24,13 @@ extern "C" {
  * @brief Static initializer for #eaf_map_low_t
  * @see eaf_map_low_t
  */
-#define EAF_MAP_LOW_INITIALIZER			((eaf_map_low_t){ NULL })
+#define EAF_MAP_LOW_INITIALIZER			{ NULL }
 
 /**
  * @brief Static initializer for #eaf_map_low_node_t
  * @see eaf_map_low_node_t
  */
-#define EAF_MAP_LOW_NODE_INITIALIZER	((eaf_map_low_node_t){ NULL, NULL, NULL })
+#define EAF_MAP_LOW_NODE_INITIALIZER	{ NULL, NULL, NULL }
 
 /**
  * @brief find helper
