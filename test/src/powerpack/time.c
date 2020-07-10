@@ -48,8 +48,7 @@ TEST_F(powerpack_time, clocktime_diff)
 	ASSERT_LT_D32(eaf_clocktime_diff(&t1, &t2, &dif), 0);
 	ASSERT_GT_D32(eaf_clocktime_diff(&t2, &t1, &dif), 0);
 
-	ASSERT_NE_U64(dif.tv_sec, 0);
-	ASSERT_NE_U32(dif.tv_usec, 0);
+	ASSERT_GT_U64(dif.tv_sec * 1000 * 1000 + dif.tv_usec, 0);
 }
 
 TEST_F(powerpack_time, clocktime_add)
