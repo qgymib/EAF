@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+#include "eaf/eaf.h"
+
 #define TEST_QUICK_S0		0xE0000000
 #define TEST_QUICK_S0_REQ1	(TEST_QUICK_S0 + 0x0001)
 #define TEST_QUICK_S0_REQ2	(TEST_QUICK_S0 + 0x0002)
