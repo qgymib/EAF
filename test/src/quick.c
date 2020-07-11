@@ -56,6 +56,7 @@ static test_template_ctx_t	g_test_quick_ctx = {
 		{ { TEST_QUICK_S2, 8 }, { TEST_QUICK_S3, 8 } },
 	},	/* service_table */
 };
+test_quick_cfg_t g_quick_cfg;
 
 static void _test_template_default_request(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
 {

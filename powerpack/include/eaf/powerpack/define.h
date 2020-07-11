@@ -29,6 +29,16 @@ extern "C" {
 #	define EAF_MSVC_POP_WARNNING()
 #endif
 
+/**
+ * @brief Prevent MSVC show warning `x'
+ * @param[in] x	Warning number
+ * @param[in] f	Code
+ */
+#define EAF_MSVC_WARNING_GUARD(x, f)	\
+	EAF_MSVC_PUSH_WARNNING(x)\
+	f\
+	EAF_MSVC_POP_WARNNING()
+
 #ifdef __cplusplus
 }
 #endif

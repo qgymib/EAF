@@ -70,6 +70,28 @@ extern "C" {
 	} while (0)
 
 /**
+ * @brief A macro to help create and send request
+ * @param[out] ret		A integer to store result
+ * @param[in] msg_id	Message ID
+ * @param[in] msg_size	The size of message
+ * @param[in] rsp_fn	The function for handle response
+ * @param[in] from		The sender Service ID
+ * @param[in] to		The receiver Service ID
+ * @param[in] code		The code to fill message
+ */
+#define EAF_SEND_REQUEST(ret, msg_id, msg_size, rsp_fn, from, to, code)	\
+	do {\
+		eaf_msg_t* _1 = eaf_msg_create_req(msg_id, msg_size, rsp_fn);\
+		if (_1 == NULL) {\
+			ret = eaf_errno_memory;\
+			break;\
+		}\
+		{ code };\
+		ret = eaf_send_req(from, to, _1);\
+		eaf_msg_dec_ref(_1);\
+	} while (0)
+
+/**
  * @brief Internal operation for #eaf_send_req_sync
  * @note This function should only for internal usage.
  * @see eaf_send_req_sync

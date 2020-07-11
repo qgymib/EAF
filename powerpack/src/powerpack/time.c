@@ -9,8 +9,6 @@
 #include <time.h>
 #endif
 
-#define USEC_IN_SEC		(1 * 1000 * 1000)
-
 #if defined(_MSC_VER)
 
 typedef struct time_getclocktime_static_ctx

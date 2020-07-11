@@ -2110,8 +2110,19 @@ size_t ctest_internal_parameterized_index(void)
 TEST_NORETURN
 void ctest_internal_assert_failure(void)
 {
-	ASSERT(g_test_ctx.runtime.cur_stage != stage_teardown);
-	longjmp(g_test_ctx2.jmpbuf, MASK_FAILURE);
+	if (g_test_ctx.info.tid != GET_TID())
+	{
+		/*
+		* If current thread is NOT the main thread, it is dangerous to jump back
+		* to caller stack, so we just abort the program.
+		*/
+		abort();
+	}
+	else
+	{
+		ASSERT(g_test_ctx.runtime.cur_stage != stage_teardown);
+		longjmp(g_test_ctx2.jmpbuf, MASK_FAILURE);
+	}
 }
 
 void ctest_skip_test(void)

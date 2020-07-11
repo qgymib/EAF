@@ -256,7 +256,7 @@ static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t
 			{
 				*group = g_eaf_ctx->group.table[i];
 			}
-			return service;
+			return service->entry != NULL ? service : NULL;
 		}
 	}
 
