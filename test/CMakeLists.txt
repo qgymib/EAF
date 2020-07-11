@@ -1,4 +1,4 @@
-set(TEST_BUILD_NAME etest)
+set(TEST_BUILD_NAME ctest)
 
 # test
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_TEST_C)
