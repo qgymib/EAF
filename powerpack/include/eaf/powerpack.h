@@ -20,6 +20,7 @@ extern "C" {
 #include "eaf/powerpack/ringbuffer.h"
 #include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
+#include "eaf/powerpack/watchdog.h"
 /**
  * @}
  */
