@@ -569,8 +569,15 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		eaf_service_t* service = &group->service.table[*idx];
 		_eaf_group_set_cur_run(group, service);
 
+		/*
+		 * If service is not available, remove it from ready list and set state
+		 * to #eaf_service_state_exit.
+		 */
 		if (service->entry == NULL || service->entry->on_init == NULL)
 		{
+			service->state = eaf_service_state_exit;
+			eaf_list_erase(&group->coroutine.busy_list, &service->coroutine.node);
+
 			continue;
 		}
 
