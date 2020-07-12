@@ -124,6 +124,11 @@ typedef struct eaf_ctx
 
 	struct
 	{
+		unsigned					init_failure : 1;
+	}mask;
+
+	struct
+	{
 		size_t						size;		/**< 服务组长度 */
 		eaf_group_t**				table;		/**< 服务组 */
 	}group;
@@ -659,6 +664,12 @@ static void _eaf_service_thread(void* arg)
 	/* 进行初始化 */
 	int init_count = _eaf_group_init(group, &init_idx);
 
+	/* Set failure flag if initialize failed */
+	if (init_count < 0)
+	{
+		g_eaf_ctx->mask.init_failure = 1;
+	}
+
 	/* 通告初始化完毕 */
 	eaf_compat_sem_post(&g_eaf_ctx->ready);
 
@@ -985,7 +996,7 @@ int eaf_load(void)
 		eaf_compat_sem_pend(&g_eaf_ctx->ready, (unsigned long)-1);
 	}
 
-	return eaf_errno_success;
+	return g_eaf_ctx->mask.init_failure ? eaf_errno_state : eaf_errno_success;
 }
 
 int eaf_cleanup(void)
