@@ -1,3 +1,4 @@
+#include <string.h>
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
 #include "quick.h"
