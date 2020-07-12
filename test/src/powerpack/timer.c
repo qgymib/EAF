@@ -25,7 +25,7 @@ static int _test_timer_on_init(void)
 	int ret;
 	EAF_SEND_REQUEST(ret, EAF_TIMER_MSG_DELAY_REQ, sizeof(eaf_timer_delay_req_t),
 		_test_timer_on_rsp, TEST_QUICK_S0, EAF_TIMER_ID, {
-			((eaf_timer_delay_req_t*)eaf_msg_get_data(_1, NULL))->msec = s_delay_timeout;
+			((eaf_timer_delay_req_t*)eaf_msg_get_data(_0, NULL))->msec = s_delay_timeout;
 		}
 	);
 	ASSERT_EQ_D32(ret, 0);

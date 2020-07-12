@@ -81,14 +81,14 @@ extern "C" {
  */
 #define EAF_SEND_REQUEST(ret, msg_id, msg_size, rsp_fn, from, to, code)	\
 	do {\
-		eaf_msg_t* _1 = eaf_msg_create_req(msg_id, msg_size, rsp_fn);\
-		if (_1 == NULL) {\
+		eaf_msg_t* _0 = eaf_msg_create_req(msg_id, msg_size, rsp_fn);\
+		if (_0 == NULL) {\
 			ret = eaf_errno_memory;\
 			break;\
 		}\
 		{ code };\
-		ret = eaf_send_req(from, to, _1);\
-		eaf_msg_dec_ref(_1);\
+		ret = eaf_send_req(from, to, _0);\
+		eaf_msg_dec_ref(_0);\
 	} while (0)
 
 /**
