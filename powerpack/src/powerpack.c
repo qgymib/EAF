@@ -35,7 +35,10 @@ static void _powerpack_thread(void* arg)
 	(void)arg;
 	while (g_powerpack_ctx->mask.looping)
 	{
-		uv_run(&g_powerpack_ctx->uv_loop, UV_RUN_DEFAULT);
+		while (uv_run(&g_powerpack_ctx->uv_loop, UV_RUN_DEFAULT) != 0)
+		{
+		}
+
 		eaf_sem_pend(g_powerpack_ctx->sem_loop, (unsigned long)-1);
 	}
 }
@@ -49,8 +52,6 @@ static void _powerpack_on_exit(void)
 {
 	/* stop thread */
 	g_powerpack_ctx->mask.looping = 0;
-	uv_stop(&g_powerpack_ctx->uv_loop);
-
 	eaf_sem_post(g_powerpack_ctx->sem_loop);
 
 	/* wait for thread exit */

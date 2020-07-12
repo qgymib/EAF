@@ -72,7 +72,7 @@ static void _timer_on_uv_timer_delay(uv_timer_t* handle)
 
 static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
 {
-	(void)to;
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
 	uint32_t msec = ((eaf_timer_delay_req_t*)eaf_msg_get_data(msg, NULL))->msec;
 
 	timer_record_t* record = malloc(sizeof(*record));
