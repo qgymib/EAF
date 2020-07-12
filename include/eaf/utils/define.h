@@ -63,6 +63,62 @@ extern "C" {
 	(((uintptr_t)(size) + ((uintptr_t)(align) - 1)) & ~((uintptr_t)(align) - 1))
 
 /**
+ * @brief Expand content
+ * @param[in] x	Code to expand
+ */
+#define EAF_EXPAND(x)			x
+
+/**
+ * @brief Join `a' and `b' as one token
+ * @param[in] a	Token `a'
+ * @param[in] b	Token `b'
+ */
+#define EAF_JOIN(a, b)			EAF_INTERNAL_JOIN(a, b)
+/**
+ * @internal
+ */
+#define EAF_INTERNAL_JOIN(a, b)	a##b
+
+/**
+ * @def EAF_COUNT_ARG
+ * @brief Count the number of arguments in macro
+ */
+#ifdef _MSC_VER // Microsoft compilers
+#   define EAF_COUNT_ARG(...)  EAF_INTERNAL_EXPAND_ARGS_PRIVATE(EAF_INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
+#   define EAF_INTERNAL_ARGS_AUGMENTER(...) unused, __VA_ARGS__
+#   define EAF_INTERNAL_EXPAND_ARGS_PRIVATE(...) EAF_EXPAND(EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+#   define EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
+#else // Non-Microsoft compilers
+#   define EAF_COUNT_ARG(...) EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(0, ## __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#   define EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(_0, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
+#endif
+
+/**
+ * @brief Suppress unused variable warning
+ * @param[in] ...	argument list
+ */
+#define EAF_SUPPRESS_UNUSED_VARIABLE(...)	\
+	EAF_EXPAND(EAF_JOIN(EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_, EAF_COUNT_ARG(__VA_ARGS__))(__VA_ARGS__))
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_1(_0)	\
+	(void)_0
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_2(_0, _1)	\
+	(void)_0; (void)_1
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_3(_0, _1, _2)	\
+	(void)_0; (void)_1; (void)_2
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_4(_0, _1, _2, _3)	\
+	(void)_0; (void)_1; (void)_2; (void)_3
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_5(_0, _1, _2, _3, _4)	\
+	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_6(_0, _1, _2, _3, _4, _5)	\
+	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_7(_0, _1, _2, _3, _4, _5, _6)	\
+	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5; (void)_6
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_8(_0, _1, _2, _3, _4, _5, _6, _7)	\
+	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5; (void)_6; (void)_7
+#define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_9(_0, _1, _2, _3, _4, _5, _6, _7, _8)	\
+	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5; (void)_6; (void)_7; (void)_8
+
+/**
  * @internal
  * SAL provides a set of annotations to describe how a function uses
  * its parameters - the assumptions it makes about them, and the guarantees it
