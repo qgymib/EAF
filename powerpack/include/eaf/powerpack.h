@@ -9,6 +9,14 @@ extern "C" {
 
 /**
  * @defgroup PowerPack PowerPack
+ * Some of PowerPack's modules are actually services, they do have Service ID.
+ * These Service IDs are listed here:
+ *
+ * Module          | Service ID
+ * --------------- | ----------
+ * EAF_TIMER_ID    | 0x00010000
+ * EAF_WATCHDOG_ID | 0x00020000
+ *
  * @{
  */
 #include "eaf/eaf.h"
