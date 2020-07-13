@@ -86,10 +86,8 @@ void eaf_message_exit(void)
 void eaf_message_internal_proxy(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg)
 {
 	int ret;
-	uint32_t id_from = local->unsafe[0].ww.w1;
-	uint32_t id_to = local->unsafe[0].ww.w2;
+	uint32_t id_to = local->unsafe[0].ww.w1;
 	eaf_msg_t* orig_req = (eaf_msg_t*)arg;
-	assert(local->id == id_from);
 
 	/* save uuid as Service Local Information */
 	local->unsafe[0].v_uint64 = orig_req->info.constant.uuid;
@@ -99,7 +97,7 @@ void eaf_message_internal_proxy(_Inout_ eaf_service_local_t* local, _Inout_opt_ 
 	record->data.uuid = orig_req->info.constant.uuid;
 	record->data.orig_req = orig_req;
 	record->data.orig_rsp = NULL;
-	record->data.orig_from = id_from;
+	record->data.orig_from = local->id;
 	record->data.ret = eaf_errno_success;
 
 	eaf_lock_enter(g_pp_message_ctx.objlock);
@@ -126,7 +124,7 @@ err_send_req:
 	}
 	eaf_lock_leave(g_pp_message_ctx.objlock);
 	/* wake up service */
-	eaf_resume(id_from);
+	eaf_resume(local->id);
 }
 
 void eaf_message_internal_response_handler(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg)

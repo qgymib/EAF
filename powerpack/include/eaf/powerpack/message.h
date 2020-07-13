@@ -55,14 +55,13 @@ extern "C" {
  * @warning `_0' is only valid in `code_serialize', `_1' is only valid in
  *   `code_deserialize'.
  * @param[out] ret				The result
+ * @param[in] to				Who receive this message
  * @param[in] msg_id			Request Message ID
  * @param[in] msg_size			The size of request message
- * @param[in] from				Who send this message
- * @param[in] to				Who receive this message
  * @param[in] code_serialize	Code to fill request
  * @param[in] code_deserialize	Code to parse response
  */
-#define EAF_MESSAGE_CALL_FILBER(ret, msg_id, msg_size, from, to, code_serialize, code_deserialize)	\
+#define EAF_MESSAGE_CALL_FILBER(ret, to, msg_id, msg_size, code_serialize, code_deserialize)	\
 	do {\
 		eaf_msg_t* _0 = eaf_msg_create_req(msg_id, msg_size, eaf_message_internal_response_handler);\
 		if (_0 == NULL) {\
@@ -70,8 +69,7 @@ extern "C" {
 			break;\
 		}\
 		{ code_serialize };\
-		_eaf_local->unsafe[0].ww.w1 = from;\
-		_eaf_local->unsafe[0].ww.w2 = to;\
+		_eaf_local->unsafe[0].ww.w1 = to;\
 		eaf_yield_ext(eaf_message_internal_proxy, _0); _0 = NULL;\
 		eaf_msg_t* _1;\
 		if ((ret = eaf_message_internal_finalize(_eaf_local->unsafe[0].v_uint64, &_1)) < 0) {\

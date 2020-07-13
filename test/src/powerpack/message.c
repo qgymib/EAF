@@ -15,7 +15,7 @@ static int _test_powerpack_message_s1_on_init(void)
 	eaf_reenter
 	{
 		int ret;
-		EAF_MESSAGE_CALL_FILBER(ret, TEST_SERVICE_S2_REQ, sizeof(int), TEST_SERVICE_S1, TEST_SERVICE_S2,
+		EAF_MESSAGE_CALL_FILBER(ret, TEST_SERVICE_S2, TEST_SERVICE_S2_REQ, sizeof(int),
 			{
 				*(int*)eaf_msg_get_data(_0, NULL) = 100;
 			},
