@@ -15,16 +15,23 @@ typedef struct timer_record
 		eaf_msg_t*				req;			/**< original request */
 		uint32_t				from;
 	}data;
+
+	struct
+	{
+		unsigned				dead : 1;
+	}mask;
 }timer_record_t;
 
 typedef struct timer_ctx
 {
 	eaf_lock_t*					objlock;		/**< global lock */
 	eaf_list_t					delay_queue;	/**< Delay queue */
+	eaf_list_t					recycle_queue;	/**< Recycel queue*/
 }timer_ctx_t;
 
 static timer_ctx_t	g_timer_ctx = {
 	NULL,
+	EAF_LIST_INITIALIZER,
 	EAF_LIST_INITIALIZER,
 };
 
@@ -43,31 +50,46 @@ static void _timer_on_close_uv_timer(uv_handle_t* handle)
 {
 	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
 	eaf_msg_dec_ref(record->data.req);
+
+	/* remove recycel record */
+	eaf_lock_enter(g_timer_ctx.objlock);
+	{
+		eaf_list_erase(&g_timer_ctx.recycle_queue, &record->node);
+	}
+	eaf_lock_leave(g_timer_ctx.objlock);
+
 	free(record);
 }
 
-static void _timer_close_record(timer_record_t* record, int erase)
+static void _timer_on_uv_timer_active(uv_timer_t* handle)
 {
-	if (erase)
-	{
-		eaf_lock_enter(g_timer_ctx.objlock);
-		{
-			eaf_list_erase(&g_timer_ctx.delay_queue, &record->node);
-		}
-		eaf_lock_leave(g_timer_ctx.objlock);
-	}
-
-	uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
-}
-
-static void _timer_on_uv_timer_delay(uv_timer_t* handle)
-{
+	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
 	uv_timer_stop(handle);
 
-	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
+	int ret = 0;
+	eaf_lock_enter(g_timer_ctx.objlock);
+	do 
+	{
+		/* avoid multi-thread destroy */
+		if (record->mask.dead)
+		{
+			ret = -1;
+			break;
+		}
+		record->mask.dead = 1;
+
+		eaf_list_erase(&g_timer_ctx.delay_queue, &record->node);
+		eaf_list_push_back(&g_timer_ctx.recycle_queue, &record->node);
+	} EAF_MSVC_WARNING_GUARD(4127, while(0));
+	eaf_lock_leave(g_timer_ctx.objlock);
+
+	if (ret < 0)
+	{
+		return;
+	}
 
 	_timer_send_delay_rsp(record->data.from, record->data.req, eaf_errno_success);
-	_timer_close_record(record, 1);
+	uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
 }
 
 static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
@@ -83,6 +105,7 @@ static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ st
 	{
 		goto err_init_timer;
 	}
+	record->mask.dead = 0;
 	record->data.from = from;
 	record->data.req = msg;
 	eaf_msg_add_ref(msg);
@@ -91,7 +114,7 @@ static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ st
 	eaf_list_push_back(&g_timer_ctx.delay_queue, &record->node);
 
 	/* start timer */
-	if (uv_timer_start(&record->data.uv_timer, _timer_on_uv_timer_delay, msec, 0) < 0)
+	if (uv_timer_start(&record->data.uv_timer, _timer_on_uv_timer_active, msec, 0) < 0)
 	{
 		goto err_start_timer;
 	}
@@ -102,7 +125,16 @@ static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ st
 err_start_timer:
 	/* remove record */
 	_timer_send_delay_rsp(from, msg, eaf_errno_unknown);
-	_timer_close_record(record, 1);
+
+	eaf_lock_enter(g_timer_ctx.objlock);
+	{
+		eaf_list_erase(&g_timer_ctx.delay_queue, &record->node);
+		eaf_list_push_back(&g_timer_ctx.recycle_queue, &record->node);
+		record->mask.dead = 1;
+	}
+	eaf_lock_leave(g_timer_ctx.objlock);
+
+	uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
 	return;
 
 err_init_timer:
@@ -120,11 +152,17 @@ static void _timer_on_exit(void)
 {
 	eaf_list_node_t* it;
 
+	/* close pending request */
 	eaf_lock_enter(g_timer_ctx.objlock);
 	while ((it = eaf_list_pop_front(&g_timer_ctx.delay_queue)) != NULL)
 	{
 		timer_record_t* record = EAF_CONTAINER_OF(it, timer_record_t, node);
-		_timer_close_record(record, 0);
+
+		eaf_list_push_back(&g_timer_ctx.recycle_queue, it);
+		record->mask.dead = 1;
+
+		_timer_send_delay_rsp(record->data.from, record->data.req, eaf_errno_state);
+		uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
 	}
 	eaf_lock_leave(g_timer_ctx.objlock);
 }
@@ -160,6 +198,19 @@ void eaf_timer_exit(void)
 		return;
 	}
 
+	/* wait for all record closed */
+	eaf_lock_enter(g_timer_ctx.objlock);
+	while (eaf_list_size(&g_timer_ctx.recycle_queue) != 0)
+	{
+		eaf_lock_leave(g_timer_ctx.objlock);
+		{
+			eaf_thread_sleep(10);
+		}
+		eaf_lock_enter(g_timer_ctx.objlock);
+	}
+	eaf_lock_leave(g_timer_ctx.objlock);
+
+	/* cleanup resource */
 	eaf_lock_destroy(g_timer_ctx.objlock);
 	g_timer_ctx.objlock = NULL;
 }
