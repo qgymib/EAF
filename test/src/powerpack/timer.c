@@ -57,7 +57,7 @@ TEST_FIXTURE_SETUP(powerpack_timer)
 
 	ASSERT_EQ_D32(eaf_setup(group_table, EAF_ARRAY_SIZE(group_table)), 0);
 
-	eaf_powerpack_cfg_t pp_cfg = { TEST_QUICK_S1, EAF_THREAD_ATTR_INITIALIZER };
+	eaf_powerpack_cfg_t pp_cfg = { EAF_THREAD_ATTR_INITIALIZER };
 	ASSERT_EQ_D32(eaf_powerpack_init(&pp_cfg), 0);
 	ASSERT_EQ_D32(eaf_timer_init(), 0);
 

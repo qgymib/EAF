@@ -13,7 +13,6 @@ typedef struct powerpack_init_item
 
 typedef struct powerpack_ctx
 {
-	uint32_t		service_id;		/** working service id */
 	uv_loop_t		uv_loop;		/** uv loop */
 	eaf_thread_t*	working;		/** working thread */
 	eaf_sem_t*		sem_loop;		/** loop sem */
@@ -26,7 +25,6 @@ typedef struct powerpack_ctx
 
 static powerpack_ctx_t* g_powerpack_ctx = NULL;
 static powerpack_init_item_t g_powerpack_table[] = {
-	{ eaf_powerpack_message_init,	eaf_powerpack_message_exit },
 	{ eaf_powerpack_net_init,		eaf_powerpack_net_exit },
 };
 
@@ -43,22 +41,6 @@ static void _powerpack_thread(void* arg)
 	}
 }
 
-static int _powerpack_on_init(void)
-{
-	return 0;
-}
-
-static void _powerpack_on_exit(void)
-{
-	/* stop thread */
-	g_powerpack_ctx->mask.looping = 0;
-	eaf_sem_post(g_powerpack_ctx->sem_loop);
-
-	/* wait for thread exit */
-	eaf_thread_destroy(g_powerpack_ctx->working);
-	g_powerpack_ctx->working = NULL;
-}
-
 int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 {
 	int ret = eaf_errno_success;
@@ -72,7 +54,6 @@ int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 		return eaf_errno_memory;
 	}
 	g_powerpack_ctx->mask.looping = 1;
-	g_powerpack_ctx->service_id = cfg->service_id;
 	if ((g_powerpack_ctx->sem_loop = eaf_sem_create(0)) == NULL)
 	{
 		goto err_free;
@@ -83,12 +64,6 @@ int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 	{
 		ret = eaf_errno_unknown;
 		goto err_free;
-	}
-
-	static eaf_entrypoint_t service_info = { 0, NULL, _powerpack_on_init, _powerpack_on_exit };
-	if ((ret = eaf_register(cfg->service_id, &service_info)) < 0)
-	{
-		goto err_close;
 	}
 
 	size_t i;
@@ -114,7 +89,6 @@ err_init:
 	{
 		g_powerpack_table[i].on_exit();
 	}
-err_close:
 	uv_loop_close(&g_powerpack_ctx->uv_loop);
 err_free:
 	if (g_powerpack_ctx->sem_loop != NULL)
@@ -134,11 +108,11 @@ void eaf_powerpack_exit(void)
 		return;
 	}
 
-	if (g_powerpack_ctx->working != NULL)
-	{
-		eaf_thread_destroy(g_powerpack_ctx->working);
-		g_powerpack_ctx->working = NULL;
-	}
+	/* stop thread */
+	g_powerpack_ctx->mask.looping = 0;
+	eaf_sem_post(g_powerpack_ctx->sem_loop);
+	eaf_thread_destroy(g_powerpack_ctx->working);
+	g_powerpack_ctx->working = NULL;
 
 	size_t i;
 	for (i = 0; i < EAF_ARRAY_SIZE(g_powerpack_table); i++)
@@ -166,9 +140,4 @@ uv_loop_t* eaf_uv_get(void)
 void eaf_uv_mod(void)
 {
 	eaf_sem_post(g_powerpack_ctx->sem_loop);
-}
-
-uint32_t powerpack_get_service_id(void)
-{
-	return g_powerpack_ctx->service_id;
 }

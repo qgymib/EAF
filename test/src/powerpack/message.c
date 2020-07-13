@@ -10,47 +10,37 @@
 #	pragma warning(disable : 4127)
 #endif
 
-#define TEST_SERVICE_S1			0x00010000
+#define TEST_SERVICE_S1			0xF0010000
 
-#define TEST_SERVICE_S2			0x00020000
+#define TEST_SERVICE_S2			0xF0020000
 #define TEST_SERVICE_S2_REQ		(TEST_SERVICE_S2 + 0x0001)
 
-#define TEST_SERVICE_SS			0x11110000
-
-static int			s_powerpack_message_val_req_exp;
-static int			s_powerpack_message_val_rsp_exp;
-static int			s_powerpack_message_val_rsp_rel;
-static eaf_sem_t*	s_powerpack_message_sem;
+static eaf_sem_t* s_test_pp_message_sem;
+static int s_test_pp_message_rsp;
 
 static int _test_powerpack_message_s1_on_init(void)
 {
 	eaf_reenter
 	{
 		int ret;
-		eaf_msg_call(ret, &s_powerpack_message_val_rsp_rel,
-			TEST_SERVICE_S2, TEST_SERVICE_S2_REQ, int, s_powerpack_message_val_req_exp);
+		EAF_MESSAGE_CALL_FILBER(ret, TEST_SERVICE_S2_REQ, sizeof(int), TEST_SERVICE_S1, TEST_SERVICE_S2,
+			{
+				*(int*)eaf_msg_get_data(_0, NULL) = 100;
+			},
+			{
+				s_test_pp_message_rsp = *(int*)eaf_msg_get_data(_1, NULL);
+			}
+		);
 
-		ASSERT(ret == 0);
-		ASSERT(eaf_sem_post(s_powerpack_message_sem) == 0);
+		ASSERT_EQ_D32(ret, 0, "error:%s(%d)", eaf_strerror(_a), _a);
+		ASSERT_EQ_D32(eaf_sem_post(s_test_pp_message_sem), 0);
 	};
 
 	return 0;
 }
 
-static void _test_powerpack_message_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
+static void _test_powerpack_message_s1_on_exit(void)
 {
-	(void)from; (void)to;
-	int val_req = *(int*)eaf_msg_get_data(req, NULL);
-	ASSERT(val_req == s_powerpack_message_val_req_exp);
-
-	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));
-	ASSERT(rsp != NULL);
-
-	*(int*)eaf_msg_get_data(rsp, NULL) = s_powerpack_message_val_rsp_exp;
-
-	int ret = eaf_send_rsp(TEST_SERVICE_S2, req->from, rsp);
-	ASSERT(ret == 0);
-	eaf_msg_dec_ref(rsp);
 }
 
 static int _test_powerpack_message_s2_on_init(void)
@@ -58,22 +48,33 @@ static int _test_powerpack_message_s2_on_init(void)
 	return 0;
 }
 
-static void _test_powerpack_message_on_exit(void)
+static void _test_powerpack_message_s2_on_exit(void)
 {
+}
+
+static void _test_powerpack_message_s2_on_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+	int val = *(int*)eaf_msg_get_data(msg, NULL);
+
+	eaf_msg_t* rsp = eaf_msg_create_rsp(msg, sizeof(int));
+	ASSERT_NE_PTR(rsp, NULL);
+
+	*(int*)eaf_msg_get_data(rsp, NULL) = val * 2;
+	ASSERT_EQ_D32(eaf_send_rsp(TEST_SERVICE_S2, from, rsp), 0);
+	eaf_msg_dec_ref(rsp);
 }
 
 TEST_FIXTURE_SETUP(powerpack_message)
 {
-	s_powerpack_message_val_req_exp = 33;
-	s_powerpack_message_val_rsp_exp = 66;
-	s_powerpack_message_val_rsp_rel = 99;
-	ASSERT_NE_PTR(s_powerpack_message_sem = eaf_sem_create(0), NULL);
+	s_test_pp_message_rsp = 0;
+	ASSERT_NE_PTR(s_test_pp_message_sem = eaf_sem_create(0), NULL);
 
 	/* 配置EAF */
 	static eaf_service_table_t service_table_1[] = {
 		{ TEST_SERVICE_S1, 8 },
 		{ TEST_SERVICE_S2, 8 },
-		{ TEST_SERVICE_SS, 8 },
+		{ EAF_MESSAGE_ID, 8 },
 	};
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
@@ -84,7 +85,7 @@ TEST_FIXTURE_SETUP(powerpack_message)
 	static eaf_entrypoint_t s1_info = {
 		0, NULL,
 		_test_powerpack_message_s1_on_init,
-		_test_powerpack_message_on_exit,
+		_test_powerpack_message_s1_on_exit,
 	};
 	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
 
@@ -95,14 +96,13 @@ TEST_FIXTURE_SETUP(powerpack_message)
 	static eaf_entrypoint_t s2_info = {
 		EAF_ARRAY_SIZE(s2_msg), s2_msg,
 		_test_powerpack_message_s2_on_init,
-		_test_powerpack_message_on_exit,
+		_test_powerpack_message_s2_on_exit,
 	};
 	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
 
-	eaf_powerpack_cfg_t powerpack_cfg;
-	memset(&powerpack_cfg, 0, sizeof(powerpack_cfg));
-	powerpack_cfg.service_id = TEST_SERVICE_SS;
+	eaf_powerpack_cfg_t powerpack_cfg = { EAF_THREAD_ATTR_INITIALIZER };
 	ASSERT_EQ_D32(eaf_powerpack_init(&powerpack_cfg), 0);
+	ASSERT_EQ_D32(eaf_message_init(), 0);
 
 	/* 加载EAF */
 	ASSERT_EQ_D32(eaf_load(), 0);
@@ -112,13 +112,14 @@ TEST_FIXTURE_TEAREDOWN(powerpack_message)
 {
 	/* 退出并清理 */
 	ASSERT_EQ_D32(eaf_cleanup(), 0);
+	eaf_message_exit();
 	eaf_powerpack_exit();
 
-	eaf_sem_destroy(s_powerpack_message_sem);
+	eaf_sem_destroy(s_test_pp_message_sem);
 }
 
 TEST_F(powerpack_message, send_req)
 {
-	ASSERT_EQ_D32(eaf_sem_pend(s_powerpack_message_sem, (unsigned long)-1), 0);
-	ASSERT_EQ_D32(s_powerpack_message_val_rsp_rel, s_powerpack_message_val_rsp_exp);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_pp_message_sem, 1000), 0);
+	ASSERT_EQ_D32(s_test_pp_message_rsp, 200);
 }

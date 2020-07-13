@@ -16,6 +16,11 @@ extern "C" {
 #include "eaf/utils/define.h"
 
 /**
+ * @brief Infinite timeout
+ */
+#define EAF_SEM_INFINITY	((unsigned long)-1)
+
+/**
  * @brief Semaphore instance
  */
 typedef struct eaf_sem eaf_sem_t;

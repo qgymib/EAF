@@ -16,6 +16,7 @@ extern "C" {
  * --------------- | ----------
  * EAF_TIMER_ID    | 0x00010000
  * EAF_WATCHDOG_ID | 0x00020000
+ * EAF_MESSAGE_ID  | 0x00030000
  *
  * @{
  */
@@ -38,7 +39,6 @@ extern "C" {
  */
 typedef struct eaf_powerpack_cfg
 {
-	uint32_t			service_id;	/**< powerpack need a empty service to attach */
 	eaf_thread_attr_t	unistd;		/**< thread configure for unistd */
 }eaf_powerpack_cfg_t;
 
