@@ -162,24 +162,24 @@ typedef struct eaf_hook
 	 * @brief Hook a service just enter yield state.
 	 * @see eaf_yield
 	 * @see eaf_yield_ext()
-	 * @param[in] srv_id	Service ID
+	 * @param[in] id	Service ID
 	 */
-	void(*on_service_yield)(_In_ uint32_t srv_id);
+	void(*on_service_yield)(_In_ uint32_t id);
 
 	/**
 	 * @brief Hook a service will leave yield state.
 	 * @see eaf_resume()
-	 * @param[in] srv_id	Service ID
+	 * @param[in] id	Service ID
 	 */
-	void(*on_service_resume)(_In_ uint32_t srv_id);
+	void(*on_service_resume)(_In_ uint32_t id);
 
 	/**
 	 * @brief Hook a service is going to register
 	 * @see eaf_register()
-	 * @param[in] srv_id	Service ID
+	 * @param[in] id	Service ID
 	 * @return				#eaf_errno
 	 */
-	int(*on_service_register)(_In_ uint32_t srv_id);
+	int(*on_service_register)(_In_ uint32_t id);
 
 	/**
 	 * @brief Hook when a message is going to be send.
@@ -235,15 +235,15 @@ typedef struct eaf_hook
 
 	/**
 	 * @brief Hook before #eaf_cleanup() take effect
-	 * @see eaf_cleanup()
+	 * @see eaf_exit()
 	 */
-	void(*on_cleanup_before)(void);
+	void(*on_exit_before)(void);
 
 	/**
 	 * @brief Hook after #eaf_cleanup() take effect
-	 * @see eaf_cleanup()
+	 * @see eaf_exit()
 	 */
-	void(*on_cleanup_after)(void);
+	void(*on_exit_after)(void);
 }eaf_hook_t;
 
 /**
@@ -254,7 +254,7 @@ typedef struct eaf_hook
 EAF_API int eaf_resume(_In_ uint32_t srv_id);
 
 /**
- * @brief Setup EAF
+ * @brief Initialize EAF
  *
  * This will allocate every necessary resource and wait for service register.
  * Service must registered into EAF after this function call and before #eaf_load
@@ -267,7 +267,7 @@ EAF_API int eaf_resume(_In_ uint32_t srv_id);
  * @param[in] size	The size of service group table
  * @return			#eaf_errno
  */
-EAF_API int eaf_setup(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t size);
+EAF_API int eaf_init(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t size);
 
 /**
  * @brief Load EAF.
@@ -283,29 +283,29 @@ EAF_API int eaf_setup(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t
 EAF_API int eaf_load(void);
 
 /**
- * @brief Tear down EAF.
+ * @brief Exit EAF.
  *
  * At this stage, EAF will tear down every registered services.
  * After this call return, EAF guarantee every registered services was exited.
  *
  * @return			#eaf_errno
  */
-EAF_API int eaf_cleanup(void);
+EAF_API int eaf_exit(void);
 
 /**
  * @brief Register service
  *
  * Register service info into EAF. This function can only be called after
- * #eaf_setup and before #eaf_load.
+ * #eaf_init() and before #eaf_load().
  *
  * @warning The parameter `info` must be globally accessible.
- * @see eaf_setup
- * @see eaf_load
- * @param[in] srv_id	Service ID
+ * @see eaf_init()
+ * @see eaf_load()
+ * @param[in] id		Service ID
  * @param[in] entry		Service entry. Must be globally accessible.
  * @return				#eaf_errno
  */
-EAF_API int eaf_register(_In_ uint32_t srv_id, _In_ const eaf_entrypoint_t* /*static*/ entry);
+EAF_API int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* /*static*/ entry);
 
 /**
  * @brief Send request

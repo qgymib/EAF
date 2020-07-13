@@ -195,20 +195,20 @@ static int _eaf_hook_service_register(uint32_t id)
 
 static void _eaf_hook_cleanup_before(void)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_cleanup_before == NULL)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_exit_before == NULL)
 	{
 		return;
 	}
-	g_eaf_ctx->hook->on_cleanup_before();
+	g_eaf_ctx->hook->on_exit_before();
 }
 
 static void _eaf_hook_cleanup_after(const eaf_hook_t* hook)
 {
-	if (hook == NULL || hook->on_cleanup_after == NULL)
+	if (hook == NULL || hook->on_exit_after == NULL)
 	{
 		return;
 	}
-	hook->on_cleanup_after();
+	hook->on_exit_after();
 }
 
 static void _eaf_hook_service_init_before(uint32_t id)
@@ -241,6 +241,15 @@ static void _eaf_hook_service_exit_after(uint32_t id)
 	{
 		g_eaf_ctx->hook->on_service_exit_after(id);
 	}
+}
+
+static int _eaf_hook_message_send(uint32_t from, uint32_t to, struct eaf_msg* msg)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_send == NULL)
+	{
+		return 0;
+	}
+	return g_eaf_ctx->hook->on_message_send(from, to, msg);
 }
 
 static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
@@ -875,7 +884,7 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 		NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
 
-int eaf_setup(_In_ const eaf_group_table_t* info, _In_ size_t size)
+int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 {
 	size_t i;
 	if (g_eaf_ctx != NULL)
@@ -1006,7 +1015,7 @@ int eaf_load(void)
 	return g_eaf_ctx->mask.init_failure ? eaf_errno_state : eaf_errno_success;
 }
 
-int eaf_cleanup(void)
+int eaf_exit(void)
 {
 	size_t i;
 	if (g_eaf_ctx == NULL)
@@ -1089,12 +1098,9 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 	}
 
 	/* hook callback */
-	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_message_send != NULL)
+	if ((ret = _eaf_hook_message_send(from, to, req)) < 0)
 	{
-		if ((ret = g_eaf_ctx->hook->on_message_send(from, to, req)) != 0)
-		{
-			return ret;
-		}
+		return ret;
 	}
 
 	return _eaf_send_req(from, to, req);
@@ -1109,12 +1115,9 @@ int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 	}
 
 	/* hook callback */
-	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_message_send != NULL)
+	if ((ret = _eaf_hook_message_send(from, to, rsp)) < 0)
 	{
-		if ((ret = g_eaf_ctx->hook->on_message_send(from, to, rsp)) != 0)
-		{
-			return ret;
-		}
+		return ret;
 	}
 
 	return _eaf_send_rsp(from, to, rsp);

@@ -146,14 +146,14 @@ static int _test_eaf_hook_on_service_register(_In_ uint32_t srv_id)
 	return 0;
 }
 
-static void _test_eaf_hook_on_cleanup_before(void)
+static void _test_eaf_hook_on_exit_before(void)
 {
-	s_eaf_hook.info[0].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_cleanup_before;
+	s_eaf_hook.info[0].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_exit_before;
 }
 
-static void _test_eaf_hook_on_cleanup_after(void)
+static void _test_eaf_hook_on_exit_after(void)
 {
-	s_eaf_hook.info[1].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_cleanup_after;
+	s_eaf_hook.info[1].last_hook = (void*)(uintptr_t)_test_eaf_hook_on_exit_after;
 }
 
 static void _on_pre_msg_process_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
@@ -202,8 +202,8 @@ static void _test_eaf_hook_before_load(void* arg)
 	hook.on_service_yield = _test_eaf_hook_on_service_yield;
 	hook.on_service_resume = _test_eaf_hook_on_service_resume;
 	hook.on_service_register = _test_eaf_hook_on_service_register;
-	hook.on_cleanup_before = _test_eaf_hook_on_cleanup_before;
-	hook.on_cleanup_after = _test_eaf_hook_on_cleanup_after;
+	hook.on_exit_before = _test_eaf_hook_on_exit_before;
+	hook.on_exit_after = _test_eaf_hook_on_exit_after;
 	hook.on_service_init_before = _test_eaf_hook_on_service_init_before;
 	hook.on_service_init_after = _test_eaf_hook_on_service_init_after;
 	hook.on_service_exit_before = _test_eaf_hook_on_service_exit_before;
@@ -248,8 +248,8 @@ TEST_FIXTURE_TEAREDOWN(eaf_hook)
 	test_eaf_quick_cleanup();
 	eaf_sem_destroy(s_eaf_hook.sem);
 
-	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_cleanup_before);
-	ASSERT_EQ_PTR(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_cleanup_after);
+	ASSERT_EQ_PTR(s_eaf_hook.info[0].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_exit_before);
+	ASSERT_EQ_PTR(s_eaf_hook.info[1].last_hook, (void*)(uintptr_t)_test_eaf_hook_on_exit_after);
 }
 
 TEST_F(eaf_hook, on_msg_send)

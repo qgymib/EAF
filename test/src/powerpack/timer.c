@@ -53,7 +53,7 @@ TEST_FIXTURE_SETUP(powerpack_timer)
 		{ EAF_THREAD_ATTR_INITIALIZER, { EAF_ARRAY_SIZE(service_table), service_table } },
 	};
 
-	ASSERT_EQ_D32(eaf_setup(group_table, EAF_ARRAY_SIZE(group_table)), 0);
+	ASSERT_EQ_D32(eaf_init(group_table, EAF_ARRAY_SIZE(group_table)), 0);
 
 	eaf_powerpack_cfg_t pp_cfg = { EAF_THREAD_ATTR_INITIALIZER };
 	ASSERT_EQ_D32(eaf_powerpack_init(&pp_cfg), 0);
@@ -69,7 +69,7 @@ TEST_FIXTURE_SETUP(powerpack_timer)
 
 TEST_FIXTURE_TEAREDOWN(powerpack_timer)
 {
-	eaf_cleanup();
+	eaf_exit();
 	eaf_powerpack_exit();
 	eaf_timer_exit();
 

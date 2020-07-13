@@ -79,7 +79,7 @@ TEST_FIXTURE_SETUP(eaf_filber)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_init(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* 部署服务S1 */
 	static eaf_message_table_t s1_msg[] = {
@@ -110,7 +110,7 @@ TEST_FIXTURE_SETUP(eaf_filber)
 TEST_FIXTURE_TEAREDOWN(eaf_filber)
 {
 	/* 退出并清理 */
-	ASSERT_EQ_D32(eaf_cleanup(), 0);
+	ASSERT_EQ_D32(eaf_exit(), 0);
 
 	eaf_sem_destroy(_s_ret_sem);
 }

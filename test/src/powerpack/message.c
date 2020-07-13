@@ -71,7 +71,7 @@ TEST_FIXTURE_SETUP(powerpack_message)
 	static eaf_group_table_t load_table[] = {
 		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
 	};
-	ASSERT_EQ_D32(eaf_setup(load_table, EAF_ARRAY_SIZE(load_table)), 0);
+	ASSERT_EQ_D32(eaf_init(load_table, EAF_ARRAY_SIZE(load_table)), 0);
 
 	/* ²¿Êð·þÎñS1 */
 	static eaf_entrypoint_t s1_info = {
@@ -102,7 +102,7 @@ TEST_FIXTURE_SETUP(powerpack_message)
 
 TEST_FIXTURE_TEAREDOWN(powerpack_message)
 {
-	eaf_cleanup();
+	eaf_exit();
 	eaf_message_exit();
 	eaf_powerpack_exit();
 

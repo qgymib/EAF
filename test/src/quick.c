@@ -142,7 +142,7 @@ int test_eaf_quick_setup(const test_quick_cfg_t* cfg)
 		_test_template_custom(cfg);
 	}
 
-	if ((ret = eaf_setup(g_test_quick_ctx.group, EAF_ARRAY_SIZE(g_test_quick_ctx.group))) < 0)
+	if ((ret = eaf_init(g_test_quick_ctx.group, EAF_ARRAY_SIZE(g_test_quick_ctx.group))) < 0)
 	{
 		return ret;
 	}
@@ -181,6 +181,6 @@ void test_eaf_quick_cleanup(void)
 		return;
 	}
 
-	eaf_cleanup();
+	eaf_exit();
 	g_test_quick_ctx.running = 0;
 }
