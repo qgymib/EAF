@@ -89,7 +89,7 @@ extern "C" {
 		{ code };\
 		ret = eaf_send_req(from, to, _0);\
 		eaf_msg_dec_ref(_0);\
-	} while (0)
+	} EAF_MSVC_WARNING_GUARD(4127, while (0))
 
 /**
  * @brief Internal operation for #eaf_send_req_sync
