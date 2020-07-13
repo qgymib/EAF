@@ -26,7 +26,7 @@ typedef struct timer_ctx
 {
 	eaf_lock_t*					objlock;		/**< global lock */
 	eaf_list_t					delay_queue;	/**< Delay queue */
-	eaf_list_t					recycle_queue;	/**< Recycel queue*/
+	eaf_list_t					recycle_queue;	/**< Recycle queue*/
 }timer_ctx_t;
 
 static timer_ctx_t	g_timer_ctx = {
@@ -51,7 +51,7 @@ static void _timer_on_close_uv_timer(uv_handle_t* handle)
 	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
 	eaf_msg_dec_ref(record->data.req);
 
-	/* remove recycel record */
+	/* remove recycle record */
 	eaf_lock_enter(g_timer_ctx.objlock);
 	{
 		eaf_list_erase(&g_timer_ctx.recycle_queue, &record->node);

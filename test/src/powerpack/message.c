@@ -2,14 +2,6 @@
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
 
-/*
-* Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
-* https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
-*/
-#if defined(_MSC_VER) && _MSC_VER < 1900
-#	pragma warning(disable : 4127)
-#endif
-
 #define TEST_SERVICE_S1			0xF0010000
 
 #define TEST_SERVICE_S2			0xF0020000
@@ -110,8 +102,7 @@ TEST_FIXTURE_SETUP(powerpack_message)
 
 TEST_FIXTURE_TEAREDOWN(powerpack_message)
 {
-	/* 退出并清理 */
-	ASSERT_EQ_D32(eaf_cleanup(), 0);
+	eaf_cleanup();
 	eaf_message_exit();
 	eaf_powerpack_exit();
 

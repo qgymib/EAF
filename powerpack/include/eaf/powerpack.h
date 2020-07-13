@@ -39,7 +39,7 @@ extern "C" {
  */
 typedef struct eaf_powerpack_cfg
 {
-	eaf_thread_attr_t	unistd;		/**< thread configure for unistd */
+	eaf_thread_attr_t	thread_attr;		/**< thread configure for unistd */
 }eaf_powerpack_cfg_t;
 
 /**

@@ -24,7 +24,7 @@ extern "C" {
  * @ingroup PowerPack-Timer
  * @defgroup PowerPack-Timer-Delay Delay
  *
- * @ note You can use #EAF_TIMER_DELAY helper macro to quickly use this message
+ * @note You can use #EAF_TIMER_DELAY helper macro to quickly use this message
  * @{
  */
 

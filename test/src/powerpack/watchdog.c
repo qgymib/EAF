@@ -60,7 +60,6 @@ TEST_FIXTURE_SETUP(powerpack_watchdog)
 	static eaf_service_table_t service_table[] = {
 		{ EAF_WATCHDOG_ID, 8 },
 		{ EAF_TIMER_ID, 8 },
-		{ TEST_QUICK_S1, 8 },
 	};
 	static eaf_group_table_t group_table[] = {
 		{ EAF_THREAD_ATTR_INITIALIZER, { EAF_ARRAY_SIZE(service_table), service_table } },
@@ -91,8 +90,8 @@ TEST_FIXTURE_TEAREDOWN(powerpack_watchdog)
 TEST_F(powerpack_watchdog, triger)
 {
 	int ret;
-	EAF_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_REGISTER_REQ, sizeof(eaf_watchdog_register_req_t),
-		_test_watchdog_on_register_rsp, TEST_QUICK_S1, EAF_WATCHDOG_ID, {
+	EAF_MESSAGE_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_REGISTER_REQ, sizeof(eaf_watchdog_register_req_t),
+		_test_watchdog_on_register_rsp, EAF_TIMER_ID, EAF_WATCHDOG_ID, {
 			eaf_watchdog_register_req_t * req = eaf_msg_get_data(_0, NULL);
 			req->id = 1;
 			req->timeout = 100;
@@ -110,8 +109,8 @@ TEST_F(powerpack_watchdog, triger)
 TEST_F(powerpack_watchdog, register_and_unregister)
 {
 	int ret;
-	EAF_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_REGISTER_REQ, sizeof(eaf_watchdog_register_req_t),
-		_test_watchdog_on_register_rsp, TEST_QUICK_S1, EAF_WATCHDOG_ID, {
+	EAF_MESSAGE_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_REGISTER_REQ, sizeof(eaf_watchdog_register_req_t),
+		_test_watchdog_on_register_rsp, EAF_TIMER_ID, EAF_WATCHDOG_ID, {
 			eaf_watchdog_register_req_t * req = eaf_msg_get_data(_0, NULL);
 			req->id = 1;
 			req->timeout = 100;
@@ -119,8 +118,8 @@ TEST_F(powerpack_watchdog, register_and_unregister)
 	);
 	ASSERT_EQ_D32(ret, 0);
 
-	EAF_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_UNREGISTER_REQ, sizeof(eaf_watchdog_unregister_req_t),
-		_test_watchdog_on_unregister_rsp, TEST_QUICK_S1, EAF_WATCHDOG_ID, {
+	EAF_MESSAGE_SEND_REQUEST(ret, EAF_WATCHDOG_MSG_UNREGISTER_REQ, sizeof(eaf_watchdog_unregister_req_t),
+		_test_watchdog_on_unregister_rsp, EAF_TIMER_ID, EAF_WATCHDOG_ID, {
 			((eaf_watchdog_unregister_req_t*)eaf_msg_get_data(_0, NULL))->id = 1;
 		}
 	);

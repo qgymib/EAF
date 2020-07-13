@@ -10,9 +10,7 @@ static eaf_sem_t*	s_timer_sem;
 
 static void _test_timer_on_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
 {
-	(void)from;
-	(void)to;
-	(void)msg;
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 
 	eaf_getclocktime(&s_timer_stop);
 	eaf_sem_post(s_timer_sem);
@@ -23,7 +21,7 @@ static int _test_timer_on_init(void)
 	eaf_getclocktime(&s_timer_start);
 
 	int ret;
-	EAF_SEND_REQUEST(ret, EAF_TIMER_MSG_DELAY_REQ, sizeof(eaf_timer_delay_req_t),
+	EAF_MESSAGE_SEND_REQUEST(ret, EAF_TIMER_MSG_DELAY_REQ, sizeof(eaf_timer_delay_req_t),
 		_test_timer_on_rsp, TEST_QUICK_S0, EAF_TIMER_ID, {
 			((eaf_timer_delay_req_t*)eaf_msg_get_data(_0, NULL))->msec = s_delay_timeout;
 		}

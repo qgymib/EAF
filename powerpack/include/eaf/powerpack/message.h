@@ -32,7 +32,7 @@ extern "C" {
  * @param[in] to		The receiver Service ID
  * @param[in] code		The code to fill message
  */
-#define EAF_SEND_REQUEST(ret, msg_id, msg_size, rsp_fn, from, to, code)	\
+#define EAF_MESSAGE_SEND_REQUEST(ret, msg_id, msg_size, rsp_fn, from, to, code)	\
 	do {\
 		eaf_msg_t* _0 = eaf_msg_create_req(msg_id, msg_size, rsp_fn);\
 		if (_0 == NULL) {\

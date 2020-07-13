@@ -157,7 +157,7 @@ int eaf_getclocktime(_Out_ eaf_clock_time_t* ts)
 	LARGE_INTEGER t;
 	FILETIME f;
 	double microseconds;
-	
+
 	static uv_once_t get_clocktime_once = UV_ONCE_INIT;
 	uv_once(&get_clocktime_once, _time_getclocktime_init_once);
 
