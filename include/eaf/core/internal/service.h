@@ -71,12 +71,36 @@ extern "C" {
 #define EAF_SERVICE_CC0_YIELD		(0x01 << 0x00)	/**< Control Bit 0: service yield */
 
 /**
- * @brief Service local storage
+ * @brief Service states
+ * @code
+ * INIT_YIELD
+ *    /|\
+ *     |        |--------|
+ *    \|/      \|/       |
+ *   INIT --> IDLE --> BUSY --> YIELD
+ *     |        |       /|\       |
+ *     |       \|/       |--------|
+ *     | ----> EXIT
+ * @endcode
+ */
+typedef enum eaf_service_state
+{
+	eaf_service_state_init,						/**< Init */
+	eaf_service_state_init_yield,				/**< Init but user yield */
+	eaf_service_state_idle,						/**< No pending work */
+	eaf_service_state_busy,						/**< Busy */
+	eaf_service_state_yield,					/**< Wait for resume */
+	eaf_service_state_exit,						/**< Exit */
+}eaf_service_state_t;
+
+/**
+ * @brief Service Local Storage (SLS)
  */
 typedef struct eaf_service_local
 {
 	uint32_t					id;			/**< Current service id. DO NOT modify it. */
 	uint32_t					branch;		/**< Yield branch. DO NOT modify it */
+	eaf_service_state_t			state;		/**< Service state */
 
 	union
 	{
@@ -106,7 +130,7 @@ typedef struct eaf_service_local
 typedef void(*eaf_yield_hook_fn)(_Inout_ eaf_service_local_t* local, _Inout_ void* arg);
 
 /**
- * @brief Group local storage
+ * @brief Group Local Storage (GLS)
  */
 typedef struct eaf_group_local
 {
@@ -123,10 +147,38 @@ typedef struct eaf_group_local
  * @private
  * @brief Get service local storage and group local storage.
  * @param[out] local	A pointer to store group local storage
- * @return				Service local storage
+ * @return				Service Local Storage
  */
 EAF_API eaf_service_local_t* eaf_service_get_local(
-	_Outptr_opt_result_maybenull_ eaf_group_local_t** local);
+	_Outptr_opt_result_maybenull_ eaf_group_local_t** gls);
+
+/**
+ * @brief Returns an iterator to the beginning.
+ * @return				The begin node of Group Local Storage
+ */
+EAF_API eaf_group_local_t* eaf_group_begin(void);
+
+/**
+ * @brief Get an iterator next to the given one.
+ * @param[in] gls	Current Group Local Storage node
+ * @return			Next Group Local Storage node
+ */
+EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls);
+
+/**
+ * @brief Returns an iterator to the beginning.
+ * @param[in] gls	Current Group Local Storage node
+ * @return			The begin node of Service Local Storage
+ */
+EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls);
+
+/**
+ * @brief Get an iterator next to the given one.
+ * @param[in] gls	Current Group Local Storage node
+ * @param[in] sls	Current Service Local Storage node
+ * @return			Next Service Local Storage node
+ */
+EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_service_local_t* sls);
 
 /**
  * @}

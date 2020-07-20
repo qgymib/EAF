@@ -51,29 +51,6 @@ extern "C" {
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
 
 /**
- * @brief Service states
- * @code
- * INIT_YIELD
- *    /|\
- *     |        |--------|
- *    \|/      \|/       |
- *   INIT --> IDLE --> BUSY --> YIELD
- *     |        |       /|\       |
- *     |       \|/       |--------|
- *     | ----> EXIT
- * @endcode
- */
-typedef enum eaf_service_state
-{
-	eaf_service_state_init,						/**< Init */
-	eaf_service_state_init_yield,				/**< Init but user yield */
-	eaf_service_state_idle,						/**< No pending work */
-	eaf_service_state_busy,						/**< Busy */
-	eaf_service_state_yield,					/**< Wait for resume */
-	eaf_service_state_exit,						/**< Exit */
-}eaf_service_state_t;
-
-/**
  * @brief Request table
  */
 typedef struct eaf_message_table
@@ -338,15 +315,6 @@ EAF_API int eaf_inject(_In_ const eaf_hook_t* /* static */ hook, _In_ size_t siz
  * @return			Service ID
  */
 EAF_API uint32_t eaf_service_self(void);
-
-/**
- * @brief Get service state
- * @note If EAF is not running or Service ID not found, #eaf_service_state_exit
- *   is returned.
- * @param[in] id	Service ID
- * @return			Service state
- */
-EAF_API eaf_service_state_t eaf_service_get_state(_In_ uint32_t id);
 
 /**
  * @}

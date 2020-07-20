@@ -67,14 +67,13 @@ typedef struct eaf_msgq_record
 
 typedef struct eaf_service
 {
-	eaf_service_state_t				state;		/**< 状态 */
 	const eaf_entrypoint_t*			entry;		/**< 加载信息 */
 
 	struct
 	{
-		eaf_service_local_t			local;		/**< 本地存储 */
+		eaf_service_local_t			local;		/**< Service Local Information */
 		eaf_list_node_t				node;		/**< 侵入式节点。在ready_list或wait_list中 */
-	}coroutine;
+	}runtime;
 
 	struct
 	{
@@ -92,6 +91,7 @@ typedef struct eaf_group
 {
 	eaf_compat_lock_t				objlock;	/**< 线程锁 */
 	eaf_compat_thread_t				working;	/**< 承载线程 */
+	size_t							index;		/**< Group index */
 
 	struct 
 	{
@@ -261,7 +261,7 @@ static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t
 		for (j = 0; j < g_eaf_ctx->group.table[i]->service.size; j++)
 		{
 			eaf_service_t* service = &g_eaf_ctx->group.table[i]->service.table[j];
-			if (service->coroutine.local.id != service_id)
+			if (service->runtime.local.id != service_id)
 			{
 				continue;
 			}
@@ -289,7 +289,7 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 	eaf_compat_lock_enter(&group->objlock);
 	{
 		eaf_list_node_t* it = eaf_list_begin(&group->coroutine.busy_list);
-		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, coroutine.node) : NULL;
+		service = it != NULL ? EAF_CONTAINER_OF(it, eaf_service_t, runtime.node) : NULL;
 	}
 	eaf_compat_lock_leave(&group->objlock);
 
@@ -305,23 +305,18 @@ static eaf_service_t* _eaf_get_first_busy_service_lock(eaf_group_t* group)
 static void _eaf_service_set_state_nolock(eaf_group_t* group,
 	eaf_service_t* service, eaf_service_state_t state)
 {
-	if (service->state == state)
-	{
-		return;
-	}
-
-	switch (service->state)
+	switch (service->runtime.local.state)
 	{
 	case eaf_service_state_init_yield:
 	case eaf_service_state_idle:
 	case eaf_service_state_yield:
 	case eaf_service_state_exit:
-		eaf_list_erase(&group->coroutine.wait_list, &service->coroutine.node);
+		eaf_list_erase(&group->coroutine.wait_list, &service->runtime.node);
 		break;
 
 	case eaf_service_state_init:
 	case eaf_service_state_busy:
-		eaf_list_erase(&group->coroutine.busy_list, &service->coroutine.node);
+		eaf_list_erase(&group->coroutine.busy_list, &service->runtime.node);
 		break;
 	}
 
@@ -331,15 +326,15 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group,
 	case eaf_service_state_idle:
 	case eaf_service_state_yield:
 	case eaf_service_state_exit:
-		eaf_list_push_back(&group->coroutine.wait_list, &service->coroutine.node);
+		eaf_list_push_back(&group->coroutine.wait_list, &service->runtime.node);
 		break;
 
 	case eaf_service_state_init:
 	case eaf_service_state_busy:
-		eaf_list_push_back(&group->coroutine.busy_list, &service->coroutine.node);
+		eaf_list_push_back(&group->coroutine.busy_list, &service->runtime.node);
 		break;
 	}
-	service->state = state;
+	service->runtime.local.state = state;
 }
 
 static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* service, eaf_service_state_t state)
@@ -356,7 +351,7 @@ static void _eaf_service_set_state_lock(eaf_group_t* group, eaf_service_t* servi
  */
 static void _eaf_service_reset_yield_branch(eaf_service_t* service)
 {
-	service->coroutine.local.branch = 0;
+	service->runtime.local.branch = 0;
 }
 
 static void _eaf_service_reset(eaf_service_t* service)
@@ -393,7 +388,7 @@ static void _eaf_group_call_yield_hook(eaf_group_t* group)
 	}
 
 	eaf_service_t* service = _eaf_group_get_cur_run(group);
-	group->coroutine.local.yield.hook(&service->coroutine.local, group->coroutine.local.yield.arg);
+	group->coroutine.local.yield.hook(&service->runtime.local, group->coroutine.local.yield.arg);
 }
 
 /**
@@ -429,7 +424,7 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_yield);
 		_eaf_group_call_yield_hook(group);
-		_eaf_hook_service_yield(service->coroutine.local.id);
+		_eaf_hook_service_yield(service->runtime.local.id);
 		return;
 	}
 
@@ -442,7 +437,7 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 {
 	/* the state of service must be BUSY */
-	assert(service->state == eaf_service_state_busy);
+	assert(service->runtime.local.state == eaf_service_state_busy);
 
 	/* If cur_msg is not NULL, context need to be restore */
 	if (service->msgq.cur_msg != NULL)
@@ -512,7 +507,7 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 		return 0;
 	}
 	_eaf_service_reset_yield_branch(service);
-	_eaf_hook_service_init_after(service->coroutine.local.id, ret);
+	_eaf_hook_service_init_after(service->runtime.local.id, ret);
 
 	/* 初始化失败时返回错误 */
 	if (ret < 0)
@@ -546,7 +541,7 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 	_eaf_group_set_cur_run(group, service);
 	_eaf_group_clear_cc0(group);
 
-	if (service->state == eaf_service_state_init)
+	if (service->runtime.local.state == eaf_service_state_init)
 	{
 		return _eaf_service_resume_init(group, service);
 	}
@@ -584,15 +579,15 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		 */
 		if (service->entry == NULL || service->entry->on_init == NULL)
 		{
-			service->state = eaf_service_state_exit;
-			eaf_list_erase(&group->coroutine.busy_list, &service->coroutine.node);
+			service->runtime.local.state = eaf_service_state_exit;
+			eaf_list_erase(&group->coroutine.busy_list, &service->runtime.node);
 
 			continue;
 		}
 
 		_eaf_group_clear_cc0(group);
 
-		_eaf_hook_service_init_before(service->coroutine.local.id);
+		_eaf_hook_service_init_before(service->runtime.local.id);
 		int ret = service->entry->on_init();
 
 		/* 检查是否执行yield */
@@ -612,7 +607,7 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 			continue;
 		}
 		_eaf_service_reset_yield_branch(service);
-		_eaf_hook_service_init_after(service->coroutine.local.id, ret);
+		_eaf_hook_service_init_after(service->runtime.local.id, ret);
 
 		/* 若初始化失败则返回错误 */
 		if (ret < 0)
@@ -640,14 +635,19 @@ static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 	for (i = (int)max_idx - 1; i >= 0; i--)
 	{
 		eaf_service_t* service = &group->service.table[i];
+		if (service->runtime.local.state == eaf_service_state_exit)
+		{
+			continue;
+		}
+
 		_eaf_group_set_cur_run(group, service);
 		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
 
 		if (service->entry != NULL && service->entry->on_exit != NULL)
 		{
-			_eaf_hook_service_exit_before(service->coroutine.local.id);
+			_eaf_hook_service_exit_before(service->runtime.local.id);
 			service->entry->on_exit();
-			_eaf_hook_service_exit_after(service->coroutine.local.id);
+			_eaf_hook_service_exit_after(service->runtime.local.id);
 		}
 	}
 }
@@ -770,7 +770,7 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_enter(&group->objlock); }
 	do
 	{
-		if (service->state == eaf_service_state_idle)
+		if (service->runtime.local.state == eaf_service_state_idle)
 		{
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
 		}
@@ -930,9 +930,10 @@ int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 	}
 
 	/* initialize resource */
-	size_t init_idx;
+	size_t init_idx;	// Initialize index
 	for (init_idx = 0; init_idx < size; init_idx++)
 	{
+		g_eaf_ctx->group.table[init_idx]->index = init_idx;
 		g_eaf_ctx->group.table[init_idx]->service.size = info[init_idx].service.size;
 		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list);
 		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.wait_list);
@@ -957,16 +958,16 @@ int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 		size_t idx;
 		for (idx = 0; idx < info[init_idx].service.size; idx++)
 		{
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.local.id =
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.local.id =
 				info[init_idx].service.table[idx].srv_id;
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity =
 				info[init_idx].service.table[idx].msgq_size;
 			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.queue);
 
 			/* by default, service should in init0 state */
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].state = eaf_service_state_init;
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.local.state = eaf_service_state_init;
 			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list,
-				&g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.node);
+				&g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.node);
 		}
 	}
 
@@ -1061,7 +1062,7 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 		size_t idx;
 		for (idx = 0; idx < g_eaf_ctx->group.table[i]->service.size; idx++)
 		{
-			if (g_eaf_ctx->group.table[i]->service.table[idx].coroutine.local.id == id)
+			if (g_eaf_ctx->group.table[i]->service.table[idx].runtime.local.id == id)
 			{
 				service = &g_eaf_ctx->group.table[i]->service.table[idx];
 				break;
@@ -1138,7 +1139,7 @@ int eaf_resume(_In_ uint32_t srv_id)
 	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
-		switch (service->state)
+		switch (service->runtime.local.state)
 		{
 		case eaf_service_state_yield:
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
@@ -1179,7 +1180,7 @@ eaf_service_local_t* eaf_service_get_local(_Outptr_opt_result_maybenull_ eaf_gro
 		*local = &group->coroutine.local;
 	}
 
-	return &service->coroutine.local;
+	return &service->runtime.local;
 
 err:
 	if (local != NULL)
@@ -1205,17 +1206,42 @@ int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size)
 	return eaf_errno_success;
 }
 
-eaf_service_state_t eaf_service_get_state(_In_ uint32_t id)
+EAF_API eaf_group_local_t* eaf_group_begin(void)
 {
-	eaf_service_t* service;
-	if (g_eaf_ctx == NULL)
+	return &g_eaf_ctx->group.table[0]->coroutine.local;
+}
+
+EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls)
+{
+	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
+	size_t index = group->index;
+
+	if (index >= g_eaf_ctx->group.size)
 	{
-		return eaf_service_state_exit;
+		return NULL;
 	}
 
-	if ((service = _eaf_service_find_service(id, NULL)) == NULL)
+	return &g_eaf_ctx->group.table[index + 1]->coroutine.local;
+}
+
+EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls)
+{
+	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
+	return &group->service.table[0].runtime.local;
+}
+
+EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_service_local_t* sls)
+{
+	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
+	eaf_service_t* service = EAF_CONTAINER_OF(sls, eaf_service_t, runtime.local);
+
+	/* must in this group */
+	assert(service >= group->service.table);
+
+	size_t index = service - &group->service.table[0];
+	if (index >= group->service.size)
 	{
-		return eaf_service_state_exit;
+		return NULL;
 	}
-	return service->state;
+	return &group->service.table[index + 1].runtime.local;
 }
