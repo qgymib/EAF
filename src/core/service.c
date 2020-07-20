@@ -97,8 +97,8 @@ typedef struct eaf_group
 	{
 		eaf_group_local_t			local;		/**< local storage */
 		eaf_service_t*				cur_run;	/**< 当前正在处理的服务 */
-		eaf_list_t					busy_list;	/**< INIT0/BUSY */
-		eaf_list_t					wait_list;	/**< INIT1/IDLE/PEND */
+		eaf_list_t					busy_list;	/**< INIT/BUSY */
+		eaf_list_t					wait_list;	/**< INIT_YIELD/IDLE/PEND */
 	}coroutine;
 
 	struct
@@ -312,14 +312,14 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group,
 
 	switch (service->state)
 	{
-	case eaf_service_state_init1:
+	case eaf_service_state_init_yield:
 	case eaf_service_state_idle:
-	case eaf_service_state_pend:
+	case eaf_service_state_yield:
 	case eaf_service_state_exit:
 		eaf_list_erase(&group->coroutine.wait_list, &service->coroutine.node);
 		break;
 
-	case eaf_service_state_init0:
+	case eaf_service_state_init:
 	case eaf_service_state_busy:
 		eaf_list_erase(&group->coroutine.busy_list, &service->coroutine.node);
 		break;
@@ -327,14 +327,14 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group,
 
 	switch (state)
 	{
-	case eaf_service_state_init1:
+	case eaf_service_state_init_yield:
 	case eaf_service_state_idle:
-	case eaf_service_state_pend:
+	case eaf_service_state_yield:
 	case eaf_service_state_exit:
 		eaf_list_push_back(&group->coroutine.wait_list, &service->coroutine.node);
 		break;
 
-	case eaf_service_state_init0:
+	case eaf_service_state_init:
 	case eaf_service_state_busy:
 		eaf_list_push_back(&group->coroutine.busy_list, &service->coroutine.node);
 		break;
@@ -427,7 +427,7 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 	/* yield */
 	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 	{
-		_eaf_service_set_state_lock(group, service, eaf_service_state_pend);
+		_eaf_service_set_state_lock(group, service, eaf_service_state_yield);
 		_eaf_group_call_yield_hook(group);
 		_eaf_hook_service_yield(service->coroutine.local.id);
 		return;
@@ -507,7 +507,7 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 	/* 检查是否执行yield */
 	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 	{/* 若init阶段进行了yield */
-		_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
+		_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
 		_eaf_group_call_yield_hook(group);
 		return 0;
 	}
@@ -546,7 +546,7 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 	_eaf_group_set_cur_run(group, service);
 	_eaf_group_clear_cc0(group);
 
-	if (service->state == eaf_service_state_init0)
+	if (service->state == eaf_service_state_init)
 	{
 		return _eaf_service_resume_init(group, service);
 	}
@@ -598,7 +598,7 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		/* 检查是否执行yield */
 		if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
 		{/* 若init阶段进行了yield */
-			_eaf_service_set_state_lock(group, service, eaf_service_state_init1);
+			_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
 
 			/* call user hook */
 			_eaf_group_call_yield_hook(group);
@@ -964,7 +964,7 @@ int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.queue);
 
 			/* by default, service should in init0 state */
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].state = eaf_service_state_init0;
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].state = eaf_service_state_init;
 			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list,
 				&g_eaf_ctx->group.table[init_idx]->service.table[idx].coroutine.node);
 		}
@@ -1140,12 +1140,12 @@ int eaf_resume(_In_ uint32_t srv_id)
 	{
 		switch (service->state)
 		{
-		case eaf_service_state_pend:
+		case eaf_service_state_yield:
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
 			break;
 
-		case eaf_service_state_init1:
-			_eaf_service_set_state_nolock(group, service, eaf_service_state_init0);
+		case eaf_service_state_init_yield:
+			_eaf_service_set_state_nolock(group, service, eaf_service_state_init);
 			break;
 
 		default:

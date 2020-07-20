@@ -53,23 +53,23 @@ extern "C" {
 /**
  * @brief Service states
  * @code
- * INIT1
- *  /|\
- *   |        |--------|
- *  \|/      \|/       |
- * INIT0 --> IDLE --> BUSY --> PEND
- *   |        |       /|\       |
- *   |       \|/       |--------|
- *   | ----> EXIT
+ * INIT_YIELD
+ *    /|\
+ *     |        |--------|
+ *    \|/      \|/       |
+ *   INIT --> IDLE --> BUSY --> YIELD
+ *     |        |       /|\       |
+ *     |       \|/       |--------|
+ *     | ----> EXIT
  * @endcode
  */
 typedef enum eaf_service_state
 {
-	eaf_service_state_init0,					/**< Init */
-	eaf_service_state_init1,					/**< Init but user yield */
+	eaf_service_state_init,						/**< Init */
+	eaf_service_state_init_yield,				/**< Init but user yield */
 	eaf_service_state_idle,						/**< No pending work */
 	eaf_service_state_busy,						/**< Busy */
-	eaf_service_state_pend,						/**< Wait for resume */
+	eaf_service_state_yield,					/**< Wait for resume */
 	eaf_service_state_exit,						/**< Exit */
 }eaf_service_state_t;
 
