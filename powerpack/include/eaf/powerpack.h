@@ -50,7 +50,7 @@ typedef struct eaf_powerpack_cfg
 int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg);
 
 /**
- * @brief must be called after #eaf_cleanup
+ * @brief must be called after #eaf_exit()
  */
 void eaf_powerpack_exit(void);
 

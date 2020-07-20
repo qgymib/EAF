@@ -82,7 +82,7 @@ extern "C" {
  *     { { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(thread_2), thread_2 } },
  * };
  * // setup EAF with above thread table
- * eaf_setup(load_table, EAF_ARRAY_SIZE(load_table));
+ * eaf_init(load_table, EAF_ARRAY_SIZE(load_table));
  * ```
  *
  *

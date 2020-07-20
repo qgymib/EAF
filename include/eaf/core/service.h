@@ -234,13 +234,13 @@ typedef struct eaf_hook
 	void(*on_message_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
-	 * @brief Hook before #eaf_cleanup() take effect
+	 * @brief Hook before #eaf_exit() take effect
 	 * @see eaf_exit()
 	 */
 	void(*on_exit_before)(void);
 
 	/**
-	 * @brief Hook after #eaf_cleanup() take effect
+	 * @brief Hook after #eaf_exit() take effect
 	 * @see eaf_exit()
 	 */
 	void(*on_exit_after)(void);

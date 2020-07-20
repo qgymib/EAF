@@ -87,7 +87,7 @@ int eaf_message_init(void);
 
 /**
  * @brief Exit Message Service
- * @warning This function must be called after #eaf_cleanup().
+ * @warning This function must be called after #eaf_exit().
  */
 void eaf_message_exit(void);
 
