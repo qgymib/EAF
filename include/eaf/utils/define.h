@@ -74,9 +74,6 @@ extern "C" {
  * @param[in] b	Token `b'
  */
 #define EAF_JOIN(a, b)			EAF_INTERNAL_JOIN(a, b)
-/**
- * @internal
- */
 #define EAF_INTERNAL_JOIN(a, b)	a##b
 
 /**
@@ -120,12 +117,25 @@ extern "C" {
 
 /**
  * @internal
+ * Define a set of integral type aliases with specific width requirements,
+ * along with macros specifying their limits and macro functions to create
+ * values of these types.
+ * @note define `EAF_NO_STDINT_MSVC_2008' to disable stdint support for
+ * MSVC-2008
+ */
+#if defined(_MSC_VER) && _MSC_VER < 1600 && !defined(EAF_NO_STDINT_MSVC_2008)
+	/* copy from libuv-1.37.0 */
+#	include "EAF/utils/stdint-msvc2008.h"
+#else
+#	include <stdint.h>
+#endif
+
+/**
+ * @internal
  * SAL provides a set of annotations to describe how a function uses
  * its parameters - the assumptions it makes about them, and the guarantees it
  * makes upon finishing.
- * @endinternal
  */
-
 #if defined(_MSC_VER)
 #include <sal.h>
 #else
