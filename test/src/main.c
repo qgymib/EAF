@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 	}
 #endif
 
-	int ret = ctest_run_tests(argc, argv);
+	int ret = ctest_run_tests(argc, argv, NULL);
 
 #if defined(_MSC_VER)
 	if (flag_leack_check)

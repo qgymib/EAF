@@ -84,6 +84,12 @@ extern "C" {
 	TYPE _parameterized_data_##fixture_name[] = { __VA_ARGS__ }
 
 /**
+ * @brief Suppress unused parameter warning if #TEST_GET_PARAM() is not used.
+ */
+#define TEST_PARAMETERIZED_SUPPRESS_UNUSED	\
+	(void)_test_parameterized_data
+
+/**
  * @brief Parameterized Test
  *
  * A parameterized test will run many cycles, which was defined by
@@ -101,6 +107,7 @@ extern "C" {
  * @param [in] case_name		The name of test case
  * @see TEST_GET_PARAM()
  * @see TEST_PARAMETERIZED_DEFINE()
+ * @see TEST_PARAMETERIZED_SUPPRESS_UNUSED
  */
 #define TEST_P(fixture_name, case_name)	\
 	void TEST_##fixture_name##_##case_name(_parameterized_type_##fixture_name*);\
@@ -153,7 +160,7 @@ extern "C" {
 	TEST_INITIALIZER(TEST_INIT_##case_name) {\
 		static ctest_case_t _case_##suit_name##_##case_name = {\
 			{ { NULL, NULL }, { NULL, NULL, NULL } }, /* .node */\
-			{ ctest_case_type_suit, 0, #suit_name, #case_name }, /* .info */\
+			{ ctest_case_type_simple, 0, #suit_name, #case_name }, /* .info */\
 			{\
 				NULL, NULL, (uintptr_t)TEST_##suit_name##_##case_name, 0, NULL\
 			},\
@@ -892,12 +899,106 @@ extern "C" {
  */
 
 /**
+ * @brief CTest hook
+ */
+typedef struct ctest_hook
+{
+	/**
+	 * @brief Hook before run all tests
+	 * @param[in] argc	The number of arguments
+	 * @param[in] argv	Argument list
+	 */
+	void(*before_all_test)(int argc, char* argv[]);
+
+	/**
+	 * @brief Hook after run all tests
+	 */
+	void(*after_all_test)(void);
+
+	/**
+	 * @brief Hook before #TEST_FIXTURE_SETUP() is called
+	 * @param[in] fixture_name	Fixture name
+	 */
+	void(*before_fixture_setup)(const char* fixture_name);
+
+	/**
+	 * @brief Hook after #TEST_FIXTURE_SETUP() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] ret			zero: #TEST_FIXTURE_SETUP() success, otherwise failure
+	 */
+	void(*after_fixture_setup)(const char* fixture_name, int ret);
+
+	/**
+	 * @brief Hook before #TEST_FIXTURE_TEAREDOWN() is called
+	 * @param[in] fixture_name	Fixture name
+	 */
+	void(*before_fixture_teardown)(const char* fixture_name);
+
+	/**
+	 * @brief Hook after #TEST_FIXTURE_TEAREDOWN() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] ret			zero: #TEST_FIXTURE_TEAREDOWN() success, otherwise failure
+	 */
+	void(*after_fixture_teardown)(const char* fixture_name, int ret);
+
+	/**
+	 * @brief Hook before #TEST_F() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] test_name		Test name
+	 */
+	void(*before_fixture_test)(const char* fixture_name, const char* test_name);
+
+	/**
+	 * @brief Hook after #TEST_F() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] test_name		Test name
+	 * @param[in] ret			zero: #TEST_F() success, otherwise failure
+	 */
+	void(*after_fixture_test)(const char* fixture_name, const char* test_name, int ret);
+
+	/**
+	 * @brief Hook before #TEST_P() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] test_name		Test name
+	 * @param[in] index			Current parameterized data index
+	 * @param[in] total			Amount of parameterized data
+	 */
+	void(*before_parameterized_test)(const char* fixture_name, const char* test_name, unsigned index, unsigned total);
+
+	/**
+	 * @brief Hook after #TEST_P() is called
+	 * @param[in] fixture_name	Fixture name
+	 * @param[in] test_name		Test name
+	 * @param[in] index			Current parameterized data index
+	 * @param[in] total			Amount of parameterized data
+	 * @param[in] ret			zero: #TEST_P() success, otherwise failure
+	 */
+	void(*after_parameterized_test)(const char* fixture_name, const char* test_name, unsigned index, unsigned total, int ret);
+
+	/**
+	 * @brief Hook before #TEST() is called
+	 * @param[in] suit_name		Suit name
+	 * @param[in] test_name		Test name
+	 */
+	void(*before_simple_test)(const char* suit_name, const char* test_name);
+
+	/**
+	 * @brief Hook after #TEST() is called
+	 * @param[in] suit_name		Suit name
+	 * @param[in] test_name		Test name
+	 * @param[in] ret			zero: #TEST() success, otherwise failure
+	 */
+	void(*after_simple_test)(const char* suit_name, const char* test_name, int ret);
+}ctest_hook_t;
+
+/**
  * @brief Run all test cases
- * @param [in] argc		The number of arguments
- * @param [in] argv		The argument list
+ * @param[in] argc		The number of arguments
+ * @param[in] argv		The argument list
+ * @param[in] hook		Test hook
  * @return				The number of failure test
  */
-int ctest_run_tests(int argc, char* argv[]);
+int ctest_run_tests(int argc, char* argv[], const ctest_hook_t* hook);
 
 /**
  * @brief Get current running suit name
@@ -1358,7 +1459,7 @@ size_t ctest_map_size(const ctest_map_t* handler);
 
 typedef enum ctest_case_type
 {
-	ctest_case_type_suit,
+	ctest_case_type_simple,
 	ctest_case_type_fixture,
 	ctest_case_type_parameterized,
 }ctest_case_type_t;
@@ -1418,7 +1519,7 @@ int ctest_internal_assert_helper_float_ge(float a, float b);
 int ctest_internal_assert_helper_double_eq(double a, double b);
 int ctest_internal_assert_helper_double_le(double a, double b);
 int ctest_internal_assert_helper_double_ge(double a, double b);
-size_t ctest_internal_parameterized_index(void);
+unsigned ctest_internal_parameterized_index(void);
 
 const char* ctest_pretty_file(const char* file);
 
