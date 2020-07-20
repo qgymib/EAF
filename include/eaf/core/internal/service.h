@@ -31,14 +31,14 @@ extern "C" {
  * It use duff's device to generate a switch-based coroutine.
  */
 #define EAF_COROUTINE_REENTER()	\
-	eaf_group_local_t* _eaf_glocal = NULL;\
-	eaf_service_local_t* _eaf_local = eaf_service_get_local(&_eaf_glocal);\
-	switch(_eaf_local->branch)\
-		case (unsigned)-1: if (_eaf_local->branch)\
+	eaf_group_local_t* _eaf_gls = NULL;\
+	eaf_service_local_t* _eaf_sls = eaf_service_get_local(&_eaf_gls);\
+	switch(_eaf_sls->branch)\
+		case (unsigned)-1: if (_eaf_sls->branch)\
 		{\
 			goto terminate_coroutine;\
 		terminate_coroutine:\
-			_eaf_local->branch = (unsigned)-1;\
+			_eaf_sls->branch = (unsigned)-1;\
 			goto bail_out_of_coroutine;\
 		bail_out_of_coroutine:\
 			break;\
@@ -53,18 +53,18 @@ extern "C" {
  * @param[in] n		switch-case label
  */
 #define EAF_COROUTINE_YIELD(_fn, _arg, n)	\
-	for (_eaf_local->branch = (n), _eaf_glocal->cc[0] = EAF_SERVICE_CC0_YIELD,\
-		_eaf_glocal->yield.hook = _fn, _eaf_glocal->yield.arg = _arg;;)\
-		if (_eaf_local->branch == 0) {\
+	for (_eaf_sls->branch = (n), _eaf_gls->cc[0] = EAF_SERVICE_CC0_YIELD,\
+		_eaf_gls->yield.hook = _fn, _eaf_gls->yield.arg = _arg;;)\
+		if (_eaf_sls->branch == 0) {\
 			case (n): ;\
 			break;\
 		} else\
-		switch (_eaf_local->branch ? 0 : 1)\
+		switch (_eaf_sls->branch ? 0 : 1)\
 			for(;;)\
-				/* fall-through */ case -1: if (_eaf_local->branch)\
+				/* fall-through */ case -1: if (_eaf_sls->branch)\
 					goto terminate_coroutine;\
 				else for (;;)\
-					/* fall-through */ case 1: if (_eaf_local->branch)\
+					/* fall-through */ case 1: if (_eaf_sls->branch)\
 					goto bail_out_of_coroutine;\
 				else /* fall-through */ case 0: { };
 

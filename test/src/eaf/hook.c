@@ -170,28 +170,27 @@ static void _on_pre_msg_process_on_rsp(uint32_t from, uint32_t to, struct eaf_ms
 
 static void _test_eaf_hook_on_service_init_before(_In_ uint32_t id)
 {
-	(void)id;
+	EAF_SUPPRESS_UNUSED_VARIABLE(id);
 }
 
 static void _test_eaf_hook_on_service_init_after(_In_ uint32_t id, _In_ int ret)
 {
-	(void)id;
-	(void)ret;
+	EAF_SUPPRESS_UNUSED_VARIABLE(id, ret);
 }
 
 static void _test_eaf_hook_on_service_exit_before(_In_ uint32_t id)
 {
-	(void)id;
+	EAF_SUPPRESS_UNUSED_VARIABLE(id);
 }
 
 static void _test_eaf_hook_on_service_exit_after(_In_ uint32_t id)
 {
-	(void)id;
+	EAF_SUPPRESS_UNUSED_VARIABLE(id);
 }
 
 static void _test_eaf_hook_before_load(void* arg)
 {
-	(void)arg;
+	EAF_SUPPRESS_UNUSED_VARIABLE(arg);
 
 	static eaf_hook_t hook;
 	memset(&hook, 0, sizeof(hook));
@@ -214,7 +213,7 @@ static void _test_eaf_hook_before_load(void* arg)
 
 static void _test_eaf_hook_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)from; (void)to; (void)msg;
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 
 	eaf_reenter
 	{

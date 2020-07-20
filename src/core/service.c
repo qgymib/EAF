@@ -551,9 +551,9 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 }
 
 /**
-* @brief 获取当前线程对应的服务组
-* @return		服务组
-*/
+ * @brief 获取当前线程对应的服务组
+ * @return		服务组
+ */
 static eaf_group_t* _eaf_get_current_group(void)
 {
 	return eaf_thread_storage_get(&g_eaf_ctx->tls);
@@ -1234,9 +1234,6 @@ EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_servic
 {
 	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
 	eaf_service_t* service = EAF_CONTAINER_OF(sls, eaf_service_t, runtime.local);
-
-	/* must in this group */
-	assert(service >= group->service.table);
 
 	size_t index = service - &group->service.table[0];
 	if (index >= group->service.size)
