@@ -58,7 +58,7 @@ static test_template_ctx_t	g_test_quick_ctx = {
 };
 test_quick_cfg_t g_quick_cfg;
 
-static void _test_template_default_request(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
+void test_quick_default_request(uint32_t from, uint32_t to, eaf_msg_t* req)
 {
 	(void)from; (void)to;
 	int value = *(int*)eaf_msg_get_data(req, NULL);
@@ -67,6 +67,16 @@ static void _test_template_default_request(_In_ uint32_t from, _In_ uint32_t to,
 	*(int*)eaf_msg_get_data(rsp, NULL) = ~value;
 
 	eaf_send_rsp(eaf_service_self(), req->from, rsp);
+	eaf_msg_dec_ref(rsp);
+}
+
+void test_quick_request_template_empty(uint32_t from, uint32_t to, eaf_msg_t* req)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to);
+
+	eaf_msg_t* rsp = eaf_msg_create_rsp(req, 0);
+
+	eaf_send_rsp(to, req->from, rsp);
 	eaf_msg_dec_ref(rsp);
 }
 
@@ -119,7 +129,7 @@ static void _test_quick_reset_default_config(void)
 		size_t j;
 		for (j = 0; j < EAF_ARRAY_SIZE(g_test_quick_ctx.entry[j].msg_map); j++)
 		{
-			g_test_quick_ctx.entry[i].msg_map[j].fn = _test_template_default_request;
+			g_test_quick_ctx.entry[i].msg_map[j].fn = test_quick_default_request;
 		}
 
 		g_test_quick_ctx.entry[i].ability.enable = 0;

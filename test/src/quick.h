@@ -88,6 +88,9 @@ int test_eaf_quick_setup(const test_quick_cfg_t* cfg);
  */
 void test_eaf_quick_cleanup(void);
 
+void test_quick_default_request(uint32_t from, uint32_t to, eaf_msg_t* req);
+void test_quick_request_template_empty(uint32_t from, uint32_t to, eaf_msg_t* req);
+
 #ifdef __cplusplus
 }
 #endif

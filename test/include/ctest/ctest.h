@@ -46,7 +46,7 @@ extern "C" {
  * @param [in] fixture_name		The name of fixture
  */
 #define TEST_FIXTURE_SETUP(fixture_name)	\
-	void TEST_FIXTURE_SETUP_##fixture_name(void)
+	static void TEST_FIXTURE_SETUP_##fixture_name(void)
 
 /**
  * @brief TearDown test suit
@@ -54,7 +54,7 @@ extern "C" {
  * @param [in] fixture_name		The name of fixture
  */
 #define TEST_FIXTURE_TEAREDOWN(fixture_name)	\
-	void TEST_FIXTURE_TEARDOWN_##fixture_name(void)
+	static void TEST_FIXTURE_TEARDOWN_##fixture_name(void)
 
 /**
  * Group: SetupAndTeardown
@@ -1039,7 +1039,7 @@ void ctest_skip_test(void);
  * @param [in] ...		Print arguments
  */
 #define TEST_LOG(fmt, ...)	\
-	TEST_EXPAND(printf("[%s:%d %s] " fmt "\n", ctest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__))
+	printf("[%s:%d %s] " fmt "\n", ctest_pretty_file(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 /**
  * @}

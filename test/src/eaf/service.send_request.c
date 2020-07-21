@@ -1,5 +1,7 @@
+#include <string.h>
 #include "ctest/ctest.h"
 #include "eaf/eaf.h"
+#include "quick2.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_MSG		(TEST_SERVICE_S1 + 0x0001)
@@ -7,15 +9,21 @@
 #define TEST_SERVICE_S2			0x00020000
 #define TEST_SERVICE_S2_MSG		(TEST_SERVICE_S2 + 0x0001)
 
-static int			_s_ret_val;
-static eaf_sem_t*	s_service_send_request_sem;
-
-static void _test_send_request_s1_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
+typedef struct test_send_request_ctx
 {
-	(void)from; (void)to;
-	ASSERT(eaf_msg_get_receipt(msg) == eaf_errno_success);
-	_s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
-	eaf_sem_post(s_service_send_request_sem);
+	int			_s_ret_val;
+	eaf_sem_t*	s_service_send_request_sem;
+}test_send_request_ctx_t;
+
+static test_send_request_ctx_t s_test_send_request_ctx;
+
+static void _test_send_request_s1_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to);
+
+	ASSERT_EQ_D32(eaf_msg_get_receipt(msg), eaf_errno_success);
+	s_test_send_request_ctx._s_ret_val = *(int*)eaf_msg_get_data(msg, NULL);
+	eaf_sem_post(s_test_send_request_ctx.s_service_send_request_sem);
 }
 
 static int _test_send_request_s1_on_init(void)
@@ -30,29 +38,10 @@ static int _test_send_request_s1_on_init(void)
 	return 0;
 }
 
-static void _test_send_request_s1_on_exit(void)
+static void _test_send_request_s2_on_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 {
-	// do nothing
-}
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to);
 
-static int _test_send_request_s2_on_init(void)
-{
-	return 0;
-}
-
-static void _test_send_request_s2_on_exit(void)
-{
-	// do nothing
-}
-
-static void _test_send_request_s1_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
-{
-	(void)from; (void)to; (void)msg;
-}
-
-static void _test_send_request_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* req)
-{
-	(void)from; (void)to;
 	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(int));
 	ASSERT(rsp != NULL);
 
@@ -63,58 +52,25 @@ static void _test_send_request_s2_on_req(_In_ uint32_t from, _In_ uint32_t to, _
 
 TEST_FIXTURE_SETUP(eaf_service)
 {
-	_s_ret_val = 0;
-	ASSERT_NE_PTR(s_service_send_request_sem = eaf_sem_create(0), NULL);
+	memset(&s_test_send_request_ctx, 0, sizeof(s_test_send_request_ctx));
+	ASSERT_NE_PTR(s_test_send_request_ctx.s_service_send_request_sem = eaf_sem_create(0), NULL);
 
-	/* 配置EAF */
-	static eaf_service_table_t service_table_1[] = {
-		{ TEST_SERVICE_S1, 8 },
-		{ TEST_SERVICE_S2, 8 },
-	};
-	static eaf_group_table_t load_table[] = {
-		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
-	};
-	ASSERT_EQ_D32(eaf_init(load_table, EAF_ARRAY_SIZE(load_table)), 0);
-
-	/* 部署服务S1 */
-	static eaf_message_table_t s1_msg_table[] = {
-		{ TEST_SERVICE_S1_MSG, _test_send_request_s1_on_req },
-	};
-	static eaf_entrypoint_t s1_info = {
-		EAF_ARRAY_SIZE(s1_msg_table), s1_msg_table,
-		_test_send_request_s1_on_init,
-		_test_send_request_s1_on_exit,
-	};
-	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
-
-	/* 部署服务S2*/
-	static eaf_message_table_t s2_msg_table[] = {
-		{ TEST_SERVICE_S2_MSG, _test_send_request_s2_on_req },
-	};
-	static eaf_entrypoint_t s2_info = {
-		EAF_ARRAY_SIZE(s2_msg_table), s2_msg_table,
-		_test_send_request_s2_on_init,
-		_test_send_request_s2_on_exit,
-	};
-	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
-
-	/* 加载EAF */
-	ASSERT_EQ_D32(eaf_load(), 0);
+	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S1, _test_send_request_s1_on_init, NULL, QUICK_DEPLOY_NO_MSG);
+	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S2, NULL, NULL, {
+		{ TEST_SERVICE_S2_MSG, _test_send_request_s2_on_req }
+	});
 }
 
 TEST_FIXTURE_TEAREDOWN(eaf_service)
 {
-	/* 退出并清理 */
-	ASSERT_EQ_D32(eaf_exit(), 0);
-
-	eaf_sem_destroy(s_service_send_request_sem);
+	eaf_sem_destroy(s_test_send_request_ctx.s_service_send_request_sem);
 }
 
 TEST_F(eaf_service, send_request)
 {
 	/* 等待结果 */
-	ASSERT_EQ_D32(eaf_sem_pend(s_service_send_request_sem, 8 * 1000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_send_request_ctx.s_service_send_request_sem, 8 * 1000), 0);
 
 	/* 检查结果 */
-	ASSERT_EQ_D32(_s_ret_val, 99 * 2);
+	ASSERT_EQ_D32(s_test_send_request_ctx._s_ret_val, 99 * 2);
 }

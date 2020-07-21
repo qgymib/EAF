@@ -2,6 +2,7 @@
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
 #include "quick.h"
+#include "quick2.h"
 
 typedef struct test_watchdog_ctx
 {
@@ -57,27 +58,19 @@ TEST_FIXTURE_SETUP(powerpack_watchdog)
 	ASSERT_NE_PTR(s_test_watchdog_ctx.on_register_rsp.sem = eaf_sem_create(0), NULL);
 	ASSERT_NE_PTR(s_test_watchdog_ctx.on_unregister_rsp.sem = eaf_sem_create(0), NULL);
 
-	static eaf_service_table_t service_table[] = {
-		{ EAF_WATCHDOG_ID, 8 },
-		{ EAF_TIMER_ID, 8 },
-	};
-	static eaf_group_table_t group_table[] = {
-		{ EAF_THREAD_ATTR_INITIALIZER, { EAF_ARRAY_SIZE(service_table), service_table } },
-	};
-	ASSERT_EQ_D32(eaf_init(group_table, EAF_ARRAY_SIZE(group_table)), 0);
+	QUICK_RESERVE_SERVICE(0, EAF_WATCHDOG_ID);
+	QUICK_RESERVE_SERVICE(0, EAF_TIMER_ID);
+	QUICK_FORCE_INIT_EAF();
 
 	eaf_powerpack_cfg_t pp_cfg = { EAF_THREAD_ATTR_INITIALIZER };
 	ASSERT_EQ_D32(eaf_powerpack_init(&pp_cfg), 0);
 
 	ASSERT_EQ_D32(eaf_timer_init(), 0, "error:%s(%d)", eaf_strerror(_a), _a);
 	ASSERT_EQ_D32(eaf_watchdog_init(_test_watchdog_on_error_fn, NULL), 0);
-
-	ASSERT_EQ_D32(eaf_load(), 0, "error:%s(%d)", eaf_strerror(_a), _a);
 }
 
 TEST_FIXTURE_TEAREDOWN(powerpack_watchdog)
 {
-	eaf_exit();
 	eaf_watchdog_exit();
 	eaf_timer_exit();
 	eaf_powerpack_exit();

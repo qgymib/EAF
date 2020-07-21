@@ -1,4 +1,5 @@
 #include "ctest/ctest.h"
+#include "quick2.h"
 #if defined(_MSC_VER)
 #	define _CRTDBG_MAP_ALLOC
 #	include <stdlib.h>
@@ -51,7 +52,7 @@ int main(int argc, char* argv[])
 	}
 #endif
 
-	int ret = ctest_run_tests(argc, argv, NULL);
+	int ret = ctest_run_tests(argc, argv, &quick_hook);
 
 #if defined(_MSC_VER)
 	if (flag_leack_check)
