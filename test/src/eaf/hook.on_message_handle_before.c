@@ -23,7 +23,7 @@ static void _test_hook_on_message_before_rsp(uint32_t from, uint32_t to, struct 
 	eaf_sem_post(s_test_hook_on_message_before_ctx.check_point);
 }
 
-static int _test_hook_on_message_before(uint32_t from, uint32_t to, eaf_msg_t* msg)
+static int _test_hook_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 	s_test_hook_on_message_before_ctx.hook_cnt++;
@@ -48,7 +48,7 @@ TEST_FIXTURE_SETUP(eaf_hook)
 
 	static eaf_hook_t hook;
 	memset(&hook, 0, sizeof(hook));
-	hook.on_message_before = _test_hook_on_message_before;
+	hook.on_message_handle_before = _test_hook_on_message_handle_before;
 	ASSERT_EQ_D32(eaf_inject(&hook, sizeof(hook)), 0);
 }
 
@@ -58,7 +58,7 @@ TEST_FIXTURE_TEAREDOWN(eaf_hook)
 	eaf_sem_destroy(s_test_hook_on_message_before_ctx.wait_point);
 }
 
-TEST_F(eaf_hook, on_message_before)
+TEST_F(eaf_hook, on_message_handle_before)
 {
 	{
 		eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S1_REQ1, 0, _test_hook_on_message_before_rsp);

@@ -172,18 +172,21 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_message_send)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_send_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg);
 
 	/**
-	 * @brief Hook when destination cannot found.
+	 * @brief Hook when a message is done send.
+	 *
+	 * This hook is called when user already send a request/response.
+	 *
 	 * @see eaf_send_req()
 	 * @see eaf_send_rsp()
 	 * @param[in] from		Who send this message
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
-	 * @return				#eaf_errno
+	 * @param[in] ret		Send result
 	 */
-	int(*on_message_dst_not_found)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	void(*on_message_send_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg, _In_ int ret);
 
 	/**
 	 * @brief Hook a service is going to handle message.
@@ -198,7 +201,7 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_message_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_handle_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook a service is just handle message.
@@ -208,7 +211,7 @@ typedef struct eaf_hook
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
 	 */
-	void(*on_message_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	void(*on_message_handle_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
 
 	/**
 	 * @brief Hook before #eaf_exit() take effect
@@ -309,6 +312,13 @@ EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t
  * @return			#eaf_errno
  */
 EAF_API int eaf_inject(_In_ const eaf_hook_t* /* static */ hook, _In_ size_t size);
+
+/**
+ * @brief Undo inject system wide hook.
+ * @param[in] hook	The hook already registered
+ * @return			#eaf_errno
+ */
+EAF_API int eaf_uninject(_In_ const eaf_hook_t* hook);
 
 /**
  * @brief Get caller's service id

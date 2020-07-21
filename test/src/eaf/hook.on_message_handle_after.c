@@ -16,7 +16,7 @@ typedef struct test_hook_on_message_after_ctx
 
 static test_hook_on_message_after_ctx_t s_test_hook_on_message_after_ctx;
 
-static void _test_hook_on_message_after(uint32_t from, uint32_t to, eaf_msg_t* msg)
+static void _test_hook_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 
@@ -49,7 +49,7 @@ TEST_FIXTURE_SETUP(eaf_hook)
 
 	static eaf_hook_t hook;
 	memset(&hook, 0, sizeof(hook));
-	hook.on_message_after = _test_hook_on_message_after;
+	hook.on_message_handle_after = _test_hook_on_message_handle_after;
 	ASSERT_EQ_D32(eaf_inject(&hook, sizeof(hook)), 0);
 }
 
@@ -59,7 +59,7 @@ TEST_FIXTURE_TEAREDOWN(eaf_hook)
 	eaf_sem_destroy(s_test_hook_on_message_after_ctx.wait_point);
 }
 
-TEST_F(eaf_hook, on_message_after)
+TEST_F(eaf_hook, on_message_handle_after)
 {
 	{
 		eaf_msg_t* msg = eaf_msg_create_req(TEST_QUICK_S1_REQ1, 0, _test_hook_on_message_after_rsp);

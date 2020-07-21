@@ -138,15 +138,15 @@ typedef struct eaf_ctx
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/**< Global runtime */
 
-static int _eaf_hook_message_before(eaf_msgq_record_t* msg)
+static int _eaf_hook_message_handle_before(eaf_msgq_record_t* msg)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_before == NULL)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_handle_before == NULL)
 	{
 		return 0;
 	}
 
 	int ret;
-	if ((ret = g_eaf_ctx->hook->on_message_before(msg->data.from,
+	if ((ret = g_eaf_ctx->hook->on_message_handle_before(msg->data.from,
 		msg->data.to, &msg->data.msg->msg)) == 0)
 	{
 		return 0;
@@ -155,14 +155,14 @@ static int _eaf_hook_message_before(eaf_msgq_record_t* msg)
 	return ret;
 }
 
-static void _eaf_hook_message_after(eaf_msgq_record_t* msg)
+static void _eaf_hook_message_handle_after(eaf_msgq_record_t* msg)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_after == NULL)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_handle_after == NULL)
 	{
 		return;
 	}
 
-	g_eaf_ctx->hook->on_message_after(msg->data.from, msg->data.to, &msg->data.msg->msg);
+	g_eaf_ctx->hook->on_message_handle_after(msg->data.from, msg->data.to, &msg->data.msg->msg);
 }
 
 static void _eaf_hook_service_yield(uint32_t service)
@@ -243,13 +243,22 @@ static void _eaf_hook_service_exit_after(uint32_t id)
 	}
 }
 
-static int _eaf_hook_message_send(uint32_t from, uint32_t to, struct eaf_msg* msg)
+static int _eaf_hook_message_send_before(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_send == NULL)
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_send_before == NULL)
 	{
 		return 0;
 	}
-	return g_eaf_ctx->hook->on_message_send(from, to, msg);
+	return g_eaf_ctx->hook->on_message_send_before(from, to, msg);
+}
+
+static void _eaf_hook_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* msg, int ret)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_send_after == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_message_send_after(from, to, msg, ret);
 }
 
 static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
@@ -428,7 +437,7 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 		return;
 	}
 
-	_eaf_hook_message_after(msg);
+	_eaf_hook_message_handle_after(msg);
 
 	/* normal end, reset branch */
 	_eaf_service_reset(service);
@@ -466,7 +475,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 	}
 
 	/* hook: on_pre_msg_process */
-	if (_eaf_hook_message_before(service->msgq.cur_msg) < 0)
+	if (_eaf_hook_message_handle_before(service->msgq.cur_msg) < 0)
 	{
 		_eaf_service_reset(service);
 		return;
@@ -805,16 +814,6 @@ static eaf_service_t* _eaf_get_current_service(eaf_group_t** group)
 	return ret != NULL ? _eaf_group_get_cur_run(ret) : NULL;
 }
 
-static int _eaf_hook_dst_not_found(uint32_t from, uint32_t to, eaf_msg_t* msg)
-{
-	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_message_dst_not_found == NULL)
-	{
-		return eaf_errno_notfound;
-	}
-
-	return g_eaf_ctx->hook->on_message_dst_not_found(from, to, msg);
-}
-
 static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 {
 	eaf_msg_full_t* real_msg = EAF_MSG_I2C(req);
@@ -827,7 +826,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 	/* if service not found, send to rpc */
 	if (service == NULL)
 	{
-		return _eaf_hook_dst_not_found(from, to, req);
+		return eaf_errno_notfound;
 	}
 
 	/* 查找消息处理函数 */
@@ -876,7 +875,7 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 	/* report dst_not_found */
 	if (service == NULL)
 	{
-		return _eaf_hook_dst_not_found(from, to, rsp);
+		return eaf_errno_notfound;
 	}
 
 	/* 推送消息 */
@@ -1099,12 +1098,15 @@ int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
 	}
 
 	/* hook callback */
-	if ((ret = _eaf_hook_message_send(from, to, req)) < 0)
+	if ((ret = _eaf_hook_message_send_before(from, to, req)) < 0)
 	{
 		return ret;
 	}
 
-	return _eaf_send_req(from, to, req);
+	ret = _eaf_send_req(from, to, req);
+	_eaf_hook_message_send_after(from, to, req, ret);
+
+	return ret;
 }
 
 int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
@@ -1116,12 +1118,15 @@ int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
 	}
 
 	/* hook callback */
-	if ((ret = _eaf_hook_message_send(from, to, rsp)) < 0)
+	if ((ret = _eaf_hook_message_send_before(from, to, rsp)) < 0)
 	{
 		return ret;
 	}
 
-	return _eaf_send_rsp(from, to, rsp);
+	ret = _eaf_send_rsp(from, to, rsp);
+	_eaf_hook_message_send_after(from, to, rsp, ret);
+
+	return ret;
 }
 
 int eaf_resume(_In_ uint32_t srv_id)
@@ -1198,11 +1203,35 @@ uint32_t eaf_service_self(void)
 
 int eaf_inject(_In_ const eaf_hook_t* hook, _In_ size_t size)
 {
-	if (g_eaf_ctx == NULL || size != sizeof(*hook))
+	if (g_eaf_ctx == NULL)
 	{
 		return eaf_errno_state;
 	}
+	if (size != sizeof(*hook))
+	{
+		return eaf_errno_invalid;
+	}
+	if (g_eaf_ctx->hook != NULL)
+	{
+		return eaf_errno_duplicate;
+	}
+
 	g_eaf_ctx->hook = hook;
+	return eaf_errno_success;
+}
+
+EAF_API int eaf_uninject(_In_ const eaf_hook_t* hook)
+{
+	if (g_eaf_ctx == NULL)
+	{
+		return eaf_errno_state;
+	}
+	if (g_eaf_ctx->hook != hook)
+	{
+		return eaf_errno_invalid;
+	}
+
+	g_eaf_ctx->hook = NULL;
 	return eaf_errno_success;
 }
 
