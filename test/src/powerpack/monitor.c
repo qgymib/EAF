@@ -33,3 +33,8 @@ TEST_F(powerpack_monitor, DISABLED_print_tree)
 	eaf_monitor_print_tree(s_test_monitor_ctx.buffer, sizeof(s_test_monitor_ctx.buffer));
 	printf("%s", s_test_monitor_ctx.buffer);
 }
+
+TEST_F(powerpack_monitor, print_tree)
+{
+	eaf_monitor_print_tree(s_test_monitor_ctx.buffer, sizeof(s_test_monitor_ctx.buffer));
+}

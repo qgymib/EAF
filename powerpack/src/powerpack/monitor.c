@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "eaf/eaf.h"
 #include "powerpack.h"
 #include "monitor.h"
@@ -343,11 +344,40 @@ void eaf_monitor_exit(void)
 	uv_rwlock_destroy(&g_eaf_monitor_ctx2.dataflow.rwlock);
 }
 
+static const char* _monitor_state_2_string(eaf_service_state_t state)
+{
+	switch (state)
+	{
+	case eaf_service_state_init:
+		return "INIT";
+
+	case eaf_service_state_init_yield:
+		return "INIT_Y";
+
+	case eaf_service_state_idle:
+		return "IDLE";
+
+	case eaf_service_state_busy:
+		return "BUSY";
+
+	case eaf_service_state_yield:
+		return "YIELD";
+
+	case eaf_service_state_exit:
+		return "EXIT";
+
+	default:
+		break;
+	}
+
+	return "UNKNOWN";
+}
+
 void eaf_monitor_print_tree(char* buffer, size_t size)
 {
 	buffer[0] = '\0';
 
-	APPEND_LINE(buffer, size, ".\n");
+	APPEND_LINE(buffer, size, "[SERVICE]        [STATE] [RECV]     [SEND]     [S/C]\n");
 
 	uint32_t last_gid = (uint32_t)-1;
 	eaf_map_node_t* it = eaf_map_begin(&g_eaf_monitor_ctx.serivce.record_group);
@@ -361,6 +391,12 @@ void eaf_monitor_print_tree(char* buffer, size_t size)
 			last_gid = record->data.gid;
 		}
 
-		APPEND_LINE(buffer, size, "|  |- %#010x\n", record->data.sid);
+		APPEND_LINE(buffer, size, "|  |- %#010"PRIx32" %-7s %-10"PRIu64" %-10"PRIu64" %u/%u\n",
+			record->data.sid,
+			_monitor_state_2_string(record->data.sls->state),
+			record->counter.cnt_recv,
+			record->counter.cnt_send,
+			(unsigned)eaf_message_queue_size(record->data.sls),
+			(unsigned)eaf_message_queue_capacity(record->data.sls));
 	}
 }

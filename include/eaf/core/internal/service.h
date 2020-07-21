@@ -181,6 +181,20 @@ EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls);
 EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_service_local_t* sls);
 
 /**
+ * @brief Get message queue size.
+ * @param[in] sls	Service Local Storage
+ * @return			The size of message queue
+ */
+EAF_API size_t eaf_message_queue_size(_In_ const eaf_service_local_t* sls);
+
+/**
+ * @brief Get message queue capacity.
+ * @param[in] sls	Service Local Storage
+ * @return			The capacity of message queue
+ */
+EAF_API size_t eaf_message_queue_capacity(_In_ const eaf_service_local_t* sls);
+
+/**
  * @}
  */
 

@@ -1295,3 +1295,15 @@ EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_servic
 	}
 	return &group->service.table[index + 1].runtime.local;
 }
+
+EAF_API size_t eaf_message_queue_size(_In_ const eaf_service_local_t* sls)
+{
+	eaf_service_t* service = EAF_CONTAINER_OF(sls, eaf_service_t, runtime.local);
+	return eaf_list_size(&service->msgq.queue);
+}
+
+EAF_API size_t eaf_message_queue_capacity(_In_ const eaf_service_local_t* sls)
+{
+	eaf_service_t* service = EAF_CONTAINER_OF(sls, eaf_service_t, runtime.local);
+	return service->msgq.capacity;
+}
