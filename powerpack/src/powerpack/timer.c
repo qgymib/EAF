@@ -143,6 +143,23 @@ err_init_timer:
 	return;
 }
 
+/**
+ * @brief Wait for all record closed
+ */
+static void _timer_wait_all_uv_timer_close(void)
+{
+	eaf_lock_enter(g_timer_ctx.objlock);
+	while (eaf_list_size(&g_timer_ctx.recycle_queue) != 0)
+	{
+		eaf_lock_leave(g_timer_ctx.objlock);
+		{
+			eaf_thread_sleep(10);
+		}
+		eaf_lock_enter(g_timer_ctx.objlock);
+	}
+	eaf_lock_leave(g_timer_ctx.objlock);
+}
+
 static int _timer_on_init(void)
 {
 	return 0;
@@ -165,6 +182,8 @@ static void _timer_on_exit(void)
 		uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
 	}
 	eaf_lock_leave(g_timer_ctx.objlock);
+
+	_timer_wait_all_uv_timer_close();
 }
 
 int eaf_timer_init(void)
@@ -197,18 +216,6 @@ void eaf_timer_exit(void)
 	{
 		return;
 	}
-
-	/* wait for all record closed */
-	eaf_lock_enter(g_timer_ctx.objlock);
-	while (eaf_list_size(&g_timer_ctx.recycle_queue) != 0)
-	{
-		eaf_lock_leave(g_timer_ctx.objlock);
-		{
-			eaf_thread_sleep(10);
-		}
-		eaf_lock_enter(g_timer_ctx.objlock);
-	}
-	eaf_lock_leave(g_timer_ctx.objlock);
 
 	/* cleanup resource */
 	eaf_lock_destroy(g_timer_ctx.objlock);
