@@ -45,7 +45,7 @@ static void _powerpack_thread(void* arg)
 		{
 		}
 
-		eaf_sem_pend(g_pp_ctx.sem_loop, (unsigned long)-1);
+		eaf_sem_pend(g_pp_ctx.sem_loop, EAF_SEM_INFINITY);
 	}
 }
 
