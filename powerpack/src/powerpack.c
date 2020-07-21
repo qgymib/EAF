@@ -273,6 +273,11 @@ void eaf_powerpack_exit(void)
 	uv_loop_close(&g_pp_uv_ctx.uv_loop);
 	eaf_sem_destroy(g_pp_ctx.sem_loop);
 	g_pp_ctx.sem_loop = NULL;
+
+	/* clear hook table */
+	while (eaf_list_pop_front(&g_pp_ctx.hook.table) != NULL)
+	{
+	}
 }
 
 int eaf_powerpack_hook_register(eaf_powerpack_hook_t* hook, size_t size)

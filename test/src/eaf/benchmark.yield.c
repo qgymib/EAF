@@ -1,6 +1,7 @@
 #include <string.h>
 #include "ctest/ctest.h"
 #include "eaf/eaf.h"
+#include "quick2.h"
 
 #define TEST_SERVICE_S1			0x00010000
 #define TEST_SERVICE_S1_REQ		(TEST_SERVICE_S1 + 0x0001)
@@ -8,123 +9,77 @@
 #define TEST_SERVICE_S2			0x00020000
 #define TEST_SERVICE_S2_REQ		(TEST_SERVICE_S2 + 0x0001)
 
-static eaf_sem_t*				s_benchmark_yield_sem_s1;
-static eaf_sem_t*				s_benchmark_yield_sem_s2;
-static size_t					s_benchmark_yield_count_s1;
-static size_t					s_benchmark_yield_count_s2;
-static size_t					s_benchmark_yield_total;
+typedef struct test_benchmark_yield_ctx
+{
+	eaf_sem_t*	sem_s1;
+	eaf_sem_t*	sem_s2;
+	size_t		cnt_s1;
+	size_t		cnt_s2;
+	size_t		total;
+}test_benchmark_yield_ctx_t;
+
+static test_benchmark_yield_ctx_t s_test_benchmark_yield_ctx;
 
 static void _test_benchmark_yield_on_rsp(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)from; (void)to; (void)msg;
-}
-
-static int _test_benchmark_yield_on_init(void)
-{
-	return 0;
-}
-
-static void _test_benchmark_yield_on_exit(void)
-{
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 }
 
 static void _test_benchmark_yield_s1_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)from; (void)to; (void)msg;
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 	eaf_reenter
 	{
 		/* first we need s2 continue run */
 		eaf_resume(TEST_SERVICE_S2);
 
-		for (; s_benchmark_yield_count_s1 < s_benchmark_yield_total;
-			s_benchmark_yield_count_s1++)
+		for (; s_test_benchmark_yield_ctx.cnt_s1 < s_test_benchmark_yield_ctx.total;
+			s_test_benchmark_yield_ctx.cnt_s1++)
 		{
 			eaf_yield eaf_resume(TEST_SERVICE_S2);
 		}
 
-		eaf_sem_post(s_benchmark_yield_sem_s1);
+		eaf_sem_post(s_test_benchmark_yield_ctx.sem_s1);
 	};
 }
 
 static void _test_benchmark_yield_s2_on_req(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)from; (void)to; (void)msg;
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 	eaf_reenter
 	{
 		/* first we need s1 continue run */
 		eaf_resume(TEST_SERVICE_S1);
 
-		for (; s_benchmark_yield_count_s2 < s_benchmark_yield_total;
-			s_benchmark_yield_count_s2++)
+		for (; s_test_benchmark_yield_ctx.cnt_s2 < s_test_benchmark_yield_ctx.total;
+			s_test_benchmark_yield_ctx.cnt_s2++)
 		{
 			eaf_yield eaf_resume(TEST_SERVICE_S1);
 		}
 
-		eaf_sem_post(s_benchmark_yield_sem_s2);
+		eaf_sem_post(s_test_benchmark_yield_ctx.sem_s2);
 	};
-}
-
-static void _benchmark_yield_setup(size_t count)
-{
-	ASSERT_NE_PTR(s_benchmark_yield_sem_s1 = eaf_sem_create(0), NULL);
-	ASSERT_NE_PTR(s_benchmark_yield_sem_s2 = eaf_sem_create(0), NULL);
-
-	s_benchmark_yield_total = count;
-	s_benchmark_yield_count_s1 = 0;
-	s_benchmark_yield_count_s2 = 0;
-
-	/* 配置EAF */
-	static eaf_service_table_t service_table_1[] = {
-		{ TEST_SERVICE_S1, 8 },
-		{ TEST_SERVICE_S2, 8 },
-	};
-	static eaf_group_table_t load_table[] = {
-		{ { 0, { 0, 0, 0 } }, { EAF_ARRAY_SIZE(service_table_1), service_table_1 } },
-	};
-	ASSERT_EQ_D32(eaf_init(load_table, EAF_ARRAY_SIZE(load_table)), 0);
-
-	/* 部署服务S1 */
-	static eaf_message_table_t s1_msg_table[] = {
-		{ TEST_SERVICE_S1_REQ, _test_benchmark_yield_s1_on_req },
-	};
-	static eaf_entrypoint_t s1_info = {
-		EAF_ARRAY_SIZE(s1_msg_table), s1_msg_table,
-		_test_benchmark_yield_on_init,
-		_test_benchmark_yield_on_exit,
-	};
-	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S1, &s1_info), 0);
-
-	/* 部署服务S2*/
-	static eaf_message_table_t s2_msg_table[] = {
-		{ TEST_SERVICE_S2_REQ, _test_benchmark_yield_s2_on_req },
-	};
-	static eaf_entrypoint_t s2_info = {
-		EAF_ARRAY_SIZE(s2_msg_table), s2_msg_table,
-		_test_benchmark_yield_on_init,
-		_test_benchmark_yield_on_exit,
-	};
-	ASSERT_EQ_D32(eaf_register(TEST_SERVICE_S2, &s2_info), 0);
-
-	/* 加载EAF */
-	ASSERT_EQ_D32(eaf_load(), 0);
-}
-
-static void _benchmark_yield_teardown(void)
-{
-	/* 退出并清理 */
-	ASSERT_EQ_D32(eaf_exit(), 0);
-	eaf_sem_destroy(s_benchmark_yield_sem_s1);
-	eaf_sem_destroy(s_benchmark_yield_sem_s2);
 }
 
 TEST_FIXTURE_SETUP(benchmark_yield)
 {
-	_benchmark_yield_setup(1000000);
+	memset(&s_test_benchmark_yield_ctx, 0, sizeof(s_test_benchmark_yield_ctx));
+	ASSERT_NE_PTR(s_test_benchmark_yield_ctx.sem_s1 = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_test_benchmark_yield_ctx.sem_s2 = eaf_sem_create(0), NULL);
+	s_test_benchmark_yield_ctx.total = 1000000;
+
+	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S1, NULL, NULL, {
+		{ TEST_SERVICE_S1_REQ, _test_benchmark_yield_s1_on_req }
+	});
+	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S2, NULL, NULL, {
+		{ TEST_SERVICE_S2_REQ, _test_benchmark_yield_s2_on_req }
+	});
 }
 
 TEST_FIXTURE_TEAREDOWN(benchmark_yield)
 {
-	_benchmark_yield_teardown();
+	eaf_sem_destroy(s_test_benchmark_yield_ctx.sem_s1);
+	eaf_sem_destroy(s_test_benchmark_yield_ctx.sem_s2);
 }
 
 TEST_F(benchmark_yield, DISABLED_yield_1000000)
@@ -145,7 +100,7 @@ TEST_F(benchmark_yield, DISABLED_yield_1000000)
 	}
 	/* wait for test complete */
 	{
-		eaf_sem_pend(s_benchmark_yield_sem_s1, (unsigned long)-1);
-		eaf_sem_pend(s_benchmark_yield_sem_s2, (unsigned long)-1);
+		eaf_sem_pend(s_test_benchmark_yield_ctx.sem_s1, EAF_SEM_INFINITY);
+		eaf_sem_pend(s_test_benchmark_yield_ctx.sem_s2, EAF_SEM_INFINITY);
 	}
 }
