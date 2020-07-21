@@ -201,7 +201,7 @@ typedef struct eaf_hook
 	 * @param[in,out] msg	The message
 	 * @return				#eaf_errno
 	 */
-	int(*on_message_handle_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	int(*on_message_handle_before)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg);
 
 	/**
 	 * @brief Hook a service is just handle message.
@@ -211,7 +211,18 @@ typedef struct eaf_hook
 	 * @param[in] to		Who will receive this message
 	 * @param[in,out] msg	The message
 	 */
-	void(*on_message_handle_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg);
+	void(*on_message_handle_after)(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg);
+
+	/**
+	 * @brief Hook EAF is going to load.
+	 */
+	void(*on_load_before)(void);
+
+	/**
+	 * @brief Hook EAF is loaded.
+	 * @param[in] ret	Load result
+	 */
+	void(*on_load_after)(int ret);
 
 	/**
 	 * @brief Hook before #eaf_exit() take effect

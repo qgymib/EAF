@@ -1339,7 +1339,7 @@ static void _test_hook_before_parameterized_test(ctest_case_t* test_case, unsign
 		return;
 	}
 	g_test_ctx.hook->before_parameterized_test(test_case->info.suit_name,
-		test_case->info.case_name, index, test_case->stage.n_dat);
+		test_case->info.case_name, index, (unsigned)test_case->stage.n_dat);
 }
 
 static void _test_hook_after_parameterized_test(ctest_case_t* test_case, unsigned index, int ret)
@@ -1349,7 +1349,7 @@ static void _test_hook_after_parameterized_test(ctest_case_t* test_case, unsigne
 		return;
 	}
 	g_test_ctx.hook->after_parameterized_test(test_case->info.suit_name,
-		test_case->info.case_name, index, test_case->stage.n_dat, ret);
+		test_case->info.case_name, index, (unsigned)test_case->stage.n_dat, ret);
 }
 
 static void _test_fixture_run_body(void)

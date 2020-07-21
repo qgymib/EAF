@@ -6,6 +6,8 @@ extern "C" {
 
 #include "c_semaphore.h"
 
+#define EAF_COMPAT_SEM_INFINITY	((unsigned long)-1)
+
 struct eaf_compat_sem;
 typedef struct eaf_compat_sem eaf_compat_sem_t;
 

@@ -25,6 +25,7 @@ extern "C" {
 #include "eaf/powerpack/hash.h"
 #include "eaf/powerpack/log.h"
 #include "eaf/powerpack/message.h"
+#include "eaf/powerpack/monitor.h"
 #include "eaf/powerpack/net.h"
 #include "eaf/powerpack/ringbuffer.h"
 #include "eaf/powerpack/time.h"
@@ -33,6 +34,12 @@ extern "C" {
 /**
  * @}
  */
+
+typedef struct eaf_powerpack_hook
+{
+	eaf_list_node_t		node;
+	eaf_hook_t			hook;
+}eaf_powerpack_hook_t;
 
 /**
  * @brief PowerPack configuration
@@ -53,6 +60,8 @@ int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg);
  * @brief must be called after #eaf_exit()
  */
 void eaf_powerpack_exit(void);
+
+int eaf_powerpack_hook_register(eaf_powerpack_hook_t* hook, size_t size);
 
 #ifdef __cplusplus
 }

@@ -12,9 +12,9 @@
 #include "message.h"
 
 /*
-* Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
-* https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
-*/
+ * Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
+ * https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4127
+ */
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #	pragma warning(disable : 4127)
 #endif
@@ -259,6 +259,24 @@ static void _eaf_hook_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* 
 		return;
 	}
 	g_eaf_ctx->hook->on_message_send_after(from, to, msg, ret);
+}
+
+static void _eaf_hook_load_before(void)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_load_before == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_load_before();
+}
+
+static void _eaf_hook_load_after(int ret)
+{
+	if (g_eaf_ctx->hook == NULL || g_eaf_ctx->hook->on_load_after == NULL)
+	{
+		return;
+	}
+	g_eaf_ctx->hook->on_load_after(ret);
 }
 
 static eaf_service_t* _eaf_service_find_service(uint32_t service_id, eaf_group_t** group)
@@ -999,6 +1017,8 @@ int eaf_load(void)
 		return eaf_errno_state;
 	}
 
+	_eaf_hook_load_before();
+
 	/* start all thread */
 	g_eaf_ctx->state = eaf_ctx_state_busy;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
@@ -1009,10 +1029,13 @@ int eaf_load(void)
 	/* wait for all thread to be ready */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		eaf_compat_sem_pend(&g_eaf_ctx->ready, (unsigned long)-1);
+		eaf_compat_sem_pend(&g_eaf_ctx->ready, EAF_COMPAT_SEM_INFINITY);
 	}
 
-	return g_eaf_ctx->mask.init_failure ? eaf_errno_state : eaf_errno_success;
+	int ret = g_eaf_ctx->mask.init_failure ? eaf_errno_state : eaf_errno_success;
+	_eaf_hook_load_after(ret);
+
+	return ret;
 }
 
 int eaf_exit(void)
@@ -1245,7 +1268,7 @@ EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls)
 	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
 	size_t index = group->index;
 
-	if (index >= g_eaf_ctx->group.size)
+	if (index >= (g_eaf_ctx->group.size - 1))
 	{
 		return NULL;
 	}
@@ -1256,7 +1279,8 @@ EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls)
 EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls)
 {
 	eaf_group_t* group = EAF_CONTAINER_OF(gls, eaf_group_t, coroutine.local);
-	return &group->service.table[0].runtime.local;
+	eaf_service_t* service = &group->service.table[0];
+	return &service->runtime.local;
 }
 
 EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_service_local_t* sls)
@@ -1265,7 +1289,7 @@ EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_servic
 	eaf_service_t* service = EAF_CONTAINER_OF(sls, eaf_service_t, runtime.local);
 
 	size_t index = service - &group->service.table[0];
-	if (index >= group->service.size)
+	if (index >= (group->service.size - 1))
 	{
 		return NULL;
 	}
