@@ -292,6 +292,20 @@ int eaf_powerpack_hook_register(eaf_powerpack_hook_t* hook, size_t size)
 	return eaf_errno_success;
 }
 
+void eaf_powerpack_hook_unregister(eaf_powerpack_hook_t* hook)
+{
+	eaf_list_node_t* it = eaf_list_begin(&g_pp_ctx.hook.table);
+	for (; it != NULL; it = eaf_list_next(it))
+	{
+		eaf_powerpack_hook_t* record = EAF_CONTAINER_OF(it, eaf_powerpack_hook_t, node);
+		if (record == hook)
+		{
+			eaf_list_erase(&g_pp_ctx.hook.table, it);
+			break;
+		}
+	}
+}
+
 uv_loop_t* eaf_uv_get(void)
 {
 	return &g_pp_uv_ctx.uv_loop;

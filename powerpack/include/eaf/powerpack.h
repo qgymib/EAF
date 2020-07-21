@@ -57,11 +57,23 @@ typedef struct eaf_powerpack_cfg
 int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg);
 
 /**
- * @brief must be called after #eaf_exit()
+ * @brief Must be called after #eaf_exit()
  */
 void eaf_powerpack_exit(void);
 
+/**
+ * @brief Register global hook.
+ * @param[in] hook	Hook
+ * @param[in] size	sizeof(*hook)
+ * @return			#eaf_errno
+ */
 int eaf_powerpack_hook_register(eaf_powerpack_hook_t* hook, size_t size);
+
+/**
+ * @brief Unregister global hook.
+ * @param[in] hook	A registered hook
+ */
+void eaf_powerpack_hook_unregister(eaf_powerpack_hook_t* hook);
 
 #ifdef __cplusplus
 }

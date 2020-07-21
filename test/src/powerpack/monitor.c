@@ -19,7 +19,7 @@ TEST_FIXTURE_SETUP(powerpack_monitor)
 	eaf_powerpack_cfg_t pp_cfg = { EAF_THREAD_ATTR_INITIALIZER };
 	ASSERT_EQ_D32(eaf_powerpack_init(&pp_cfg), 0);
 
-	ASSERT_EQ_D32(eaf_monitor_init(), 0);
+	ASSERT_EQ_D32(eaf_monitor_init(1), 0);
 }
 
 TEST_FIXTURE_TEAREDOWN(powerpack_monitor)

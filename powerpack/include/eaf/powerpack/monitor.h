@@ -6,9 +6,10 @@ extern "C" {
 
 /**
  * @brief Initialize monitor
+ * @param[in] sec	Refresh time interval
  * @return		#eaf_errno
  */
-int eaf_monitor_init(void);
+int eaf_monitor_init(unsigned sec);
 
 /**
  * @brief Exit monitor

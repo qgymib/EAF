@@ -27,6 +27,7 @@ static int _monitor_on_cmp_service_record_split(const eaf_map_node_t* key1, cons
 static void _monitor_on_load_before(void);
 static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* msg, int ret);
 static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg_t* msg);
+static void _monitor_on_exit_before(void);
 
 typedef struct monitor_dataflow_record
 {
@@ -44,6 +45,8 @@ typedef struct monitor_service_record
 	eaf_map_node_t				node_group;		/**< node for eaf_monitor_ctx_t::serivce::record_group */
 	eaf_map_node_t				node_split;		/**< node for eaf_monitor_ctx_t::serivce::record_split */
 
+	uv_mutex_t					objlock;		/**< Object lock */
+
 	struct
 	{
 		uint32_t				gid;			/**< Group ID */
@@ -53,8 +56,8 @@ typedef struct monitor_service_record
 
 	struct
 	{
-		uint64_t				cnt_send;		/** The number of message send */
-		uint64_t				cnt_recv;		/** The number of message recv */
+		uint32_t				cnt_send;		/** The number of message send */
+		uint32_t				cnt_recv;		/** The number of message recv */
 	}counter;
 }monitor_service_record_t;
 
@@ -74,6 +77,15 @@ typedef struct eaf_monitor_ctx
 
 typedef struct eaf_monitor_ctx2
 {
+	struct
+	{
+		uv_timer_t				timer;
+		struct
+		{
+			unsigned			running : 1;
+		}mask;
+	}refresh;
+
 	struct
 	{
 		uv_rwlock_t				rwlock;
@@ -107,7 +119,7 @@ static eaf_powerpack_hook_t g_pp_hook = {
 		_monitor_on_message_handle_after,	// .on_message_handle_after
 		_monitor_on_load_before,			// .on_load_before
 		NULL,								// .on_load_after
-		NULL,								// .on_exit_before
+		_monitor_on_exit_before,			// .on_exit_before
 		NULL,								// .on_exit_after
 	}
 };
@@ -194,7 +206,19 @@ static monitor_service_record_t* _monitor_find_serivce(uint32_t sid)
 static void _monitor_update_counter_recv(uint32_t sid)
 {
 	monitor_service_record_t* record = _monitor_find_serivce(sid);
+
+	uv_mutex_lock(&record->objlock);
 	record->counter.cnt_recv++;
+	uv_mutex_unlock(&record->objlock);
+}
+
+static void _monitor_update_counter_send(uint32_t sid)
+{
+	monitor_service_record_t* record = _monitor_find_serivce(sid);
+
+	uv_mutex_lock(&record->objlock);
+	record->counter.cnt_send++;
+	uv_mutex_unlock(&record->objlock);
 }
 
 static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg_t* msg)
@@ -202,6 +226,24 @@ static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, msg);
 
 	_monitor_update_counter_recv(to);
+}
+
+static void _monitor_on_timer_close(uv_handle_t* handle)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
+
+	g_eaf_monitor_ctx2.refresh.mask.running = 0;
+}
+
+static void _monitor_on_exit_before(void)
+{
+	uv_timer_stop(&g_eaf_monitor_ctx2.refresh.timer);
+	uv_close((uv_handle_t*)&g_eaf_monitor_ctx2.refresh.timer, _monitor_on_timer_close);
+
+	while (g_eaf_monitor_ctx2.refresh.mask.running)
+	{
+		eaf_thread_sleep(10);
+	}
 }
 
 static void _monitor_on_load_before(void)
@@ -221,6 +263,12 @@ static void _monitor_on_load_before(void)
 			record->data.sls = sls;
 			record->counter.cnt_send = 0;
 			record->counter.cnt_recv = 0;
+
+			if (uv_mutex_init(&record->objlock) < 0)
+			{
+				free(record);
+				continue;
+			}
 
 			if (eaf_map_insert(&g_eaf_monitor_ctx.serivce.record_split, &record->node_split) < 0)
 			{
@@ -284,12 +332,6 @@ static void _monitor_update_message_path(uint32_t from, uint32_t to)
 	}
 }
 
-static void _monitor_update_counter_send(uint32_t sid)
-{
-	monitor_service_record_t* record = _monitor_find_serivce(sid);
-	record->counter.cnt_send++;
-}
-
 static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* msg, int ret)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(msg);
@@ -302,46 +344,6 @@ static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t
 
 	_monitor_update_message_path(from, to);
 	_monitor_update_counter_send(from);
-}
-
-int eaf_monitor_init(void)
-{
-	if (uv_rwlock_init(&g_eaf_monitor_ctx2.dataflow.rwlock) < 0)
-	{
-		return eaf_errno_unknown;
-	}
-
-	return eaf_powerpack_hook_register(&g_pp_hook, sizeof(g_pp_hook));
-}
-
-void eaf_monitor_exit(void)
-{
-	eaf_map_node_t* it;
-
-	it = eaf_map_begin(&g_eaf_monitor_ctx.serivce.record_split);
-	while (it != NULL)
-	{
-		eaf_map_node_t* tmp = it;
-		it = eaf_map_next(it);
-		eaf_map_erase(&g_eaf_monitor_ctx.serivce.record_split, tmp);
-
-		monitor_service_record_t* record = EAF_CONTAINER_OF(tmp, monitor_service_record_t, node_split);
-		eaf_map_erase(&g_eaf_monitor_ctx.serivce.record_group, &record->node_group);
-		free(record);
-	}
-
-	it = eaf_map_begin(&g_eaf_monitor_ctx.dataflow.record);
-	while (it != NULL)
-	{
-		eaf_map_node_t* tmp = it;
-		it = eaf_map_next(it);
-		eaf_map_erase(&g_eaf_monitor_ctx.dataflow.record, tmp);
-
-		monitor_dataflow_record_t* record = EAF_CONTAINER_OF(it, monitor_dataflow_record_t, node);
-		free(record);
-	}
-
-	uv_rwlock_destroy(&g_eaf_monitor_ctx2.dataflow.rwlock);
 }
 
 static const char* _monitor_state_2_string(eaf_service_state_t state)
@@ -373,11 +375,102 @@ static const char* _monitor_state_2_string(eaf_service_state_t state)
 	return "UNKNOWN";
 }
 
+static void _monitor_on_timer_cb(uv_timer_t* handle)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
+
+	eaf_map_node_t* it = eaf_map_begin(&g_eaf_monitor_ctx.serivce.record_group);
+	for (; it != NULL; it = eaf_map_next(it))
+	{
+		monitor_service_record_t* record = EAF_CONTAINER_OF(it, monitor_service_record_t, node_group);
+
+		/* Reset counter */
+		uv_mutex_lock(&record->objlock);
+		{
+			record->counter.cnt_send = 0;
+			record->counter.cnt_recv = 0;
+		}
+		uv_mutex_unlock(&record->objlock);
+	}
+}
+
+int eaf_monitor_init(unsigned sec)
+{
+	int ret = eaf_errno_success;
+	if (uv_rwlock_init(&g_eaf_monitor_ctx2.dataflow.rwlock) < 0)
+	{
+		return eaf_errno_unknown;
+	}
+
+	g_eaf_monitor_ctx2.refresh.mask.running = 0;
+	if (uv_timer_init(eaf_uv_get(), &g_eaf_monitor_ctx2.refresh.timer) < 0)
+	{
+		ret = eaf_errno_unknown;
+		goto err_init_timer;
+	}
+
+	if ((ret = eaf_powerpack_hook_register(&g_pp_hook, sizeof(g_pp_hook))) < 0)
+	{
+		goto err_register_hook;
+	}
+
+	uint64_t timeout = (uint64_t)sec * 1000;
+
+	g_eaf_monitor_ctx2.refresh.mask.running = 1;
+	if (uv_timer_start(&g_eaf_monitor_ctx2.refresh.timer, _monitor_on_timer_cb, timeout, timeout) < 0)
+	{
+		goto err_start_timer;
+	}
+
+	eaf_uv_mod();
+	return eaf_errno_success;
+
+err_start_timer:
+	g_eaf_monitor_ctx2.refresh.mask.running = 0;
+	eaf_powerpack_hook_unregister(&g_pp_hook);
+err_register_hook:
+	uv_close((uv_handle_t*)&g_eaf_monitor_ctx2.refresh.timer, NULL);
+err_init_timer:
+	uv_rwlock_destroy(&g_eaf_monitor_ctx2.dataflow.rwlock);
+	return ret;
+}
+
+void eaf_monitor_exit(void)
+{
+	eaf_map_node_t* it;
+
+	it = eaf_map_begin(&g_eaf_monitor_ctx.serivce.record_split);
+	while (it != NULL)
+	{
+		eaf_map_node_t* tmp = it;
+		it = eaf_map_next(it);
+		eaf_map_erase(&g_eaf_monitor_ctx.serivce.record_split, tmp);
+
+		monitor_service_record_t* record = EAF_CONTAINER_OF(tmp, monitor_service_record_t, node_split);
+		eaf_map_erase(&g_eaf_monitor_ctx.serivce.record_group, &record->node_group);
+		uv_mutex_destroy(&record->objlock);
+		free(record);
+	}
+
+	it = eaf_map_begin(&g_eaf_monitor_ctx.dataflow.record);
+	while (it != NULL)
+	{
+		eaf_map_node_t* tmp = it;
+		it = eaf_map_next(it);
+		eaf_map_erase(&g_eaf_monitor_ctx.dataflow.record, tmp);
+
+		monitor_dataflow_record_t* record = EAF_CONTAINER_OF(it, monitor_dataflow_record_t, node);
+		free(record);
+	}
+
+	uv_rwlock_destroy(&g_eaf_monitor_ctx2.dataflow.rwlock);
+}
+
 void eaf_monitor_print_tree(char* buffer, size_t size)
 {
 	buffer[0] = '\0';
 
-	APPEND_LINE(buffer, size, "[SERVICE]        [STATE] [RECV]     [SEND]     [S/C]\n");
+	APPEND_LINE(buffer, size, "[SERVICE]        [STATE] [RECV]   [SEND]   [S/C]\n");
 
 	uint32_t last_gid = (uint32_t)-1;
 	eaf_map_node_t* it = eaf_map_begin(&g_eaf_monitor_ctx.serivce.record_group);
@@ -391,7 +484,7 @@ void eaf_monitor_print_tree(char* buffer, size_t size)
 			last_gid = record->data.gid;
 		}
 
-		APPEND_LINE(buffer, size, "|  |- %#010"PRIx32" %-7s %-10"PRIu64" %-10"PRIu64" %u/%u\n",
+		APPEND_LINE(buffer, size, "|  |- %#010"PRIx32" %-7s %-8"PRIu32" %-8"PRIu32" %u/%u\n",
 			record->data.sid,
 			_monitor_state_2_string(record->data.sls->state),
 			record->counter.cnt_recv,
