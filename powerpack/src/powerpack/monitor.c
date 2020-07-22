@@ -74,6 +74,7 @@ typedef struct monitor_service_record
 typedef struct monitor_group_record
 {
 	uv_mutex_t						objlock;		/**< Object lock */
+	eaf_group_local_t*				gls;			/**< Group Local Storage */
 
 	struct
 	{
@@ -359,7 +360,7 @@ static void _monitor_print_tree_nolock(char* buffer, size_t size)
 		{
 			last_gid = record->data.gid;
 			g_record = &g_eaf_monitor_ctx.group.table[last_gid];
-			APPEND_LINE(buffer, size, "%u\n", (unsigned)record->data.gid);
+			APPEND_LINE(buffer, size, "%u:%lu\n", (unsigned)record->data.gid, g_record->gls->tid);
 		}
 
 		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u    %4.1f\n",
@@ -464,16 +465,25 @@ static void _monitor_on_exit_before(void)
 
 static void _monitor_on_load_before(void)
 {
-	eaf_group_local_t* gls = eaf_group_begin();
-	for (g_eaf_monitor_ctx.group.size = 0; gls != NULL; gls = eaf_group_next(gls), g_eaf_monitor_ctx.group.size++)
+	g_eaf_monitor_ctx.group.size = eaf_group_size();
+	g_eaf_monitor_ctx.group.table = malloc(sizeof(monitor_service_record_t) * g_eaf_monitor_ctx.group.size);
+	assert(g_eaf_monitor_ctx.group.table != NULL);
+
+	size_t i;
+	eaf_group_local_t* gls;
+	for (gls = eaf_group_begin(), i = 0; gls != NULL; gls = eaf_group_next(gls), i++)
 	{
+		g_eaf_monitor_ctx.group.table[i].gls = gls;
+		g_eaf_monitor_ctx.group.table[i].counter.flush_use_time = 0;
+		uv_mutex_init(&g_eaf_monitor_ctx.group.table[i].objlock);
+
 		eaf_service_local_t* sls = eaf_service_begin(gls);
 		for (; sls != NULL; sls = eaf_service_next(gls, sls))
 		{
 			monitor_service_record_t* record = malloc(sizeof(*record));
 			assert(record != NULL);
 
-			record->data.gid = g_eaf_monitor_ctx.group.size;
+			record->data.gid = i;
 			record->data.sid = sls->id;
 			record->data.sls = sls;
 			record->counter.flush_send = 0;
@@ -495,16 +505,6 @@ static void _monitor_on_load_before(void)
 			}
 			eaf_map_insert(&g_eaf_monitor_ctx.serivce.record_group, &record->node_group);
 		}
-	}
-
-	g_eaf_monitor_ctx.group.table = malloc(sizeof(monitor_service_record_t) * g_eaf_monitor_ctx.group.size);
-	assert(g_eaf_monitor_ctx.group.table != NULL);
-
-	size_t i;
-	for (i = 0; i < g_eaf_monitor_ctx.group.size; i++)
-	{
-		uv_mutex_init(&g_eaf_monitor_ctx.group.table[i].objlock);
-		g_eaf_monitor_ctx.group.table[i].counter.flush_use_time = 0;
 	}
 }
 
