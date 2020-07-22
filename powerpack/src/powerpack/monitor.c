@@ -614,7 +614,7 @@ void eaf_monitor_exit(void)
 		it = eaf_map_next(it);
 		eaf_map_erase(&g_eaf_monitor_ctx.dataflow.record, tmp);
 
-		monitor_dataflow_record_t* record = EAF_CONTAINER_OF(it, monitor_dataflow_record_t, node);
+		monitor_dataflow_record_t* record = EAF_CONTAINER_OF(tmp, monitor_dataflow_record_t, node);
 		free(record);
 	}
 
