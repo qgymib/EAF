@@ -55,6 +55,7 @@ static int _test_monitor_on_init(void)
 {
 	int ret;
 	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S3_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S3, );
+	ASSERT_EQ_D32(ret, 0);
 	return 0;
 }
 
@@ -102,5 +103,7 @@ TEST_F(powerpack_monitor, DISABLED_print_tree)
 
 TEST_F(powerpack_monitor, print_tree)
 {
+	eaf_sem_post(s_test_monitor_ctx.wait_point);
 	eaf_monitor_print_tree(s_test_monitor_ctx.buffer, sizeof(s_test_monitor_ctx.buffer));
+	eaf_sem_post(s_test_monitor_ctx.wait_point);
 }

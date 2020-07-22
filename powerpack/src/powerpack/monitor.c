@@ -483,7 +483,7 @@ static void _monitor_on_load_before(void)
 			monitor_service_record_t* record = malloc(sizeof(*record));
 			assert(record != NULL);
 
-			record->data.gid = i;
+			record->data.gid = (uint32_t)i;
 			record->data.sid = sls->id;
 			record->data.sls = sls;
 			record->counter.flush_send = 0;
