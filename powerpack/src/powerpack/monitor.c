@@ -308,9 +308,9 @@ static float _monitor_calculate_cpu(uint64_t use, uint64_t total)
 	}
 
 	float ret = ((float)use / (float)total) * 100;
-	const float gate = 99.9f;
+	const float gate = 100.0f;
 
-	return ret >= gate ? gate : ret;
+	return ret > gate ? gate : ret;
 }
 
 static const char* _monitor_state_2_string(eaf_service_state_t state)
@@ -363,7 +363,7 @@ static void _monitor_print_tree_nolock(char* buffer, size_t size)
 			APPEND_LINE(buffer, size, "%u:%lu\n", (unsigned)record->data.gid, g_record->gls->tid);
 		}
 
-		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u   %4.1f\n",
+		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u  %5.1f\n",
 			record->data.sid,
 			_monitor_state_2_string(record->data.sls->state),
 			record->counter.flush_recv,
