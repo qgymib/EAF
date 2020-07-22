@@ -346,7 +346,7 @@ static void _monitor_print_tree_nolock(char* buffer, size_t size)
 {
 	buffer[0] = '\0';
 
-	APPEND_LINE(buffer, size, "[SERVICE]    [STATE]   [RECV]   [SEND] [MSGQ] [TIME]  [CPU%%]\n");
+	APPEND_LINE(buffer, size, "[SERVICE]    [STATE]   [RECV]   [SEND] [MSGQ] [TIME] [CPU%%]\n");
 
 	uint32_t last_gid = (uint32_t)-1;
 	monitor_group_record_t* g_record = NULL;
@@ -363,7 +363,7 @@ static void _monitor_print_tree_nolock(char* buffer, size_t size)
 			APPEND_LINE(buffer, size, "%u:%lu\n", (unsigned)record->data.gid, g_record->gls->tid);
 		}
 
-		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u    %4.1f\n",
+		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u   %4.1f\n",
 			record->data.sid,
 			_monitor_state_2_string(record->data.sls->state),
 			record->counter.flush_recv,
