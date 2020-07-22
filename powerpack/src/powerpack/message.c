@@ -90,7 +90,7 @@ void eaf_message_internal_proxy(_Inout_ eaf_service_local_t* local, _Inout_opt_ 
 	eaf_msg_t* orig_req = (eaf_msg_t*)arg;
 
 	/* save uuid as Service Local Information */
-	local->unsafe[0].v_uint64 = orig_req->info.constant.uuid;
+	local->unsafe[0].v_u64 = orig_req->info.constant.uuid;
 
 	pp_message_record_t* record = malloc(sizeof(pp_message_record_t));
 	assert(record != NULL);

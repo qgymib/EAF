@@ -72,7 +72,7 @@ extern "C" {
 		_eaf_sls->unsafe[0].ww.w1 = to;\
 		eaf_yield_ext(eaf_message_internal_proxy, _0); _0 = NULL;\
 		eaf_msg_t* _1;\
-		if ((ret = eaf_message_internal_finalize(_eaf_sls->unsafe[0].v_uint64, &_1)) < 0) {\
+		if ((ret = eaf_message_internal_finalize(_eaf_sls->unsafe[0].v_u64, &_1)) < 0) {\
 			break;\
 		}\
 		{ code_deserialize };\

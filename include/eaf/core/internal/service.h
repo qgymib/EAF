@@ -104,15 +104,12 @@ typedef struct eaf_service_local
 
 	union
 	{
-		long					v_long;		/**< unsafe value: signed long */
-		unsigned long			v_ulong;	/**< unsafe value: unsigned long */
-		long long				v_llong;	/**< unsafe value: signed long long */
-		unsigned long long		v_ullong;	/**< unsafe value: unsigned long long */
-		float					v_float;	/**< unsafe value: float */
-		double					v_double;	/**< unsafe value: double */
-		int64_t					v_int64;	/**< unsafe value: int64_t */
-		uint64_t				v_uint64;	/**< unsafe value: uint64_t */
-		uintptr_t				v_uintptr;	/**< unsafe value: v_uintptr */
+		float					v_f32;		/**< unsafe value: float */
+		double					v_f64;		/**< unsafe value: double */
+		int32_t					v_d32;		/**< unsafe value: int32_t */
+		uint32_t				v_u32;		/**< unsafe value: uint32_t */
+		int64_t					v_d64;		/**< unsafe value: int64_t */
+		uint64_t				v_u64;		/**< unsafe value: uint64_t */
 		void*					v_ptr;		/**< unsafe value: void* */
 		struct
 		{
