@@ -1,7 +1,7 @@
 #include "quick2.h"
 
-#define TEST_QUICK_GROUP_NUM	8
-#define TEST_QUICK_SERVICE_NUM	64
+#define TEST_QUICK_GROUP_NUM	4
+#define TEST_QUICK_SERVICE_NUM	8
 
 static void _quick_hook_before_fixture_setup(const char* fixture_name);
 static void _quick_hook_after_fixture_setup(const char* fixture_name, int ret);
