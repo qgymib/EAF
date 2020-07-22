@@ -59,7 +59,7 @@ static void _time_getclocktime_init_once(void)
 
 #endif
 
-int eaf_gettimeofday(_Inout_ eaf_clock_time_t* tv)
+int eaf_time_get(_Inout_ eaf_clock_time_t* tv)
 {
 	/**
 	 * uv_gettimeofday() was added in libuv-1.28.0, which was release in
@@ -104,7 +104,7 @@ int eaf_gettimeofday(_Inout_ eaf_clock_time_t* tv)
 #endif
 }
 
-int eaf_getsystemtime(_Inout_ eaf_calendar_time_t* tv)
+int eaf_time_getsystem(_Inout_ eaf_calendar_time_t* tv)
 {
 #if defined(_MSC_VER)
 	SYSTEMTIME cur_time;
@@ -133,7 +133,7 @@ int eaf_getsystemtime(_Inout_ eaf_calendar_time_t* tv)
 	}
 
 	eaf_clock_time_t tmp_clock;
-	if (eaf_gettimeofday(&tmp_clock) < 0)
+	if (eaf_time_get(&tmp_clock) < 0)
 	{
 		return eaf_errno_unknown;
 	}
@@ -150,7 +150,7 @@ int eaf_getsystemtime(_Inout_ eaf_calendar_time_t* tv)
 #endif
 }
 
-int eaf_getclocktime(_Out_ eaf_clock_time_t* ts)
+int eaf_time_getclock(_Out_ eaf_clock_time_t* ts)
 {
 #if defined(_MSC_VER)
 
@@ -193,7 +193,7 @@ int eaf_getclocktime(_Out_ eaf_clock_time_t* ts)
 #endif
 }
 
-int eaf_clocktime_diff(_In_ const eaf_clock_time_t* t1,
+int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 	_In_ const eaf_clock_time_t* t2, _Out_opt_ eaf_clock_time_t* diff)
 {
 	eaf_clock_time_t tmp_dif;
@@ -224,7 +224,7 @@ int eaf_clocktime_diff(_In_ const eaf_clock_time_t* t1,
 	return t1 == little_t ? -1 : 1;
 }
 
-int eaf_clocktime_add(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
+int eaf_time_addclock(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
 {
 	/**
 	 * How to check overflow:

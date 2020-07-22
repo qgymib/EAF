@@ -44,7 +44,7 @@ typedef struct eaf_calendar_time
  * @param[out] tv	Time stamp
  * @return			#eaf_errno
  */
-int eaf_gettimeofday(_Out_ eaf_clock_time_t* tv);
+int eaf_time_get(_Out_ eaf_clock_time_t* tv);
 
 /**
  * @brief Retrieves the current system date and time. The system time is
@@ -53,14 +53,14 @@ int eaf_gettimeofday(_Out_ eaf_clock_time_t* tv);
  *   the current system date and time.
  * @return			#eaf_errno
  */
-int eaf_getsystemtime(_Out_ eaf_calendar_time_t* tv);
+int eaf_time_getsystem(_Out_ eaf_calendar_time_t* tv);
 
 /**
  * @brief Get high resolution time since some unspecified starting point.
  * @param[out] ts	Time stamp
  * @return			#eaf_errno
  */
-int eaf_getclocktime(_Out_ eaf_clock_time_t* ts);
+int eaf_time_getclock(_Out_ eaf_clock_time_t* ts);
 
 /**
  * @brief Compare `t1' with `t2', and Difference diff into `diff'
@@ -69,7 +69,7 @@ int eaf_getclocktime(_Out_ eaf_clock_time_t* ts);
  * @param[out] diff	Difference
  * @return			-1 if t1 < t2; 1 if t1 > t2; 0 if t1 == t2
  */
-int eaf_clocktime_diff(_In_ const eaf_clock_time_t* t1,
+int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 	_In_ const eaf_clock_time_t* t2, _Out_opt_ eaf_clock_time_t* diff);
 
 /**
@@ -78,7 +78,7 @@ int eaf_clocktime_diff(_In_ const eaf_clock_time_t* t1,
  * @param[in] src		Source
  * @return				0: success; -1: overflow, and dst is not modified
  */
-int eaf_clocktime_add(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src);
+int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src);
 
 /**
  * @}

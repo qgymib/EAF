@@ -18,13 +18,13 @@ static void _test_timer_on_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ str
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 
-	eaf_getclocktime(&s_test_timer_delay_ctx.s_timer_stop);
+	eaf_time_getclock(&s_test_timer_delay_ctx.s_timer_stop);
 	eaf_sem_post(s_test_timer_delay_ctx.s_timer_sem);
 }
 
 static int _test_timer_on_init(void)
 {
-	eaf_getclocktime(&s_test_timer_delay_ctx.s_timer_start);
+	eaf_time_getclock(&s_test_timer_delay_ctx.s_timer_start);
 
 	int ret;
 	EAF_MESSAGE_SEND_REQUEST(ret, EAF_TIMER_MSG_DELAY_REQ, sizeof(eaf_timer_delay_req_t),
@@ -67,7 +67,7 @@ TEST_F(powerpack_timer, delay)
 	ASSERT_EQ_D32(eaf_sem_pend(s_test_timer_delay_ctx.s_timer_sem, 100000), 0);
 
 	eaf_clock_time_t diff;
-	ASSERT_LT_D32(eaf_clocktime_diff(&s_test_timer_delay_ctx.s_timer_start, &s_test_timer_delay_ctx.s_timer_stop, &diff), 0);
+	ASSERT_LT_D32(eaf_time_diffclock(&s_test_timer_delay_ctx.s_timer_start, &s_test_timer_delay_ctx.s_timer_stop, &diff), 0);
 
 	uint32_t msec = (uint32_t)diff.tv_sec * 1000 + diff.tv_usec / 1000;
 	ASSERT_GE_D32(msec, s_test_timer_delay_ctx.s_delay_timeout * 0.8);

@@ -61,7 +61,7 @@ static int _watchdog_on_cmp_timeout(const eaf_map_node_t* key1, const eaf_map_no
 
 	/* compare timestamp */
 	int ret;
-	if ((ret = eaf_clocktime_diff(&rec_1->data.timestamp, &rec_2->data.timestamp, NULL)) != 0)
+	if ((ret = eaf_time_diffclock(&rec_1->data.timestamp, &rec_2->data.timestamp, NULL)) != 0)
 	{
 		return ret;
 	}
@@ -111,14 +111,14 @@ static void _watchdog_set_timestamp(eaf_clock_time_t* t, uint32_t ms)
 
 static void _watchdog_calculate_timeout(eaf_watchdog_record_t* record)
 {
-	int ret = eaf_getclocktime(&record->data.timestamp);
+	int ret = eaf_time_getclock(&record->data.timestamp);
 	assert(ret == 0);
 
 	eaf_clock_time_t timeout;
 	_watchdog_set_timestamp(&timeout, record->data.timeout);
 
 	/* calculate dead time */
-	eaf_clocktime_add(&record->data.timestamp, &timeout);
+	eaf_time_addclock(&record->data.timestamp, &timeout);
 }
 
 static void _watchdog_on_timer(uint32_t from, uint32_t to, struct eaf_msg* msg)
@@ -134,11 +134,11 @@ static void _watchdog_on_timer(uint32_t from, uint32_t to, struct eaf_msg* msg)
 	}
 
 	eaf_clock_time_t current_time;
-	ret = eaf_getclocktime(&current_time);
+	ret = eaf_time_getclock(&current_time);
 	assert(ret == 0);
 
 	eaf_watchdog_record_t* record = EAF_CONTAINER_OF(it, eaf_watchdog_record_t, node_timeout);
-	if (eaf_clocktime_diff(&record->data.timestamp, &current_time, NULL) > 0)
+	if (eaf_time_diffclock(&record->data.timestamp, &current_time, NULL) > 0)
 	{
 		return;
 	}

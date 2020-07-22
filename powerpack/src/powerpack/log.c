@@ -32,7 +32,7 @@ void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 {
 	(void)func;
 	eaf_calendar_time_t cur_time;
-	if (eaf_getsystemtime(&cur_time) < 0)
+	if (eaf_time_getsystem(&cur_time) < 0)
 	{
 		return;
 	}
