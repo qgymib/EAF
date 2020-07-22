@@ -132,6 +132,7 @@ typedef void(*eaf_yield_hook_fn)(_Inout_ eaf_service_local_t* local, _Inout_ voi
 typedef struct eaf_group_local
 {
 	uint32_t					cc[1];		/**< coroutine control */
+	unsigned long				tid;		/**< Thread ID */
 
 	struct
 	{
@@ -150,8 +151,14 @@ EAF_API eaf_service_local_t* eaf_service_get_local(
 	_Outptr_opt_result_maybenull_ eaf_group_local_t** gls);
 
 /**
+ * @brief Get the number of groups
+ * @return		The number of groups
+ */
+EAF_API size_t eaf_group_size(void);
+
+/**
  * @brief Returns an iterator to the beginning.
- * @return				The begin node of Group Local Storage
+ * @return			The begin node of Group Local Storage
  */
 EAF_API eaf_group_local_t* eaf_group_begin(void);
 

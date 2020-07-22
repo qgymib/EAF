@@ -688,13 +688,16 @@ static void _eaf_service_thread(void* arg)
 	size_t init_idx = 0;
 	eaf_group_t* group = arg;
 
-	/* 设置线程私有变量 */
+	/* Set thread id */
+	group->coroutine.local.tid = eaf_compat_thread_id();
+
+	/* Set Thread Local Storage */
 	if (eaf_thread_storage_set(&g_eaf_ctx->tls, arg) < 0)
 	{
 		return;
 	}
 
-	/* 等待就绪 */
+	/* Wait for start */
 	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
 	{
 		eaf_compat_sem_pend(&group->msgq.sem, (unsigned long)-1);
@@ -1261,6 +1264,11 @@ EAF_API int eaf_uninject(_In_ const eaf_hook_t* hook)
 EAF_API eaf_group_local_t* eaf_group_begin(void)
 {
 	return &g_eaf_ctx->group.table[0]->coroutine.local;
+}
+
+EAF_API size_t eaf_group_size(void)
+{
+	return g_eaf_ctx->group.size;
 }
 
 EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls)
