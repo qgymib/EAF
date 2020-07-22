@@ -67,7 +67,7 @@ void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	}
 
 	/* time */
-	printf("[%s %02u:%02u:%02u.%03u %s:%d] <%s>", prefix,
+	printf("[%s %02u:%02u:%02u.%03u %s:%d]<%s> ", prefix,
 		cur_time.hour, cur_time.minute, cur_time.second, cur_time.mseconds,
 		_log_filename(file), line, mod);
 
