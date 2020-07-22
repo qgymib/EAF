@@ -31,63 +31,6 @@ extern "C" {
 #define TEST_QUICK_S3_REQ3	(TEST_QUICK_S3 + 0x0003)
 #define TEST_QUICK_S3_REQ4	(TEST_QUICK_S3 + 0x0004)
 
-#define QUICK_SETUP_CFG(pcfg, idx, id, init, exit, p0, p1, p2, p3)	\
-	do {\
-		test_quick_cfg_t* cfg = pcfg;\
-		size_t i = idx;\
-		cfg->entry[i].ability.enable = 1;\
-		cfg->entry[i].on_init = init;\
-		cfg->entry[i].on_exit = exit;\
-		cfg->entry[i].msg_map[0] = p0;\
-		cfg->entry[i].msg_map[1] = p1;\
-		cfg->entry[i].msg_map[2] = p2;\
-		cfg->entry[i].msg_map[3] = p3;\
-	} EAF_MSVC_PUSH_WARNNING(4127) while (0) EAF_MSVC_POP_WARNNING()
-
-#define QUICK_SETUP_BEFPRELOAD(pcfg, proc, priv)	\
-	do {\
-		test_quick_cfg_t* cfg = pcfg;\
-		cfg->before_load.fn = proc;\
-		cfg->before_load.arg = priv;\
-	} EAF_MSVC_PUSH_WARNNING(4127) while (0) EAF_MSVC_POP_WARNNING()
-
-typedef struct test_quick_cfg
-{
-	struct
-	{
-		struct
-		{
-			unsigned			enable : 1;
-		}ability;
-		eaf_msg_handle_fn		msg_map[4];				/**< Each service has 4 messages */
-		int						(*on_init)(void);		/**< Initialize callback */
-		void					(*on_exit)(void);		/**< Exit callback */
-	}entry[4];
-
-	struct
-	{
-		void					(*fn)(void* arg);		/**< Callback before load */
-		void*					arg;					/**< User defined argument */
-	}before_load;
-}test_quick_cfg_t;
-
-/**
- * @brief A global quick configuration for minimize program size.
- */
-extern test_quick_cfg_t g_quick_cfg;
-
-/**
- * @brief Setup EAF
- * @param[in] cfg	Configure
- * @return			#eaf_errno
- */
-int test_eaf_quick_setup(const test_quick_cfg_t* cfg);
-
-/**
- * @brief Exit EAF
- */
-void test_eaf_quick_cleanup(void);
-
 void test_quick_default_request(uint32_t from, uint32_t to, eaf_msg_t* req);
 void test_quick_request_template_empty(uint32_t from, uint32_t to, eaf_msg_t* req);
 
