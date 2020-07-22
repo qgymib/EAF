@@ -41,11 +41,3 @@ addons:
     build_command_prepend: "cmake ."
     build_command: "make"
     branch_pattern: coverity_scan
-
-deploy:
-  provider: pages
-  skip_cleanup: true
-  local_dir: docs/html
-  github_token: $GH_REPO_TOKEN
-  on:
-    branch: master
