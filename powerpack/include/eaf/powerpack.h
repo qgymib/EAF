@@ -39,6 +39,17 @@ typedef struct eaf_powerpack_hook
 {
 	eaf_list_node_t		node;
 	eaf_hook_t			hook;
+
+	/**
+	 * @brief Initialize function, called in loop thread
+	 * @return			Initialize result
+	 */
+	int (*on_loop_init)(void);
+
+	/**
+	 * @brief Exit function, called in loop thread
+	 */
+	void(*on_loop_exit)(void);
 }eaf_powerpack_hook_t;
 
 /**

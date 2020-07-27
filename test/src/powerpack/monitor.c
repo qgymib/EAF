@@ -6,6 +6,7 @@ typedef struct test_monitor_ctx
 {
 	eaf_sem_t*		wait_point;
 	eaf_sem_t*		check_point;
+	eaf_sem_t*		finish_point;
 
 	size_t			counter;
 	size_t			max_count;
@@ -34,6 +35,7 @@ static void _test_monitor_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	/* only test `max_count' round */
 	if (s_test_monitor_ctx.counter >= s_test_monitor_ctx.max_count)
 	{
+		eaf_sem_post(s_test_monitor_ctx.finish_point);
 		return;
 	}
 
@@ -45,7 +47,7 @@ static void _test_monitor_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	}
 
 	int ret;
-	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S3_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S3, );
+	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S1_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S1, );
 	ASSERT_EQ_D32(ret, 0);
 
 	s_test_monitor_ctx.counter++;
@@ -54,7 +56,7 @@ static void _test_monitor_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 static int _test_monitor_on_init(void)
 {
 	int ret;
-	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S3_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S3, );
+	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S1_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S1, );
 	ASSERT_EQ_D32(ret, 0);
 	return 0;
 }
@@ -64,15 +66,16 @@ TEST_FIXTURE_SETUP(powerpack_monitor)
 	memset(&s_test_monitor_ctx, 0, sizeof(s_test_monitor_ctx));
 	ASSERT_NE_PTR(s_test_monitor_ctx.wait_point = eaf_sem_create(0), NULL);
 	ASSERT_NE_PTR(s_test_monitor_ctx.check_point = eaf_sem_create(0), NULL);
+	ASSERT_NE_PTR(s_test_monitor_ctx.finish_point = eaf_sem_create(0), NULL);
 	s_test_monitor_ctx.max_count = 1000;
 	s_test_monitor_ctx.wait_round = 500;
 
 	QUICK_DEPLOY_SERVICE(0, TEST_QUICK_S0, _test_monitor_on_init, NULL, QUICK_DEPLOY_NO_MSG);
-	QUICK_DEPLOY_SERVICE(0, TEST_QUICK_S1, NULL, NULL, QUICK_DEPLOY_NO_MSG);
-	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S2, NULL, NULL, QUICK_DEPLOY_NO_MSG);
-	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S3, NULL, NULL, {
-		{ TEST_QUICK_S3_REQ1, test_quick_request_template_empty }
+	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S1, NULL, NULL, {
+		{ TEST_QUICK_S1_REQ1, test_quick_request_template_empty }
 	});
+	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S2, NULL, NULL, QUICK_DEPLOY_NO_MSG);
+	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S3, NULL, NULL, QUICK_DEPLOY_NO_MSG);
 	QUICK_FORCE_INIT_EAF();
 
 	eaf_powerpack_cfg_t pp_cfg = { EAF_THREAD_ATTR_INITIALIZER };
@@ -88,6 +91,7 @@ TEST_FIXTURE_TEAREDOWN(powerpack_monitor)
 
 	eaf_sem_destroy(s_test_monitor_ctx.wait_point);
 	eaf_sem_destroy(s_test_monitor_ctx.check_point);
+	eaf_sem_destroy(s_test_monitor_ctx.finish_point);
 }
 
 TEST_F(powerpack_monitor, DISABLED_print_tree)
@@ -99,6 +103,7 @@ TEST_F(powerpack_monitor, DISABLED_print_tree)
 	printf("%s", s_test_monitor_ctx.buffer);
 
 	eaf_sem_post(s_test_monitor_ctx.wait_point);
+	eaf_sem_pend(s_test_monitor_ctx.finish_point, 8 * 1000);
 }
 
 TEST_F(powerpack_monitor, print_tree)
@@ -106,4 +111,5 @@ TEST_F(powerpack_monitor, print_tree)
 	eaf_sem_post(s_test_monitor_ctx.wait_point);
 	eaf_monitor_print_tree(s_test_monitor_ctx.buffer, sizeof(s_test_monitor_ctx.buffer));
 	eaf_sem_post(s_test_monitor_ctx.wait_point);
+	eaf_sem_pend(s_test_monitor_ctx.finish_point, 8 * 1000);
 }

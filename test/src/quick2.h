@@ -8,6 +8,13 @@ extern "C" {
 #include "ctest/ctest.h"
 
 /**
+ * @brief Log helper
+ * @param[in] fmt	Format
+ * @param[in] ...	Arguments
+ */
+#define LOG_TRACE(fmt, ...)	EAF_LOG_TRACE("test", fmt, ##__VA_ARGS__)
+
+/**
  * @brief A macro to help deploy a new service
  * @param[in] gid		Group ID, 0 <= gid <= 8
  * @param[in] sid		Service ID
