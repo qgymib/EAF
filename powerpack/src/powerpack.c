@@ -75,7 +75,7 @@ typedef struct powerpack_ctx
 	}hook;
 }pp_ctx_t;
 
-typedef struct pp_uv_ctx
+typedef struct uv_ctx
 {
 	struct
 	{
@@ -85,9 +85,9 @@ typedef struct pp_uv_ctx
 	uv_sem_t		init_wait_point;
 	uv_loop_t		uv_loop;			/**< libuv loop */
 	uv_async_t		uv_async_mode;		/**< libuv async notifier */
-}pp_uv_ctx_t;
+}uv_ctx_t;
 
-static pp_uv_ctx_t g_pp_uv_ctx;
+static uv_ctx_t g_uv_ctx;
 static pp_ctx_t g_pp_ctx = {
 	NULL, NULL, { 0 },
 	{
@@ -196,7 +196,7 @@ static void _pp_notify_exit_thread(void)
 	eaf_sem_post(g_pp_ctx.sem_loop);
 
 	/* notify libuv loop we need to exit */
-	uv_async_send(&g_pp_uv_ctx.uv_async_mode);
+	uv_async_send(&g_uv_ctx.uv_async_mode);
 }
 
 static void _pp_hook_on_exit_before(void)
@@ -249,7 +249,7 @@ static void _pp_loop(void)
 {
 	while (g_pp_ctx.mask.looping)
 	{
-		while (uv_run(&g_pp_uv_ctx.uv_loop, UV_RUN_DEFAULT) != 0)
+		while (uv_run(&g_uv_ctx.uv_loop, UV_RUN_DEFAULT) != 0)
 		{
 		}
 	}
@@ -262,7 +262,7 @@ static void _pp_on_uv_async_mode(uv_async_t* handle)
 	if (!g_pp_ctx.mask.looping)
 	{
 		_pp_call_exit((size_t)-1);
-		uv_close((uv_handle_t*)&g_pp_uv_ctx.uv_async_mode, NULL);
+		uv_close((uv_handle_t*)&g_uv_ctx.uv_async_mode, NULL);
 		return;
 	}
 }
@@ -274,17 +274,17 @@ static void _pp_thread(void* arg)
 	g_pp_ctx.mask.have_thread = 1;
 
 	/* initialize libuv */
-	if (uv_loop_init(&g_pp_uv_ctx.uv_loop) < 0)
+	if (uv_loop_init(&g_uv_ctx.uv_loop) < 0)
 	{
 		goto err_init_uv_loop;
 	}
 
-	if (uv_async_init(&g_pp_uv_ctx.uv_loop, &g_pp_uv_ctx.uv_async_mode, _pp_on_uv_async_mode) < 0)
+	if (uv_async_init(&g_uv_ctx.uv_loop, &g_uv_ctx.uv_async_mode, _pp_on_uv_async_mode) < 0)
 	{
 		goto err_init_async;
 	}
 
-	uv_sem_post(&g_pp_uv_ctx.init_wait_point);
+	uv_sem_post(&g_uv_ctx.init_wait_point);
 
 	/* wait for initialize */
 	while (g_pp_ctx.mask.looping)
@@ -311,7 +311,7 @@ static void _pp_thread(void* arg)
 	/* we cannot call #_pp_call_exit() here */
 
 	/* close loop */
-	uv_loop_close(&g_pp_uv_ctx.uv_loop);
+	uv_loop_close(&g_uv_ctx.uv_loop);
 	g_pp_ctx.mask.have_thread = 0;
 
 	return;
@@ -320,11 +320,11 @@ err_exit:
 	_pp_call_exit(idx);
 
 err_init_async:
-	uv_loop_close(&g_pp_uv_ctx.uv_loop);
+	uv_loop_close(&g_uv_ctx.uv_loop);
 err_init_uv_loop:
 	g_pp_ctx.mask.have_thread = 0;
-	g_pp_uv_ctx.mask.init_failed = 1;
-	uv_sem_post(&g_pp_uv_ctx.init_wait_point);
+	g_uv_ctx.mask.init_failed = 1;
+	uv_sem_post(&g_uv_ctx.init_wait_point);
 	return;
 }
 
@@ -336,14 +336,14 @@ int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 	{
 		return eaf_errno_duplicate;
 	}
-	memset(&g_pp_uv_ctx, 0, sizeof(g_pp_uv_ctx));
+	memset(&g_uv_ctx, 0, sizeof(g_uv_ctx));
 
 	if ((ret = eaf_inject(&g_pp_ctx.hook.inject, sizeof(g_pp_ctx.hook.inject))) < 0)
 	{
 		return ret;
 	}
 
-	if (uv_sem_init(&g_pp_uv_ctx.init_wait_point, 0) < 0)
+	if (uv_sem_init(&g_uv_ctx.init_wait_point, 0) < 0)
 	{
 		goto err_sem_create_1;
 	}
@@ -370,8 +370,8 @@ int eaf_powerpack_init(_In_ const eaf_powerpack_cfg_t* cfg)
 		goto err_init;
 	}
 
-	uv_sem_wait(&g_pp_uv_ctx.init_wait_point);
-	if (g_pp_uv_ctx.mask.init_failed)
+	uv_sem_wait(&g_uv_ctx.init_wait_point);
+	if (g_uv_ctx.mask.init_failed)
 	{
 		goto err_uv_init;
 	}
@@ -389,7 +389,7 @@ err_init:
 	eaf_sem_destroy(g_pp_ctx.sem_loop);
 	g_pp_ctx.sem_loop = NULL;
 err_sem_create:
-	uv_sem_destroy(&g_pp_uv_ctx.init_wait_point);
+	uv_sem_destroy(&g_uv_ctx.init_wait_point);
 err_sem_create_1:
 	eaf_uninject(&g_pp_ctx.hook.inject);
 	g_pp_ctx.mask.looping = 0;
@@ -415,11 +415,11 @@ void eaf_powerpack_exit(void)
 		g_powerpack_table[i].on_exit();
 	}
 
-	uv_loop_close(&g_pp_uv_ctx.uv_loop);
+	uv_loop_close(&g_uv_ctx.uv_loop);
 	eaf_sem_destroy(g_pp_ctx.sem_loop);
 	g_pp_ctx.sem_loop = NULL;
 
-	uv_sem_destroy(&g_pp_uv_ctx.init_wait_point);
+	uv_sem_destroy(&g_uv_ctx.init_wait_point);
 
 	/* clear hook table */
 	while (eaf_list_pop_front(&g_pp_ctx.hook.table) != NULL)
@@ -455,7 +455,7 @@ void eaf_powerpack_hook_unregister(eaf_powerpack_hook_t* hook)
 
 uv_loop_t* eaf_uv_get(void)
 {
-	return &g_pp_uv_ctx.uv_loop;
+	return &g_uv_ctx.uv_loop;
 }
 
 void eaf_uv_mod(void)

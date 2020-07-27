@@ -26,6 +26,11 @@ void eaf_monitor_exit(void);
  */
 void eaf_monitor_print_tree(char* buffer, size_t size);
 
+/**
+ * @brief Reset all necessary counters.
+ */
+void eaf_monitor_flush(void);
+
 #ifdef __cplusplus
 }
 #endif
