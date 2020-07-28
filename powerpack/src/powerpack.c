@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "eaf/eaf.h"
 #include "powerpack/message.h"
 #include "powerpack/net.h"
