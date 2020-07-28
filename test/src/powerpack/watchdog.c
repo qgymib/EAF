@@ -92,10 +92,10 @@ TEST_F(powerpack_watchdog, triger)
 	);
 	ASSERT_EQ_D32(ret, 0, "error:%s(%d)", eaf_strerror(ret), ret);
 
-	ASSERT_EQ_D32(eaf_sem_pend(s_test_watchdog_ctx.on_register_rsp.sem, 1000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_watchdog_ctx.on_register_rsp.sem, 8000), 0);
 	ASSERT_EQ_D32(s_test_watchdog_ctx.on_register_rsp.has, 1);
 
-	ASSERT_EQ_D32(eaf_sem_pend(s_test_watchdog_ctx.on_error.sem, 1000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_watchdog_ctx.on_error.sem, 8000), 0);
 	ASSERT_EQ_D32(s_test_watchdog_ctx.on_error.has, 1);
 }
 

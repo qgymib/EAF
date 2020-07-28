@@ -64,7 +64,7 @@ TEST_FIXTURE_TEAREDOWN(powerpack_timer)
 
 TEST_F(powerpack_timer, delay)
 {
-	ASSERT_EQ_D32(eaf_sem_pend(s_test_timer_delay_ctx.s_timer_sem, 100000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_timer_delay_ctx.s_timer_sem, 8000), 0);
 
 	eaf_clock_time_t diff;
 	ASSERT_LT_D32(eaf_time_diffclock(&s_test_timer_delay_ctx.s_timer_start, &s_test_timer_delay_ctx.s_timer_stop, &diff), 0);
