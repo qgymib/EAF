@@ -1,8 +1,20 @@
+/**
+ * @file
+ * EAF Monitor.
+ */
 #ifndef __EAF_POWERPACK_MONITOR_H__
 #define __EAF_POWERPACK_MONITOR_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Monitor Monitor
+ * @{
+ */
+
+#include "eaf/eaf.h"
 
 /**
  * @brief Initialize monitor
@@ -30,6 +42,10 @@ void eaf_monitor_print_tree(char* buffer, size_t size);
  * @brief Reset all necessary counters.
  */
 void eaf_monitor_flush(void);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

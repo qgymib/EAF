@@ -1,8 +1,18 @@
+/**
+ * @file
+ * Random utils.
+ */
 #ifndef __EAF_POWERPACK_RANDOM_H__
 #define __EAF_POWERPACK_RANDOM_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @ingroup PowerPack
+ * @defgroup PowerPack-Random Random
+ * @{
+ */
 
 #include "eaf/eaf.h"
 
@@ -42,6 +52,10 @@ uint32_t eaf_random32(void);
  * @return		Random integer
  */
 uint64_t eaf_random64(void);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
