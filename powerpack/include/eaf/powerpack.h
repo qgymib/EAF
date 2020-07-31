@@ -27,6 +27,7 @@ extern "C" {
 #include "eaf/powerpack/message.h"
 #include "eaf/powerpack/monitor.h"
 #include "eaf/powerpack/net.h"
+#include "eaf/powerpack/random.h"
 #include "eaf/powerpack/ringbuffer.h"
 #include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
