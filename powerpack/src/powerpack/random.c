@@ -1,10 +1,11 @@
+#include <assert.h>
+#include <string.h>
 #include "random.h"
 
 #if defined(_MSC_VER)
+/* `_CRT_RAND_S' was needed by `rand_s()' */
 #define _CRT_RAND_S
 #include <stdlib.h>
-#include <string.h>
-#include <assert.h>
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -101,24 +102,28 @@ void eaf_random(void* buffer, size_t size)
 	 * Because `buffer' might not be aligned to machine size, it is better to
 	 * deal with unaligned part.
 	 */
-	start_pos = (void*)EAF_ALIGN(buffer, sizeof(pad));
-	if ((diff_size = (uintptr_t)start_pos - (uintptr_t)buffer) != 0)
 	{
-		assert(diff_size < sizeof(unsigned int));
-		pad = _random_non_failure();
-		memcpy(buffer, &pad, diff_size);
+		start_pos = (void*)EAF_ALIGN(buffer, sizeof(pad));
+		if ((diff_size = (uintptr_t)start_pos - (uintptr_t)buffer) != 0)
+		{
+			assert(diff_size < sizeof(unsigned int));
+			pad = _random_non_failure();
+			memcpy(buffer, &pad, diff_size);
+		}
 	}
 #else
 	/**
-	 * Under linux, we just read from `/dev/urandom'
+	 * In linux, we just read from `/dev/urandom'
 	 */
-	ssize_t read_size = read(g_random_ctx.random_fd, buffer, size);
-	if (read_size >= size)
 	{
-		return;
-	}
+		ssize_t read_size = read(g_random_ctx.random_fd, buffer, size);
+		if (read_size >= (ssize_t)size)
+		{
+			return;
+		}
 
-	start_pos = (void*)((uintptr_t)buffer + (read_size >= 0 ? read_size : 0));
+		start_pos = (void*)((uintptr_t)buffer + (read_size >= 0 ? read_size : 0));
+	}
 #endif
 
 	/* Fill random data */
