@@ -47,10 +47,6 @@ typedef struct eaf_ringbuffer_counter
 	size_t				reading;						/**< The number of reading nodes */
 }eaf_ringbuffer_counter_t;
 
-#if defined(_MSC_VER)
-#	pragma warning(push)
-#	pragma warning(disable : 4200)
-#endif
 /**
  * @brief Ring buffer data token
  */
@@ -62,11 +58,15 @@ typedef struct eaf_ringbuffer_token
 		void*			_pad;							/**< Padding field used for make sure address align */
 	}size;												/**< Data size */
 
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
 	uint8_t				data[];							/**< Data body */
-}eaf_ringbuffer_token_t;
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
+}eaf_ringbuffer_token_t;
 
 /**
  * @brief Initialize ring buffer on the give memory.
