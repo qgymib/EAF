@@ -27,7 +27,7 @@ TEST_F(powerpack_random, random)
 {
 	/* Ensure buffer address is not aligned to sizeof(unsigned int) */
 	{
-		uintptr_t addr = s_test_random_ctx.buffer;
+		uintptr_t addr = (uintptr_t)s_test_random_ctx.buffer;
 		ASSERT_NE_U32(addr % sizeof(unsigned int), 0);
 	}
 
