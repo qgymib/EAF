@@ -1,38 +1,30 @@
 #include <stdlib.h>
 #include <assert.h>
-#include "eaf/eaf.h"
 #include "time.h"
 #include "timer.h"
 #include "powerpack.h"
 
-typedef struct timer_record
-{
-	eaf_list_node_t				node;			/**< List node */
+#define MODULE			"timer"
+#define LOG_TRACE(fmt, ...)		EAF_LOG_TRACE(MODULE, fmt, ##__VA_ARGS__)
 
-	struct
-	{
-		uv_timer_t				uv_timer;		/**< timer */
-		eaf_msg_t*				req;			/**< original request */
-		uint32_t				from;
-	}data;
+#define MALLOC(size)	malloc(size)
+#define FREE(ptr)		free(ptr)
 
-	struct
-	{
-		unsigned				dead : 1;
-	}mask;
-}timer_record_t;
+static int _timer_on_libuv_loop_init(void);
+static void _timer_on_libuv_loop_exit(void);
 
-typedef struct timer_ctx
-{
-	eaf_lock_t*					objlock;		/**< global lock */
-	eaf_list_t					delay_queue;	/**< Delay queue */
-	eaf_list_t					recycle_queue;	/**< Recycle queue*/
-}timer_ctx_t;
-
+static timer_uv_ctx_t g_timer_uv_ctx;
 static timer_ctx_t	g_timer_ctx = {
-	NULL,
+	{ 0, 0, 0 },
 	EAF_LIST_INITIALIZER,
 	EAF_LIST_INITIALIZER,
+	EAF_LIST_INITIALIZER,
+	{
+		EAF_LIST_NODE_INITIALIZER,
+		EAF_HOOK_INITIALIZER,
+		_timer_on_libuv_loop_init,
+		_timer_on_libuv_loop_exit,
+	}
 };
 
 static void _timer_send_delay_rsp(uint32_t to, eaf_msg_t* req, int32_t ret)
@@ -46,156 +38,182 @@ static void _timer_send_delay_rsp(uint32_t to, eaf_msg_t* req, int32_t ret)
 	eaf_msg_dec_ref(rsp);
 }
 
-static void _timer_on_close_uv_timer(uv_handle_t* handle)
+static void _timer_on_timer_close(uv_handle_t* handle)
 {
-	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
-	eaf_msg_dec_ref(record->data.req);
+	uv_timer_t* timer = (uv_timer_t*)handle;
+	timer_record_t* record = EAF_CONTAINER_OF(timer, timer_record_t, uv.timer);
 
-	/* remove recycle record */
-	eaf_lock_enter(g_timer_ctx.objlock);
-	{
-		eaf_list_erase(&g_timer_ctx.recycle_queue, &record->node);
-	}
-	eaf_lock_leave(g_timer_ctx.objlock);
-
-	free(record);
+	eaf_list_erase(&g_timer_ctx.dead_queue, &record->node);
+	FREE(record);
 }
 
-static void _timer_on_uv_timer_active(uv_timer_t* handle)
+static void _timer_on_active(uv_timer_t* handle)
 {
-	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, data.uv_timer);
-	uv_timer_stop(handle);
+	timer_record_t* record = EAF_CONTAINER_OF(handle, timer_record_t, uv.timer);
+	_timer_send_delay_rsp(record->data.req.from, &record->data.req, eaf_errno_success);
 
-	int ret = 0;
-	eaf_lock_enter(g_timer_ctx.objlock);
-	do 
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
 	{
-		/* avoid multi-thread destroy */
-		if (record->mask.dead)
-		{
-			ret = -1;
-			break;
-		}
-		record->mask.dead = 1;
-
-		eaf_list_erase(&g_timer_ctx.delay_queue, &record->node);
-		eaf_list_push_back(&g_timer_ctx.recycle_queue, &record->node);
-	} EAF_MSVC_WARNING_GUARD(4127, while(0));
-	eaf_lock_leave(g_timer_ctx.objlock);
-
-	if (ret < 0)
-	{
-		return;
+		eaf_list_erase(&g_timer_ctx.busy_queue, &record->node);
+		eaf_list_push_back(&g_timer_ctx.dead_queue, &record->node);
 	}
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
 
-	_timer_send_delay_rsp(record->data.from, record->data.req, eaf_errno_success);
-	uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
+	/* Send response and close */
+	uv_close((uv_handle_t*)&record->uv.timer, _timer_on_timer_close);
 }
 
-static void _timer_on_req_delay(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
+static void _timer_handle_idle_record(timer_record_t* record)
 {
-	EAF_SUPPRESS_UNUSED_VARIABLE(to);
-	uint32_t msec = ((eaf_timer_delay_req_t*)eaf_msg_get_data(msg, NULL))->msec;
-
-	timer_record_t* record = malloc(sizeof(*record));
-	assert(record != NULL);
-
-	/* initialize */
-	if (uv_timer_init(eaf_uv_get(), &record->data.uv_timer) < 0)
+	/* Initialize timer */
+	if (uv_timer_init(eaf_uv_get(), &record->uv.timer) < 0)
 	{
 		goto err_init_timer;
 	}
-	record->mask.dead = 0;
-	record->data.from = from;
-	record->data.req = msg;
-	eaf_msg_add_ref(msg);
 
-	/* save record */
-	eaf_list_push_back(&g_timer_ctx.delay_queue, &record->node);
-
-	/* start timer */
-	if (uv_timer_start(&record->data.uv_timer, _timer_on_uv_timer_active, msec, 0) < 0)
+	/* Push to busy_queue */
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
 	{
+		eaf_list_push_back(&g_timer_ctx.busy_queue, &record->node);
+	}
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
+
+	if (uv_timer_start(&record->uv.timer, _timer_on_active, record->data.msec, 0) < 0)
+	{
+		/* Operation rollback */
 		goto err_start_timer;
 	}
-	eaf_uv_mod();
 
 	return;
 
 err_start_timer:
-	/* remove record */
-	_timer_send_delay_rsp(from, msg, eaf_errno_unknown);
-
-	eaf_lock_enter(g_timer_ctx.objlock);
+	/* Erase from busy_queue and push to deaed_queue */
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
 	{
-		eaf_list_erase(&g_timer_ctx.delay_queue, &record->node);
-		eaf_list_push_back(&g_timer_ctx.recycle_queue, &record->node);
-		record->mask.dead = 1;
+		eaf_list_erase(&g_timer_ctx.busy_queue, &record->node);
+		eaf_list_push_back(&g_timer_ctx.dead_queue, &record->node);
 	}
-	eaf_lock_leave(g_timer_ctx.objlock);
-
-	uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
+	/* Send response and close */
+	_timer_send_delay_rsp(record->data.req.from, &record->data.req, eaf_errno_unknown);
+	uv_close((uv_handle_t*)&record->uv.timer, _timer_on_timer_close);
 	return;
 
 err_init_timer:
-	_timer_send_delay_rsp(from, msg, eaf_errno_unknown);
-	free(record);
+	_timer_send_delay_rsp(record->data.req.from, &record->data.req, eaf_errno_unknown);
+	FREE(record);
 	return;
 }
 
-/**
- * @brief Wait for all record closed
- */
-static void _timer_wait_all_uv_timer_close(void)
+static void _timer_on_uv_notify(uv_async_t* handle)
 {
-	eaf_lock_enter(g_timer_ctx.objlock);
-	while (eaf_list_size(&g_timer_ctx.recycle_queue) != 0)
+	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
+
+	eaf_list_node_t* it;
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
+	while ((it = eaf_list_pop_front(&g_timer_ctx.idle_queue)) != NULL)
 	{
-		eaf_lock_leave(g_timer_ctx.objlock);
+		uv_mutex_unlock(&g_timer_uv_ctx.glock);
 		{
-			eaf_thread_sleep(10);
+			_timer_handle_idle_record(EAF_CONTAINER_OF(it, timer_record_t, node));
 		}
-		eaf_lock_enter(g_timer_ctx.objlock);
+		uv_mutex_lock(&g_timer_uv_ctx.glock);
 	}
-	eaf_lock_leave(g_timer_ctx.objlock);
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
+}
+
+static int _timer_on_libuv_loop_init(void)
+{
+	if (uv_async_init(eaf_uv_get(), &g_timer_uv_ctx.gnotifier, _timer_on_uv_notify) < 0)
+	{
+		return -1;
+	}
+	g_timer_ctx.mask.inited_notifier = 1;
+	return 0;
+}
+
+static void _timer_on_notifier_close(uv_handle_t* handle)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
+	g_timer_ctx.mask.inited_notifier = 0;
+}
+
+static void _timer_on_libuv_loop_exit(void)
+{
+	g_timer_ctx.mask.looping = 0;
+
+	/* Close notifier */
+	uv_close((uv_handle_t*)&g_timer_uv_ctx.gnotifier, _timer_on_notifier_close);
+
+
+}
+
+static void _timer_on_req_delay(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	int ret;
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+
+	if (!g_timer_ctx.mask.looping)
+	{
+		_timer_send_delay_rsp(from, msg, eaf_errno_state);
+		return;
+	}
+
+	timer_record_t* record = MALLOC(sizeof(*record));
+	assert(record != NULL);
+
+	record->data.req = *msg;
+	record->data.msec = ((eaf_timer_delay_req_t*)eaf_msg_get_data(msg, NULL))->msec;
+
+	/* store in queue */
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
+	{
+		eaf_list_push_back(&g_timer_ctx.idle_queue, &record->node);
+		if ((ret = uv_async_send(&g_timer_uv_ctx.gnotifier)) < 0)
+		{
+			eaf_list_erase(&g_timer_ctx.idle_queue, &record->node);
+		}
+	}
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
+
+	if (ret >= 0)
+	{
+		return;
+	}
+
+	_timer_send_delay_rsp(from, msg, eaf_errno_unknown);
+	FREE(record);
+
+	return;
 }
 
 static int _timer_on_init(void)
 {
+	g_timer_ctx.mask.looping = 1;
 	return 0;
 }
 
 static void _timer_on_exit(void)
 {
-	eaf_list_node_t* it;
-
-	/* close pending request */
-	eaf_lock_enter(g_timer_ctx.objlock);
-	while ((it = eaf_list_pop_front(&g_timer_ctx.delay_queue)) != NULL)
-	{
-		timer_record_t* record = EAF_CONTAINER_OF(it, timer_record_t, node);
-
-		eaf_list_push_back(&g_timer_ctx.recycle_queue, it);
-		record->mask.dead = 1;
-
-		_timer_send_delay_rsp(record->data.from, record->data.req, eaf_errno_state);
-		uv_close((uv_handle_t*)&record->data.uv_timer, _timer_on_close_uv_timer);
-	}
-	eaf_lock_leave(g_timer_ctx.objlock);
-
-	_timer_wait_all_uv_timer_close();
+	g_timer_ctx.mask.looping = 0;
 }
 
 int eaf_timer_init(void)
 {
-	if (g_timer_ctx.objlock != NULL)
+	int ret;
+	if (g_timer_ctx.mask.inited)
 	{
 		return eaf_errno_duplicate;
 	}
 
-	if ((g_timer_ctx.objlock = eaf_lock_create(eaf_lock_attr_normal)) == NULL)
+	if (uv_mutex_init(&g_timer_uv_ctx.glock) < 0)
 	{
-		return eaf_errno_memory;
+		return eaf_errno_unknown;
+	}
+
+	if ((ret = eaf_powerpack_hook_register(&g_timer_ctx.hook, sizeof(g_timer_ctx.hook))) < 0)
+	{
+		goto err_hook_register;
 	}
 
 	static eaf_message_table_t msg_table[] = {
@@ -207,17 +225,28 @@ int eaf_timer_init(void)
 		_timer_on_init, _timer_on_exit,
 	};
 
-	return eaf_register(EAF_TIMER_ID, &entry);
+	if ((ret = eaf_register(EAF_TIMER_ID, &entry)) < 0)
+	{
+		goto err_register;
+	}
+
+	g_timer_ctx.mask.inited = 1;
+	return eaf_errno_success;
+
+err_register:
+	eaf_powerpack_hook_unregister(&g_timer_ctx.hook);
+err_hook_register:
+	uv_mutex_destroy(&g_timer_uv_ctx.glock);
+	return ret;
 }
 
 void eaf_timer_exit(void)
 {
-	if (g_timer_ctx.objlock == NULL)
+	if (!g_timer_ctx.mask.inited)
 	{
 		return;
 	}
 
-	/* cleanup resource */
-	eaf_lock_destroy(g_timer_ctx.objlock);
-	g_timer_ctx.objlock = NULL;
+	uv_mutex_destroy(&g_timer_uv_ctx.glock);
+	g_timer_ctx.mask.inited = 0;
 }

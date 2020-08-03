@@ -43,12 +43,18 @@ typedef struct eaf_powerpack_hook
 
 	/**
 	 * @brief Initialize function, called in loop thread
-	 * @return			Initialize result
+	 *
+	 * PowerPack guarantee this callback is called before every service is going
+	 * to initialize.
+	 *
+	 * @return			Non-zero if initialize failure, zero if success.
 	 */
 	int (*on_loop_init)(void);
 
 	/**
 	 * @brief Exit function, called in loop thread
+	 *
+	 * PowerPack guarantee is callback is called after every service is done exit.
 	 */
 	void(*on_loop_exit)(void);
 }eaf_powerpack_hook_t;

@@ -51,6 +51,12 @@ extern "C" {
 #define eaf_yield_ext(fn, arg)		EAF_COROUTINE_YIELD(fn, arg, EAF_COROUTINE_YIELD_TOKEN)
 
 /**
+ * @brief A static initializer for #eaf_hook_t
+ * @see eaf_hook_t
+ */
+#define EAF_HOOK_INITIALIZER	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+
+/**
  * @brief Request table
  */
 typedef struct eaf_message_table

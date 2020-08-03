@@ -14,9 +14,11 @@ typedef struct test_timer_delay_ctx
 
 static test_timer_delay_ctx_t s_test_timer_delay_ctx;
 
-static void _test_timer_on_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ struct eaf_msg* msg)
+static void _test_timer_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
+
+	ASSERT_EQ_D32(((eaf_timer_delay_rsp_t*)eaf_msg_get_data(msg, NULL))->ret, eaf_errno_success);
 
 	eaf_time_getclock(&s_test_timer_delay_ctx.s_timer_stop);
 	eaf_sem_post(s_test_timer_delay_ctx.s_timer_sem);
@@ -64,7 +66,7 @@ TEST_FIXTURE_TEAREDOWN(powerpack_timer)
 
 TEST_F(powerpack_timer, delay)
 {
-	ASSERT_EQ_D32(eaf_sem_pend(s_test_timer_delay_ctx.s_timer_sem, 8000), 0);
+	ASSERT_EQ_D32(eaf_sem_pend(s_test_timer_delay_ctx.s_timer_sem, 80000), 0);
 
 	eaf_clock_time_t diff;
 	ASSERT_LT_D32(eaf_time_diffclock(&s_test_timer_delay_ctx.s_timer_start, &s_test_timer_delay_ctx.s_timer_stop, &diff), 0);
