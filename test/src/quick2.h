@@ -6,6 +6,7 @@ extern "C" {
 
 #include "eaf/powerpack.h"
 #include "ctest/ctest.h"
+#include "utils/dial.h"
 
 /**
  * @brief Log helper

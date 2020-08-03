@@ -1,6 +1,5 @@
 /**
  * @file
- * EAF Monitor.
  */
 #ifndef __EAF_POWERPACK_MONITOR_H__
 #define __EAF_POWERPACK_MONITOR_H__
@@ -17,6 +16,46 @@ extern "C" {
 #include "eaf/eaf.h"
 
 /**
+ * @brief Monitor Service ID
+ */
+#define EAF_MONITOR_ID							(0x00040000)
+
+/**
+ * @ingroup PowerPack-Monitor
+ * @defgroup PowerPack-Monitor-Print Print
+ * @{
+ */
+
+typedef enum eaf_monitor_stringify_type
+{
+	eaf_monitor_stringify_type_normal,
+}eaf_monitor_stringify_type_t;
+
+#define EAF_MINITOR_MSG_STRINGIFY_REQ			(EAF_MONITOR_ID + 0x0001)
+typedef struct eaf_monitor_stringify_req
+{
+	eaf_monitor_stringify_type_t	type;		/**< String type */
+}eaf_monitor_stringify_req_t;
+
+#define EAF_MINITOR_MSG_STRINGIFY_RSP			EAF_MINITOR_MSG_STRINGIFY_REQ
+typedef struct eaf_monitor_stringify_rsp
+{
+	size_t							size;		/**< String length (not include NULL terminator) */
+#if defined(_MSC_VER)
+#	pragma warning(push)
+#	pragma warning(disable : 4200)
+#endif
+	char							data[];		/**< String data */
+#if defined(_MSC_VER)
+#	pragma warning(pop)
+#endif
+}eaf_monitor_stringify_rsp_t;
+
+/**
+ * @}
+ */
+
+/**
  * @brief Initialize monitor
  * @param[in] sec	Refresh time interval
  * @return		#eaf_errno
@@ -27,16 +66,6 @@ int eaf_monitor_init(unsigned sec);
  * @brief Exit monitor
  */
 void eaf_monitor_exit(void);
-
-/**
- * @brief Print service summary information into buffer.
- *
- * Buffer always NULL terminated.
- *
- * @param[in] buffer	Buffer
- * @param[in] size		Buffer size
- */
-void eaf_monitor_print_tree(char* buffer, size_t size);
 
 /**
  * @brief Reset all necessary counters.

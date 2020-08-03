@@ -2,6 +2,7 @@ set(TEST_BUILD_NAME ctest)
 
 # test
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_TEST_C)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/utils SRC_TEST_C)
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/eaf SRC_TEST_C)
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src/powerpack SRC_TEST_C)
 add_executable(${TEST_BUILD_NAME} ${SRC_TEST_C})

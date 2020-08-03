@@ -17,29 +17,13 @@
  */
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "eaf/eaf.h"
-#include "powerpack.h"
+#include "string.h"
 #include "monitor.h"
 
 #define MODULE	"monitor"
 #define LOG_TRACE(fmt, ...)	EAF_LOG_TRACE(MODULE, fmt, ##__VA_ARGS__)
-
-#ifdef _MSC_VER
-#define APPEND_LINE(buf, buflen, fmt, ...)										\
-	do {																		\
-		size_t len = strlen(buf);												\
-		_snprintf_s(buf + len, buflen - len, _TRUNCATE, fmt, ##__VA_ARGS__);	\
-	} EAF_MSVC_WARNING_GUARD(4127, while (0))
-#else
-#define APPEND_LINE(buf, buflen, fmt, ...)										\
-	do {																		\
-		size_t len = strlen(buf);												\
-		snprintf(buf + len, buflen - len, fmt, ##__VA_ARGS__);					\
-	} while (0)
-#endif
 
 static int _monitor_cmp_dataflow_record(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
 static int _monitor_cmp_service_record_group(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
@@ -50,102 +34,6 @@ static int _monitor_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg
 static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg_t* msg);
 static int _monitor_on_loop_init(void);
 static void _monitor_on_loop_exit(void);
-
-typedef struct monitor_dataflow_record
-{
-	eaf_map_node_t					node;			/**< node for eaf_monitor_ctx_t::dataflow::record */
-	struct
-	{
-		uint32_t					from;			/** Who send this message */
-		uint32_t					to;				/** Who will receive this message */
-		size_t						count;			/** Message count */
-	}data;
-}monitor_dataflow_record_t;
-
-typedef struct monitor_service_record
-{
-	eaf_map_node_t					node_group;		/**< node for eaf_monitor_ctx_t::serivce::record_group */
-	eaf_map_node_t					node_split;		/**< node for eaf_monitor_ctx_t::serivce::record_split */
-
-	uv_mutex_t						objlock;		/**< Object lock */
-
-	struct
-	{
-		uint32_t					gid;			/**< Group ID */
-		uint32_t					sid;			/**< Service ID. It must be unique */
-		eaf_service_local_t*		sls;			/**< Service Local Storage */
-	}data;
-
-	struct
-	{
-		uint32_t					flush_send;		/**< The number of message send */
-		uint32_t					flush_recv;		/**< The number of message recv */
-		uint64_t					flush_use_time;	/**< Use time in nanoseconds */
-
-		uint64_t					total_send;		/**< The total number of message send */
-		uint64_t					total_recv;		/**< The total number of message recv */
-	}counter;
-
-	struct
-	{
-		uint64_t					use_time_start;	/**< The start point of use time */
-	}temp;
-}monitor_service_record_t;
-
-typedef struct monitor_group_record
-{
-	uv_mutex_t						objlock;		/**< Object lock */
-	eaf_group_local_t*				gls;			/**< Group Local Storage */
-
-	struct
-	{
-		uint64_t					flush_use_time;	/**< Use time in nanoseconds */
-	}counter;
-}monitor_group_record_t;
-
-typedef struct eaf_monitor_ctx
-{
-	struct
-	{
-		eaf_map_t					record_group;	/**< Group by GID, search by `gid' and `sid' */
-		eaf_map_t					record_split;	/**< Independent record, search by `sid' */
-	}serivce;
-
-	struct
-	{
-		size_t						size;			/**< Array size */
-		monitor_group_record_t*		table;			/** Group record */
-	}group;
-
-	struct
-	{
-		eaf_map_t					record;			/**< A insert-only table for record message flow */
-	}dataflow;
-
-	struct
-	{
-		unsigned					timeout_sec;	/**< Refresh timeout in seconds */
-	}config;
-}eaf_monitor_ctx_t;
-
-typedef struct eaf_monitor_ctx2
-{
-	struct
-	{
-		unsigned					refresh_timer_running : 1;
-	}mask;
-
-	struct
-	{
-		uv_timer_t					timer;			/**< Global refresh timer */
-		uv_mutex_t					objlock;		/**< Object lock */
-	}refresh;
-
-	struct
-	{
-		uv_rwlock_t					rwlock;			/**< rwlock for eaf_monitor_ctx_t::dataflow::record */
-	}dataflow;
-}eaf_monitor_ctx2_t;
 
 static eaf_monitor_ctx2_t g_monitor_ctx2;
 static eaf_monitor_ctx_t g_monitor_ctx = {
@@ -466,38 +354,6 @@ static const char* _monitor_state_2_string(eaf_service_state_t state)
 	return "UNKNOWN";
 }
 
-static void _monitor_print_tree_nolock(char* buffer, size_t size)
-{
-	buffer[0] = '\0';
-
-	APPEND_LINE(buffer, size, "[SERVICE]    [STATE]   [RECV]   [SEND] [MSGQ] [TIME] [CPU%%]\n");
-
-	uint32_t last_gid = (uint32_t)-1;
-	monitor_group_record_t* g_record = NULL;
-
-	eaf_map_node_t* it = eaf_map_begin(&g_monitor_ctx.serivce.record_group);
-	for (; it != NULL; it = eaf_map_next(it))
-	{
-		monitor_service_record_t* record = EAF_CONTAINER_OF(it, monitor_service_record_t, node_group);
-
-		if (last_gid != record->data.gid)
-		{
-			last_gid = record->data.gid;
-			g_record = &g_monitor_ctx.group.table[last_gid];
-			APPEND_LINE(buffer, size, "%u:%lu\n", (unsigned)record->data.gid, g_record->gls->tid);
-		}
-
-		APPEND_LINE(buffer, size, "|-%#010"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u  %5.1f\n",
-			record->data.sid,
-			_monitor_state_2_string(record->data.sls->state),
-			record->counter.flush_recv,
-			record->counter.flush_send,
-			(unsigned)eaf_message_queue_size(record->data.sls),
-			(unsigned)(record->counter.flush_use_time / 1000 / 1000),
-			_monitor_calculate_cpu(record->counter.flush_use_time, g_record->counter.flush_use_time));
-	}
-}
-
 static int _monitor_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, msg);
@@ -595,6 +451,119 @@ static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t
 	_monitor_update_counter_send(from);
 }
 
+static void _monitor_on_req_stringify_error(uint32_t from, eaf_msg_t* req)
+{
+	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(eaf_monitor_stringify_rsp_t));
+	((eaf_monitor_stringify_rsp_t*)eaf_msg_get_data(rsp, NULL))->size = 0;
+
+	eaf_send_rsp(EAF_MONITOR_ID, from, rsp);
+	eaf_msg_dec_ref(rsp);
+}
+
+static size_t _monitor_stringify_normal_fill_nolock(char* buffer, size_t size)
+{
+	size_t token = 0;
+	size_t write_size = 0;
+
+	write_size += eaf_string_apply(buffer, size, &token, "[SERVICE]    [STATE]   [RECV]   [SEND] [MSGQ] [TIME] [CPU%%]\n");
+
+	uint32_t last_gid = (uint32_t)-1;
+	monitor_group_record_t* g_record = NULL;
+
+	eaf_map_node_t* it = eaf_map_begin(&g_monitor_ctx.serivce.record_group);
+	for (; it != NULL; it = eaf_map_next(it))
+	{
+		monitor_service_record_t* record = EAF_CONTAINER_OF(it, monitor_service_record_t, node_group);
+
+		if (last_gid != record->data.gid)
+		{
+			last_gid = record->data.gid;
+			g_record = &g_monitor_ctx.group.table[last_gid];
+			write_size += eaf_string_apply(buffer, size, &token, "%u:%lu\n", (unsigned)record->data.gid, g_record->gls->tid);
+		}
+
+		write_size += eaf_string_apply(buffer, size, &token, "|-0x%08"PRIx32" %-7s %8"PRIu32" %8"PRIu32" %6u %6u  %5.1f\n",
+			record->data.sid,
+			_monitor_state_2_string(record->data.sls->state),
+			record->counter.flush_recv,
+			record->counter.flush_send,
+			(unsigned)eaf_message_queue_size(record->data.sls),
+			(unsigned)(record->counter.flush_use_time / 1000 / 1000),
+			_monitor_calculate_cpu(record->counter.flush_use_time, g_record->counter.flush_use_time));
+	}
+
+	return write_size;
+}
+
+static void _monitor_on_req_stringify_normal(uint32_t from, eaf_msg_t* req)
+{
+	/**
+	 * The template is:
+	 * 
+	 * [SERVICE]    [STATE]   [RECV]   [SEND] [MSGQ] [TIME] [CPU%]      --> 59 + 1
+	 * [uint32_t]:[uint64_t]                                            --> 31 + 1
+	 * |-0x[    8C] [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]      --> 59 + 1
+	 * |-0x[    8C] [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]
+	 * |-0x[    8C] [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]
+	 * [uint32_t]:[uint64_t]
+	 * |-0xe0010000 [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]
+	 * |-0xe0020000 [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]
+	 * |-0xe0030000 [ 7C  ] [    8C] [    8C] [  6C] [  6C]  [ 5C]
+	 *
+	 * Which means the maximum length (include NULL terminator) is:
+	 * N = 60 + 32 * G + 60 * S + 1
+	 */
+
+	size_t string_size = 60 + 32 * g_monitor_ctx.group.size + 60 * eaf_map_size(&g_monitor_ctx.serivce.record_split) + 1;
+	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(eaf_monitor_stringify_rsp_t) + string_size);
+	eaf_monitor_stringify_rsp_t* monitor_rsp = eaf_msg_get_data(rsp, NULL);
+
+	/**
+	 * The refresh process will reset necessary fields.
+	 *
+	 * For performance consideration, the refresh process is separated into
+	 * multiple steps, which means during refresh process, the report might odd.
+	 *
+	 * So it is better wait for refresh to finish.
+	 */
+	uv_mutex_lock(&g_monitor_ctx2.refresh.objlock);
+	{
+		monitor_rsp->size =
+			_monitor_stringify_normal_fill_nolock(monitor_rsp->data, string_size);
+	}
+	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
+
+	eaf_send_rsp(EAF_MONITOR_ID, from, rsp);
+	eaf_msg_dec_ref(rsp);
+}
+
+static void _monitor_on_req_stringify(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+
+	eaf_monitor_stringify_req_t* req = eaf_msg_get_data(msg, NULL);
+	switch (req->type)
+	{
+	case eaf_monitor_stringify_type_normal:
+		_monitor_on_req_stringify_normal(from, msg);
+		break;
+
+	default:
+		_monitor_on_req_stringify_error(from, msg);
+		break;
+	}
+}
+
+static int _monitor_on_service_init(void)
+{
+	return 0;
+}
+
+static void _monitor_on_service_exit(void)
+{
+	// do nothing
+}
+
 int eaf_monitor_init(unsigned sec)
 {
 	int ret = eaf_errno_success;
@@ -617,8 +586,25 @@ int eaf_monitor_init(unsigned sec)
 		goto err_init_timer;
 	}
 
+	static eaf_message_table_t msg_table[] = {
+		{ EAF_MINITOR_MSG_STRINGIFY_REQ, _monitor_on_req_stringify },
+	};
+
+	static eaf_entrypoint_t entry = {
+		EAF_ARRAY_SIZE(msg_table), msg_table,
+		_monitor_on_service_init,
+		_monitor_on_service_exit,
+	};
+
+	if ((ret = eaf_register(EAF_MONITOR_ID, &entry)) < 0)
+	{
+		goto err_register_service;
+	}
+
 	return eaf_errno_success;
 
+err_register_service:
+	eaf_powerpack_hook_unregister(&g_pp_hook);
 err_init_timer:
 	uv_mutex_destroy(&g_monitor_ctx2.refresh.objlock);
 err_init_refresh_lock:
@@ -670,22 +656,6 @@ void eaf_monitor_exit(void)
 	}
 	free(g_monitor_ctx.group.table);
 	g_monitor_ctx.group.table = NULL;
-}
-
-void eaf_monitor_print_tree(char* buffer, size_t size)
-{
-	/**
-	 * The refresh process will reset necessary fields.
-	 *
-	 * For performance consideration, the refresh process is separated into
-	 * multiple steps, which means during refresh process, the report might odd.
-	 *
-	 * So it is better wait for refresh to finish.
-	 */
-
-	uv_mutex_lock(&g_monitor_ctx2.refresh.objlock);
-	_monitor_print_tree_nolock(buffer, size);
-	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
 }
 
 void eaf_monitor_flush(void)
