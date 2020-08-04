@@ -78,6 +78,16 @@ extern "C" {
 			"%s(%d)", eaf_strerror(_a), _a);\
 	} while (0)
 
+typedef struct test_quick_config
+{
+	eaf_log_level_t	log_level;
+}test_quick_config_t;
+
+/**
+ * @brief Quick test configuration
+ */
+extern test_quick_config_t quick_config;
+
 /**
  * @brief A global hook for ctest.
  */

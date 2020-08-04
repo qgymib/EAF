@@ -42,6 +42,10 @@ const ctest_hook_t			quick_hook = {
 	NULL,									// .after_simple_test
 };
 
+test_quick_config_t quick_config = {
+	eaf_log_level_info,
+};
+
 static void _quick_hook_before_fixture_setup(const char* fixture_name)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(fixture_name);
@@ -188,6 +192,14 @@ int test_quick2_internal_force_load_eaf(void)
 	if (g_test_quick2_ctx.mask.loaded)
 	{
 		return eaf_errno_duplicate;
+	}
+
+	/* We can test PowerPack state by register a hook into it. */
+	static eaf_powerpack_hook_t pp_hook = EAF_POWERPACK_HOOK_INITIALIZER;
+	if (eaf_powerpack_hook_register(&pp_hook, sizeof(pp_hook)) == 0)
+	{
+		eaf_powerpack_hook_unregister(&pp_hook);
+		eaf_log_set_level(quick_config.log_level);
 	}
 
 	size_t i;
