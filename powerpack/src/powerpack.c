@@ -4,6 +4,7 @@
 #include "powerpack/message.h"
 #include "powerpack/net.h"
 #include "powerpack/timer.h"
+#include "powerpack/log.h"
 #include "powerpack.h"
 
 #define MODULE	"powerpack"
@@ -52,12 +53,6 @@ static void _pp_hook_on_load_after(int ret);
 static void _pp_hook_on_exit_before(void);
 static void _pp_hook_on_exit_after(void);
 
-typedef struct powerpack_init_item
-{
-	int(*on_init)(void);
-	void(*on_exit)(void);
-}powerpack_init_item_t;
-
 static uv_ctx_t g_uv_ctx;
 static pp_ctx_t g_pp_ctx = {
 	NULL, { 0, 0 },
@@ -83,8 +78,9 @@ static pp_ctx_t g_pp_ctx = {
 	},
 };
 
-static powerpack_init_item_t g_powerpack_table[] = {
-	{ eaf_powerpack_net_init,		eaf_powerpack_net_exit },
+static pp_init_item_t g_pp_init_table[] = {
+	{ eaf_powerpack_net_init,	eaf_powerpack_net_exit },
+	{ eaf_log_init,				eaf_log_exit },
 };
 
 static void _pp_hook_on_service_init_before(uint32_t id)
@@ -326,9 +322,9 @@ static int _pp_init_pp_ctx(const eaf_powerpack_cfg_t* cfg)
 {
 	/* The initialize table will be removed soon */
 	size_t i;
-	for (i = 0; i < EAF_ARRAY_SIZE(g_powerpack_table); i++)
+	for (i = 0; i < EAF_ARRAY_SIZE(g_pp_init_table); i++)
 	{
-		g_powerpack_table[i].on_init();
+		g_pp_init_table[i].on_init();
 	}
 
 	g_pp_ctx.working = eaf_thread_create(&cfg->thread_attr, _pp_thread, NULL);
@@ -399,9 +395,9 @@ void eaf_powerpack_exit(void)
 	_pp_exit_pp_ctx();
 
 	size_t i;
-	for (i = 0; i < EAF_ARRAY_SIZE(g_powerpack_table); i++)
+	for (i = 0; i < EAF_ARRAY_SIZE(g_pp_init_table); i++)
 	{
-		g_powerpack_table[i].on_exit();
+		g_pp_init_table[i].on_exit();
 	}
 
 	_pp_exit_libuv_ctx();

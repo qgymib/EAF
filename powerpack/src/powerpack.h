@@ -118,6 +118,20 @@ uv_loop_t* eaf_uv_get(void);
  */
 void eaf_uv_mod(void);
 
+typedef struct pp_init_item
+{
+	/**
+	 * @brief Generic initialize callback
+	 * @return	zero if success, non-zero if failure
+	 */
+	int(*on_init)(void);
+
+	/**
+	 * @brief Generic exit callback
+	 */
+	void(*on_exit)(void);
+}pp_init_item_t;
+
 #ifdef __cplusplus
 }
 #endif

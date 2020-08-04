@@ -13,6 +13,7 @@ extern "C" {
  * @{
  */
 
+#include <stdarg.h>
 #include "eaf/utils/define.h"
 
 /**
@@ -112,6 +113,24 @@ typedef enum eaf_log_level
 	eaf_log_level_fatal,	/**< Fatal */
 }eaf_log_level_t;
 
+typedef struct eaf_log_info
+{
+	eaf_log_level_t	level;
+	int				line;
+	const char*		mode;
+	const char*		file;
+	const char*		func;
+}eaf_log_info_t;
+
+/**
+ * @brief Log callback
+ * @param[in] info	Log information
+ * @param[in] fmt	Format
+ * @param[in] ap	Argument list
+ * @param[in] arg	User defined argument
+ */
+typedef void(*eaf_log_callback_fn)(const eaf_log_info_t* info, const char* fmt, va_list ap, void* arg);
+
 /**
  * @private
  * @brief Log
@@ -126,6 +145,29 @@ typedef enum eaf_log_level
 void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	_In_ const char* func, _In_ int line, _In_ const char* mod,
 	_In_ const char* fmt, ...);
+
+/**
+ * @brief Set log level
+ * @param[in] level		Log level
+ */
+void eaf_log_set_level(eaf_log_level_t level);
+
+/**
+ * @brief Get current filter level
+ * @return				Log level
+ */
+eaf_log_level_t eaf_log_get_level(void);
+
+/**
+ * @brief Set log callback
+ *
+ * Once set, all logs will be redirect to this callback. So if you still need
+ * output log on your screen, you need to do it manually.
+ * @note The callback does not affected by log level filter
+ * @param[in] fn	Callback function
+ * @param[in] arg	User defined argument
+ */
+void eaf_log_set_callback(eaf_log_callback_fn fn, void* arg);
 
 /**
  * @brief Dump hex data
