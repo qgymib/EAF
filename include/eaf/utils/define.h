@@ -202,6 +202,16 @@ extern "C" {
  */
 #define _Post_invalid_
 
+/**
+ * @brief Indicates that the parameter is a format string for use in a printf expression.
+ */
+#define _Printf_format_string_
+
+/**
+ * @brief Indicates that the parameter is a format string for use in a scanf expression.
+ */
+#define _Scanf_format_string_
+
 #endif
 
 #ifdef __cplusplus
