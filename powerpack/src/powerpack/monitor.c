@@ -330,28 +330,28 @@ static const char* _monitor_state_2_string(eaf_service_state_t state)
 	switch (state)
 	{
 	case eaf_service_state_init:
-		return "INIT";
+		return "init";
 
 	case eaf_service_state_init_yield:
-		return "INIT_Y";
+		return "init_y";
 
 	case eaf_service_state_idle:
-		return "IDLE";
+		return "idle";
 
 	case eaf_service_state_busy:
-		return "BUSY";
+		return "busy";
 
 	case eaf_service_state_yield:
-		return "YIELD";
+		return "yield";
 
 	case eaf_service_state_exit:
-		return "EXIT";
+		return "exit";
 
 	default:
 		break;
 	}
 
-	return "UNKNOWN";
+	return "unknown";
 }
 
 static int _monitor_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg_t* msg)
@@ -587,10 +587,7 @@ static size_t _monitor_stringify_json_fill_nolock(char* buffer, size_t size)
 	}
 
 	/* close group */
-	if (eaf_map_size(&g_monitor_ctx.serivce.record_group) != 0)
-	{
-		write_size += eaf_string_apply(buffer, size, &token, "]}");
-	}
+	write_size += eaf_string_apply(buffer, size, &token, "]}");
 
 	/* The end of json string */
 	write_size += eaf_string_apply(buffer, size, &token, "]}");
