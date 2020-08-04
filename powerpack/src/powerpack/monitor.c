@@ -537,6 +537,136 @@ static void _monitor_on_req_stringify_normal(uint32_t from, eaf_msg_t* req)
 	eaf_msg_dec_ref(rsp);
 }
 
+static size_t _monitor_stringify_json_fill_nolock(char* buffer, size_t size)
+{
+	size_t token = 0;
+	size_t write_size = 0;
+	int flag_write_service_end = 0;
+
+	/* The begin of json string */
+	write_size += eaf_string_apply(buffer, size, &token, "{\"group\":[");
+
+	uint32_t last_gid = (uint32_t)-1;
+	monitor_group_record_t* g_record = NULL;
+
+	eaf_map_node_t* it = eaf_map_begin(&g_monitor_ctx.serivce.record_group);
+	for (; it != NULL; it = eaf_map_next(it))
+	{
+		monitor_service_record_t* record = EAF_CONTAINER_OF(it, monitor_service_record_t, node_group);
+
+		if (last_gid != record->data.gid)
+		{
+			if (g_record != NULL)
+			{
+				write_size += eaf_string_apply(buffer, size, &token, "]},");
+			}
+
+			last_gid = record->data.gid;
+			g_record = &g_monitor_ctx.group.table[last_gid];
+			write_size += eaf_string_apply(buffer, size, &token,
+				"{\"gid\":%u,\"tid\":%lu,\"service\":[", (unsigned)record->data.gid, g_record->gls->tid);
+
+			flag_write_service_end = 0;
+		}
+
+		if (flag_write_service_end)
+		{
+			write_size += eaf_string_apply(buffer, size, &token, ",");
+		}
+		flag_write_service_end = 1;
+
+		write_size += eaf_string_apply(buffer, size, &token,
+			"{\"id\":%"PRIu32",\"state\":\"%s\",\"recv\":%u,\"send\":%u,\"msgq\":%u,\"time\":%u,\"cpu\":%.1f}",
+			record->data.sid,
+			_monitor_state_2_string(record->data.sls->state),
+			(unsigned)record->counter.flush_recv,
+			(unsigned)record->counter.flush_send,
+			(unsigned)eaf_message_queue_size(record->data.sls),
+			(unsigned)(record->counter.flush_use_time / 1000 / 1000),
+			_monitor_calculate_cpu(record->counter.flush_use_time, g_record->counter.flush_use_time));
+	}
+
+	/* close group */
+	if (eaf_map_size(&g_monitor_ctx.serivce.record_group) != 0)
+	{
+		write_size += eaf_string_apply(buffer, size, &token, "]}");
+	}
+
+	/* The end of json string */
+	write_size += eaf_string_apply(buffer, size, &token, "]}");
+	return write_size;
+}
+
+static void _monitor_on_req_stringify_json(uint32_t from, eaf_msg_t* req)
+{
+	/**
+	 * The template is:
+	 * {
+	 * 	"group" : [
+	 * 		{
+	 * 			"gid" : <uint32_t>,
+	 * 			"tid" : <uint64_t>,
+	 * 			"service": [
+	 * 				{
+	 * 					"id": <uint32_t>,
+	 * 					"state": "<7C>",
+	 * 					"recv": <uint32_t>,
+	 * 					"send": <uint32_t>,
+	 * 					"msgq": <uint32_t>,
+	 * 					"time": <uint32_t>,
+	 * 					"cpu": <float>
+	 * 				},
+	 * 				{
+	 * 					"id": <uint32_t>,
+	 * 					"state": "<7C>",
+	 * 					"recv": <uint32_t>,
+	 * 					"send": <uint32_t>,
+	 * 					"msgq": <uint32_t>,
+	 * 					"time": <uint32_t>,
+	 * 					"cpu": <float>
+	 * 				}
+	 * 			]
+	 * 		},
+	 * 		{
+	 * 			"gid" : <uint32_t>,
+	 * 			"tid" : <uint64_t>,
+	 * 			"service": [
+	 * 				{
+	 * 					"id": <uint32_t>,
+	 * 					"state": "<7C>",
+	 * 					"recv": <uint32_t>,
+	 * 					"send": <uint32_t>,
+	 * 					"msgq": <uint32_t>,
+	 * 					"time": <uint32_t>,
+	 * 					"cpu": <float>
+	 * 				},
+	 * 				{
+	 * 					...
+	 * 				}
+	 * 			]
+	 * 		}
+	 * 	]
+	 * }
+	 *
+	 * Which means the maximum length (include NULL terminator) is:
+	 * N = 12 + 59 * G + 120 * S + 1
+	 */
+
+	size_t string_size = 12 + 59 * g_monitor_ctx.group.size + 120 * eaf_map_size(&g_monitor_ctx.serivce.record_split) + 1;
+	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(eaf_monitor_stringify_rsp_t) + string_size);
+	eaf_monitor_stringify_rsp_t* monitor_rsp = eaf_msg_get_data(rsp, NULL);
+
+	uv_mutex_lock(&g_monitor_ctx2.refresh.objlock);
+	{
+		monitor_rsp->size =
+			_monitor_stringify_json_fill_nolock(monitor_rsp->data, string_size);
+	}
+	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
+
+	eaf_send_rsp(EAF_MONITOR_ID, from, rsp);
+	eaf_msg_dec_ref(rsp);
+}
+
 static void _monitor_on_req_stringify(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(to);
@@ -546,6 +676,10 @@ static void _monitor_on_req_stringify(uint32_t from, uint32_t to, eaf_msg_t* msg
 	{
 	case eaf_monitor_stringify_type_normal:
 		_monitor_on_req_stringify_normal(from, msg);
+		break;
+
+	case eaf_monitor_stringify_type_json:
+		_monitor_on_req_stringify_json(from, msg);
 		break;
 
 	default:

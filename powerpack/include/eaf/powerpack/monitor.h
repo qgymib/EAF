@@ -26,18 +26,34 @@ extern "C" {
  * @{
  */
 
+/**
+ * @brief Stringify type
+ * @see eaf_monitor_stringify_req_t
+ */
 typedef enum eaf_monitor_stringify_type
 {
-	eaf_monitor_stringify_type_normal,
+	eaf_monitor_stringify_type_normal,			/**< human readable string */
+	eaf_monitor_stringify_type_json,			/**< json */
 }eaf_monitor_stringify_type_t;
 
+/**
+ * @brief Request ID for monitor message: stringify
+ */
 #define EAF_MINITOR_MSG_STRINGIFY_REQ			(EAF_MONITOR_ID + 0x0001)
+/**
+ * @brief Request ID for monitor message: stringify
+ */
 typedef struct eaf_monitor_stringify_req
 {
 	eaf_monitor_stringify_type_t	type;		/**< String type */
 }eaf_monitor_stringify_req_t;
-
+/**
+ * @brief Response ID for monitor message: stringify
+ */
 #define EAF_MINITOR_MSG_STRINGIFY_RSP			EAF_MINITOR_MSG_STRINGIFY_REQ
+/**
+ * @brief Response for monitor message: stringify
+ */
 typedef struct eaf_monitor_stringify_rsp
 {
 	size_t							size;		/**< String length (not include NULL terminator) */

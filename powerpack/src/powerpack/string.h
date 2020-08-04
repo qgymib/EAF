@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include <string.h>
+#include "eaf/eaf.h"
 
 /**
  * @brief Apply string into exist buffer.
@@ -17,7 +18,11 @@ extern "C" {
  *						which  would  have  been written to the final string if
  *						enough space had been available
  */
-size_t eaf_string_apply(char* buffer, size_t size, size_t* token, const char* fmt, ...);
+size_t eaf_string_apply(char* buffer, size_t size, size_t* token, _Printf_format_string_ const char* fmt, ...)
+#if defined(_GUNC_)
+	__attribute__((format(printf, 4, 5)))
+#endif
+;
 
 #ifdef __cplusplus
 }

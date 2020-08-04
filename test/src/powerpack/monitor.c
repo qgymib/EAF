@@ -46,9 +46,11 @@ static void _test_monitor_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	/* at certain point we need to wait for check */
 	if (s_test_monitor_ctx.counter == s_test_monitor_ctx.wait_round)
 	{
+		int type = test_dial_call(&s_test_monitor_ctx.check_point, 0);
+
 		int ret;
 		EAF_MESSAGE_SEND_REQUEST(ret, EAF_MINITOR_MSG_STRINGIFY_REQ, sizeof(eaf_monitor_stringify_req_t), _test_monitor_on_stringify_rsp, TEST_QUICK_S0, EAF_MONITOR_ID, {
-			((eaf_monitor_stringify_req_t*)eaf_msg_get_data(_0, NULL))->type = eaf_monitor_stringify_type_normal;
+			((eaf_monitor_stringify_req_t*)eaf_msg_get_data(_0, NULL))->type = (eaf_monitor_stringify_type_t)type;
 		});
 		ASSERT_EQ_D32(ret, 0);
 	}
@@ -103,6 +105,12 @@ TEST_F(powerpack_monitor, stringify_normal)
 {
 	void* token;
 
+	/* check normal string */
+	{
+		test_dial_wait(&s_test_monitor_ctx.check_point, &token);
+		test_dial_answer(&s_test_monitor_ctx.check_point, token, eaf_monitor_stringify_type_normal);
+	}
+
 	/* Wait for check point */
 	{
 		test_dial_wait(&s_test_monitor_ctx.check_point, &token);
@@ -116,3 +124,25 @@ TEST_F(powerpack_monitor, stringify_normal)
 	}
 }
 
+TEST_F(powerpack_monitor, stringify_json)
+{
+	void* token;
+
+	/* check normal string */
+	{
+		test_dial_wait(&s_test_monitor_ctx.check_point, &token);
+		test_dial_answer(&s_test_monitor_ctx.check_point, token, eaf_monitor_stringify_type_json);
+	}
+
+	/* Wait for check point */
+	{
+		test_dial_wait(&s_test_monitor_ctx.check_point, &token);
+		test_dial_answer(&s_test_monitor_ctx.check_point, token, 0);
+	}
+
+	/* Wait for check point */
+	{
+		test_dial_wait(&s_test_monitor_ctx.check_point, &token);
+		test_dial_answer(&s_test_monitor_ctx.check_point, token, 0);
+	}
+}
