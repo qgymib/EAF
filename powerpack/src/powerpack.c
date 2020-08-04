@@ -169,6 +169,8 @@ static void _pp_notify_exit_thread(void)
 
 static void _pp_hook_on_exit_before(void)
 {
+	LOG_TRACE("going to exit");
+
 	/* callback */
 	FOREACH_VOID_HOOK(on_exit_before);
 }
@@ -178,6 +180,8 @@ static void _pp_hook_on_exit_after(void)
 	FOREACH_VOID_HOOK(on_exit_after);
 
 	_pp_notify_exit_thread();
+
+	LOG_TRACE("exited");
 }
 
 static int _pp_call_init(size_t* idx)
@@ -415,6 +419,11 @@ int eaf_powerpack_hook_register(eaf_powerpack_hook_t* hook, size_t size)
 	if (size != sizeof(*hook))
 	{
 		return eaf_errno_invalid;
+	}
+
+	if (!g_pp_ctx.mask.initialized)
+	{
+		return eaf_errno_state;
 	}
 
 	eaf_list_push_back(&g_pp_ctx.hook.table, &hook->node);

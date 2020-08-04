@@ -37,6 +37,14 @@ extern "C" {
  * @}
  */
 
+/**
+ * @brief A default static initializer for #eaf_powerpack_hook_t
+ */
+#define EAF_POWERPACK_HOOK_INITIALIZER	{ EAF_LIST_NODE_INITIALIZER, EAF_HOOK_INITIALIZER, NULL, NULL }
+
+/**
+ * @brief PowerPack hook
+ */
 typedef struct eaf_powerpack_hook
 {
 	eaf_list_node_t		node;
