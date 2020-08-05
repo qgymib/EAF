@@ -4,11 +4,11 @@
 #include "timer.h"
 #include "powerpack.h"
 
-#define MODULE			"timer"
+#define MODULE					"timer"
 #define LOG_TRACE(fmt, ...)		EAF_LOG_TRACE(MODULE, fmt, ##__VA_ARGS__)
 
-#define MALLOC(size)	malloc(size)
-#define FREE(ptr)		free(ptr)
+#define MALLOC(size)			malloc(size)
+#define FREE(ptr)				free(ptr)
 
 static int _timer_on_libuv_loop_init(void);
 static void _timer_on_libuv_loop_exit(void);
@@ -105,9 +105,41 @@ err_init_timer:
 	return;
 }
 
+static void _timer_close_all_timer(void)
+{
+	eaf_list_node_t* it;
+	uv_mutex_lock(&g_timer_uv_ctx.glock);
+	while ((it = eaf_list_pop_front(&g_timer_ctx.busy_queue)) != NULL)
+	{
+		eaf_list_push_back(&g_timer_ctx.dead_queue, it);
+		uv_mutex_unlock(&g_timer_uv_ctx.glock);
+		{
+			timer_record_t* record = EAF_CONTAINER_OF(it, timer_record_t, node);
+			uv_close((uv_handle_t*)&record->uv.timer, _timer_on_timer_close);
+		}
+		uv_mutex_lock(&g_timer_uv_ctx.glock);
+	}
+	while ((it = eaf_list_pop_front(&g_timer_ctx.idle_queue)) != NULL)
+	{
+		uv_mutex_unlock(&g_timer_uv_ctx.glock);
+		{
+			timer_record_t* record = EAF_CONTAINER_OF(it, timer_record_t, node);
+			FREE(record);
+		}
+		uv_mutex_lock(&g_timer_uv_ctx.glock);
+	}
+	uv_mutex_unlock(&g_timer_uv_ctx.glock);
+}
+
 static void _timer_on_uv_notify(uv_async_t* handle)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
+
+	if (!g_timer_ctx.mask.looping)
+	{
+		_timer_close_all_timer();
+		return;
+	}
 
 	eaf_list_node_t* it;
 	uv_mutex_lock(&g_timer_uv_ctx.glock);
@@ -132,20 +164,14 @@ static int _timer_on_libuv_loop_init(void)
 	return 0;
 }
 
-static void _timer_on_notifier_close(uv_handle_t* handle)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
-	g_timer_ctx.mask.inited_notifier = 0;
-}
-
 static void _timer_on_libuv_loop_exit(void)
 {
-	g_timer_ctx.mask.looping = 0;
+	assert(eaf_list_size(&g_timer_ctx.busy_queue) == 0);
+	assert(eaf_list_size(&g_timer_ctx.dead_queue) == 0);
+	assert(eaf_list_size(&g_timer_ctx.idle_queue) == 0);
 
 	/* Close notifier */
-	uv_close((uv_handle_t*)&g_timer_uv_ctx.gnotifier, _timer_on_notifier_close);
-
-
+	uv_close((uv_handle_t*)&g_timer_uv_ctx.gnotifier, NULL);
 }
 
 static void _timer_on_req_delay(uint32_t from, uint32_t to, eaf_msg_t* msg)
@@ -196,6 +222,16 @@ static int _timer_on_init(void)
 static void _timer_on_exit(void)
 {
 	g_timer_ctx.mask.looping = 0;
+	uv_async_send(&g_timer_uv_ctx.gnotifier);
+
+	/* Here we need to wait until all timer is closed */
+	while ((
+		eaf_list_size(&g_timer_ctx.busy_queue) +
+		eaf_list_size(&g_timer_ctx.idle_queue) +
+		eaf_list_size(&g_timer_ctx.dead_queue)) != 0)
+	{
+		eaf_thread_sleep(10);
+	}
 }
 
 int eaf_timer_init(void)
