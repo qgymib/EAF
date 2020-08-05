@@ -16,8 +16,7 @@ static eaf_log_ctx_t g_eaf_log_ctx = {
 static void _log_reset_default_config(void)
 {
 	g_eaf_log_ctx.filter_level = LOG_DEFAULT_FILTER_LEVEL;
-	g_eaf_log_ctx.cb.fn = NULL;
-	g_eaf_log_ctx.cb.arg = NULL;
+	eaf_log_set_callback(NULL, NULL);
 }
 
 static const char* _log_filename(const char* file)
@@ -188,4 +187,10 @@ void eaf_log_set_level(eaf_log_level_t level)
 eaf_log_level_t eaf_log_get_level(void)
 {
 	return g_eaf_log_ctx.filter_level;
+}
+
+void eaf_log_set_callback(_In_ eaf_log_callback_fn fn, _Inout_opt_ void* arg)
+{
+	g_eaf_log_ctx.cb.fn = fn;
+	g_eaf_log_ctx.cb.arg = arg;
 }

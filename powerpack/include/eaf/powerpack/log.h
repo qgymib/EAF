@@ -129,7 +129,8 @@ typedef struct eaf_log_info
  * @param[in] ap	Argument list
  * @param[in] arg	User defined argument
  */
-typedef void(*eaf_log_callback_fn)(const eaf_log_info_t* info, const char* fmt, va_list ap, void* arg);
+typedef void(*eaf_log_callback_fn)(_In_ const eaf_log_info_t* info,
+	_In_ const char* fmt, _In_ va_list ap, _Inout_opt_ void* arg);
 
 /**
  * @private
@@ -167,7 +168,7 @@ eaf_log_level_t eaf_log_get_level(void);
  * @param[in] fn	Callback function
  * @param[in] arg	User defined argument
  */
-void eaf_log_set_callback(eaf_log_callback_fn fn, void* arg);
+void eaf_log_set_callback(_In_ eaf_log_callback_fn fn, _Inout_opt_ void* arg);
 
 /**
  * @brief Dump hex data
