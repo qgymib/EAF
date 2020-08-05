@@ -1,3 +1,6 @@
+/**
+ * @file
+ */
 #ifndef __EAF_POWERPACK_WATCHDOG_H__
 #define __EAF_POWERPACK_WATCHDOG_H__
 #ifdef __cplusplus
