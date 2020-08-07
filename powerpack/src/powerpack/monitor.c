@@ -140,7 +140,7 @@ static int _monitor_on_loop_init(void)
 		return -1;
 	}
 
-	uint64_t timeout = g_monitor_ctx.config.timeout_sec * 1000;
+	uint64_t timeout = (uint64_t)g_monitor_ctx.config.timeout_sec * 1000;
 	if (uv_timer_start(&g_monitor_ctx2.refresh.timer, _monitor_on_timer_cb, timeout, timeout) < 0)
 	{
 		goto err_start_timer;
