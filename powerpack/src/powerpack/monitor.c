@@ -398,13 +398,16 @@ static void _monitor_on_load_before(void)
 	g_monitor_ctx.group.table = malloc(sizeof(monitor_service_record_t) * g_monitor_ctx.group.size);
 	assert(g_monitor_ctx.group.table != NULL);
 
-	size_t i;
+	size_t idx = 0;
 	eaf_group_local_t* gls;
-	for (gls = eaf_group_begin(), i = 0; gls != NULL; gls = eaf_group_next(gls), i++)
+	for (gls = eaf_group_begin(); gls != NULL; gls = eaf_group_next(gls), idx++)
 	{
-		g_monitor_ctx.group.table[i].gls = gls;
-		g_monitor_ctx.group.table[i].counter.flush_use_time = 0;
-		uv_mutex_init(&g_monitor_ctx.group.table[i].objlock);
+		g_monitor_ctx.group.table[idx].gls = gls;
+		g_monitor_ctx.group.table[idx].counter.flush_use_time = 0;
+		if (uv_mutex_init(&g_monitor_ctx.group.table[idx].objlock) < 0)
+		{
+			goto err_init_mutex;
+		}
 
 		eaf_service_local_t* sls = eaf_service_begin(gls);
 		for (; sls != NULL; sls = eaf_service_next(gls, sls))
@@ -412,7 +415,7 @@ static void _monitor_on_load_before(void)
 			monitor_service_record_t* record = malloc(sizeof(*record));
 			assert(record != NULL);
 
-			record->data.gid = (uint32_t)i;
+			record->data.gid = (uint32_t)idx;
 			record->data.sid = sls->id;
 			record->data.sls = sls;
 			record->counter.flush_send = 0;
@@ -429,12 +432,18 @@ static void _monitor_on_load_before(void)
 
 			if (eaf_map_insert(&g_monitor_ctx.serivce.record_split, &record->node_split) < 0)
 			{
+				uv_mutex_destroy(&record->objlock);
 				free(record);
 				continue;
 			}
 			eaf_map_insert(&g_monitor_ctx.serivce.record_group, &record->node_group);
 		}
 	}
+
+	return;
+
+err_init_mutex:
+	assert(0);
 }
 
 static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* msg, int ret)
