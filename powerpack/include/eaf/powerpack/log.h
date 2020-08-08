@@ -168,7 +168,7 @@ eaf_log_level_t eaf_log_get_level(void);
  * @param[in] fn	Callback function
  * @param[in] arg	User defined argument
  */
-void eaf_log_set_callback(_In_ eaf_log_callback_fn fn, _Inout_opt_ void* arg);
+void eaf_log_set_callback(_In_opt_ eaf_log_callback_fn fn, _Inout_opt_ void* arg);
 
 /**
  * @brief Dump hex data

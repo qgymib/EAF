@@ -189,7 +189,7 @@ eaf_log_level_t eaf_log_get_level(void)
 	return g_eaf_log_ctx.filter_level;
 }
 
-void eaf_log_set_callback(_In_ eaf_log_callback_fn fn, _Inout_opt_ void* arg)
+void eaf_log_set_callback(_In_opt_ eaf_log_callback_fn fn, _Inout_opt_ void* arg)
 {
 	g_eaf_log_ctx.cb.fn = fn;
 	g_eaf_log_ctx.cb.arg = arg;
