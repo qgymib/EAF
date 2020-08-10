@@ -81,6 +81,8 @@ typedef struct eaf_monitor_ctx
 	{
 		unsigned					timeout_sec;	/**< Refresh timeout in seconds */
 	}config;
+
+	eaf_powerpack_hook_t			hook;			/**< PowerPack hook */
 }eaf_monitor_ctx_t;
 
 typedef struct eaf_monitor_ctx2
@@ -92,7 +94,6 @@ typedef struct eaf_monitor_ctx2
 
 	struct
 	{
-		uv_timer_t					timer;			/**< Global refresh timer */
 		uv_mutex_t					objlock;		/**< Object lock */
 	}refresh;
 

@@ -32,8 +32,6 @@ static void _monitor_on_load_before(void);
 static void _monitor_on_message_send_after(uint32_t from, uint32_t to, eaf_msg_t* msg, int ret);
 static int _monitor_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg_t* msg);
 static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg_t* msg);
-static int _monitor_on_loop_init(void);
-static void _monitor_on_loop_exit(void);
 
 static eaf_monitor_ctx2_t g_monitor_ctx2;
 static eaf_monitor_ctx_t g_monitor_ctx = {
@@ -42,37 +40,36 @@ static eaf_monitor_ctx_t g_monitor_ctx = {
 		EAF_MAP_INITIALIZER(_monitor_cmp_service_record_split, NULL),
 	},																		// .serivce
 	{
-		0, NULL																// .group
-	},
+		0, NULL
+	},																		// .group
 	{
 		EAF_MAP_INITIALIZER(_monitor_cmp_dataflow_record, NULL),
 	},																		// .dataflow
 	{
 		0
 	},																		// .config
-};
-
-static eaf_powerpack_hook_t g_pp_hook = {
-	EAF_LIST_NODE_INITIALIZER,
 	{
-		NULL,								// .on_service_init_before
-		NULL,								// .on_service_init_after
-		NULL,								// .on_service_exit_before
-		NULL,								// .on_service_exit_after
-		NULL,								// .on_service_yield
-		NULL,								// .on_service_resume
-		NULL,								// .on_service_register
-		_monitor_on_message_handle_before,	// .on_message_send_before
-		_monitor_on_message_send_after,		// .on_message_send_after
-		NULL,								// .on_message_handle_before
-		_monitor_on_message_handle_after,	// .on_message_handle_after
-		_monitor_on_load_before,			// .on_load_before
-		NULL,								// .on_load_after
-		NULL,								// .on_exit_before
-		NULL,								// .on_exit_after
-	},
-	_monitor_on_loop_init,
-	_monitor_on_loop_exit,
+		EAF_LIST_NODE_INITIALIZER,
+		{
+			NULL,								// .on_service_init_before
+			NULL,								// .on_service_init_after
+			NULL,								// .on_service_exit_before
+			NULL,								// .on_service_exit_after
+			NULL,								// .on_service_yield
+			NULL,								// .on_service_resume
+			NULL,								// .on_service_register
+			_monitor_on_message_handle_before,	// .on_message_send_before
+			_monitor_on_message_send_after,		// .on_message_send_after
+			NULL,								// .on_message_handle_before
+			_monitor_on_message_handle_after,	// .on_message_handle_after
+			_monitor_on_load_before,			// .on_load_before
+			NULL,								// .on_load_after
+			NULL,								// .on_exit_before
+			NULL,								// .on_exit_after
+		},
+		NULL,
+		NULL,
+	},																		// .hook
 };
 
 static void _monitor_on_refresh_timer_closed(uv_handle_t* handle)
@@ -113,58 +110,11 @@ static void _monitor_reset_flush_nolock(void)
 	}
 }
 
-/**
-* @brief uv timer callback
-*/
-static void _monitor_on_timer_cb(uv_timer_t* handle)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
-
-	/* We cannot block on this lock because it might affect libuv loop */
-	if (uv_mutex_trylock(&g_monitor_ctx2.refresh.objlock) < 0)
-	{
-		return;
-	}
-
-	/* reset all necessary fields */
-	_monitor_reset_flush_nolock();
-
-	/* unlock refresh lock */
-	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
-}
-
-static int _monitor_on_loop_init(void)
-{
-	if (uv_timer_init(eaf_uv_get(), &g_monitor_ctx2.refresh.timer) < 0)
-	{
-		return -1;
-	}
-
-	uint64_t timeout = (uint64_t)g_monitor_ctx.config.timeout_sec * 1000;
-	if (uv_timer_start(&g_monitor_ctx2.refresh.timer, _monitor_on_timer_cb, timeout, timeout) < 0)
-	{
-		goto err_start_timer;
-	}
-	g_monitor_ctx2.mask.refresh_timer_running = 1;
-
-	return 0;
-
-err_start_timer:
-	uv_close((uv_handle_t*)&g_monitor_ctx2.refresh.timer, _monitor_on_refresh_timer_closed);
-	return -1;
-}
-
 static void _monitor_on_uv_timer_close(uv_handle_t* handle)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
 
 	g_monitor_ctx2.mask.refresh_timer_running = 0;
-}
-
-static void _monitor_on_loop_exit(void)
-{
-	uv_timer_stop(&g_monitor_ctx2.refresh.timer);
-	uv_close((uv_handle_t*)&g_monitor_ctx2.refresh.timer, _monitor_on_uv_timer_close);
 }
 
 static int _monitor_cmp_service_record_group(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
@@ -359,7 +309,10 @@ static int _monitor_on_message_handle_before(uint32_t from, uint32_t to, eaf_msg
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, msg);
 
 	monitor_service_record_t* record = _monitor_find_serivce(to);
-	assert(record != NULL);
+	if (record == NULL)
+	{
+		return 0;
+	}
 
 	record->temp.use_time_start = uv_hrtime();
 	return 0;
@@ -370,7 +323,10 @@ static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, msg);
 
 	monitor_service_record_t* record = _monitor_find_serivce(to);
-	assert(record != NULL);
+	if (record == NULL)
+	{
+		return;
+	}
 
 	uint64_t use_time = uv_hrtime() - record->temp.use_time_start;
 
@@ -694,9 +650,32 @@ static void _monitor_on_req_stringify(uint32_t from, uint32_t to, eaf_msg_t* msg
 	}
 }
 
+static void _monitor_on_timer(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	int ret;
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
+
+	/* We cannot block on this lock because it might affect libuv loop */
+	if (uv_mutex_trylock(&g_monitor_ctx2.refresh.objlock) < 0)
+	{
+		return;
+	}
+
+	/* reset all necessary fields */
+	_monitor_reset_flush_nolock();
+
+	/* unlock refresh lock */
+	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
+
+	/* restart timer */
+	EAF_TIMER_DELAY(ret, EAF_MONITOR_ID, _monitor_on_timer, g_monitor_ctx.config.timeout_sec * 1000);
+}
+
 static int _monitor_on_service_init(void)
 {
-	return 0;
+	int ret;
+	EAF_TIMER_DELAY(ret, EAF_MONITOR_ID, _monitor_on_timer, g_monitor_ctx.config.timeout_sec * 1000);
+	return ret;
 }
 
 static void _monitor_on_service_exit(void)
@@ -721,7 +700,7 @@ int eaf_monitor_init(unsigned sec)
 		goto err_init_refresh_lock;
 	}
 
-	if ((ret = eaf_powerpack_hook_register(&g_pp_hook, sizeof(g_pp_hook))) < 0)
+	if ((ret = eaf_powerpack_hook_register(&g_monitor_ctx.hook, sizeof(g_monitor_ctx.hook))) < 0)
 	{
 		goto err_init_timer;
 	}
@@ -744,7 +723,7 @@ int eaf_monitor_init(unsigned sec)
 	return eaf_errno_success;
 
 err_register_service:
-	eaf_powerpack_hook_unregister(&g_pp_hook);
+	eaf_powerpack_hook_unregister(&g_monitor_ctx.hook);
 err_init_timer:
 	uv_mutex_destroy(&g_monitor_ctx2.refresh.objlock);
 err_init_refresh_lock:
