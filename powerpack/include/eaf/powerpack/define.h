@@ -31,12 +31,12 @@ extern "C" {
 
 /**
  * @brief Prevent MSVC show warning `x'
- * @param[in] x	Warning number
- * @param[in] f	Code
+ * @param[in] x		Warning number
+ * @param[in] ...	Code
  */
-#define EAF_MSVC_WARNING_GUARD(x, f)	\
+#define EAF_MSVC_WARNING_GUARD(x, ...)	\
 	EAF_MSVC_PUSH_WARNNING(x)\
-	f\
+	__VA_ARGS__\
 	EAF_MSVC_POP_WARNNING()
 
 #ifdef __cplusplus

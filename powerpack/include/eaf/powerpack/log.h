@@ -16,7 +16,16 @@ extern "C" {
 #include <stdarg.h>
 #include "eaf/utils/define.h"
 
+#if defined(WITHOUT_LOG)
+#	define EAF_LOG_INTERNAL_WRAPPER(level, file, func, line, mode, fmt, ...)	\
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_INTERNAL_WRAPPER(level, file, func, line, mode, fmt, ...)	\
+		eaf_log(level, file, func, line, mode, fmt, ##__VA_ARGS__)
+#endif
+
 /**
+ * @def EAF_LOG_TRACE
  * @brief Log: Trace
  *
  * Designates finer-grained informational events than the DEBUG.
@@ -25,10 +34,16 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_TRACE(mod, fmt, ...) \
-	eaf_log(eaf_log_level_trace, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_TRACE)
+#	define EAF_LOG_TRACE(mod, fmt, ...) \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_TRACE(mod, fmt, ...) \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_trace, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
+ * @def EAF_LOG_DEBUG
  * @brief Log: Debug
  *
  * Designates fine-grained informational events that are most useful to debug
@@ -38,10 +53,16 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_DEBUG(mod, fmt, ...) \
-	eaf_log(eaf_log_level_debug, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_DEBUG)
+#	define EAF_LOG_DEBUG(mod, fmt, ...) \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_DEBUG(mod, fmt, ...) \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_debug, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
+ * @def EAF_LOG_INFO
  * @brief Log: Info
  *
  * Designates informational messages that highlight the progress of the
@@ -51,10 +72,16 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_INFO(mod, fmt, ...)  \
-	eaf_log(eaf_log_level_info, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_INFO)
+#	define EAF_LOG_INFO(mod, fmt, ...)  \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_INFO(mod, fmt, ...)  \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_info, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
+ * @def EAF_LOG_WARN
  * @brief Log: Warn
  *
  * Designates potentially harmful situations.
@@ -63,10 +90,16 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_WARN(mod, fmt, ...)  \
-	eaf_log(eaf_log_level_warn, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_WARN)
+#	define EAF_LOG_WARN(mod, fmt, ...)  \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_WARN(mod, fmt, ...)  \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_warn, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
+ * @def EAF_LOG_ERROR
  * @brief Log: Error
  *
  * Designates error events that might still allow the application to continue
@@ -76,10 +109,16 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_ERROR(mod, fmt, ...) \
-	eaf_log(eaf_log_level_error, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_ERROR)
+#	define EAF_LOG_ERROR(mod, fmt, ...) \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_ERROR(mod, fmt, ...) \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_error, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
+ * @def EAF_LOG_FATAL
  * @brief Log: Fatal
  *
  * Designates very severe error events that will presumably lead the application to abort.
@@ -88,8 +127,13 @@ extern "C" {
  * @param[in] fmt	Format string
  * @param[in] ...	details
  */
-#define EAF_LOG_FATAL(mod, fmt, ...) \
-	eaf_log(eaf_log_level_fatal, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#if defined(WITHOUT_LOG_FATAL)
+#	define EAF_LOG_FATAL(mod, fmt, ...) \
+		do {} EAF_MSVC_WARNING_GUARD(4217, while (0))
+#else
+#	define EAF_LOG_FATAL(mod, fmt, ...) \
+		EAF_LOG_INTERNAL_WRAPPER(eaf_log_level_fatal, __FILE__, __FUNCTION__, __LINE__, mod, fmt, ##__VA_ARGS__)
+#endif
 
 /**
  * @brief Dump data as hex
@@ -100,26 +144,28 @@ extern "C" {
 	eaf_dump_data_pretty(#data, __FILE__, __FUNCTION__, __LINE__, data, size)
 
 /**
- * @private
  * @brief Log level
  */
 typedef enum eaf_log_level
 {
-	eaf_log_level_trace,	/**< Trace */
-	eaf_log_level_debug,	/**< Debug */
-	eaf_log_level_info,		/**< Info */
-	eaf_log_level_warn,		/**< Warn */
-	eaf_log_level_error,	/**< Error */
-	eaf_log_level_fatal,	/**< Fatal */
+	eaf_log_level_trace,		/**< Trace */
+	eaf_log_level_debug,		/**< Debug */
+	eaf_log_level_info,			/**< Info. This is the default log level. */
+	eaf_log_level_warn,			/**< Warn */
+	eaf_log_level_error,		/**< Error */
+	eaf_log_level_fatal,		/**< Fatal */
 }eaf_log_level_t;
 
+/**
+ * @brief Log information
+ */
 typedef struct eaf_log_info
 {
-	eaf_log_level_t	level;
-	int				line;
-	const char*		mode;
-	const char*		file;
-	const char*		func;
+	const char*			mode;	/**< Module name */
+	const char*			file;	/**< File name */
+	const char*			func;	/**< Function name */
+	int					line;	/**< Line */
+	eaf_log_level_t		level;	/**< Log level */
 }eaf_log_info_t;
 
 /**
@@ -164,7 +210,10 @@ eaf_log_level_t eaf_log_get_level(void);
  *
  * Once set, all logs will be redirect to this callback. So if you still need
  * output log on your screen, you need to do it manually.
+ *
  * @note The callback does not affected by log level filter
+ * @note You cannot set more than one callback, otherwise the later one will
+ *   replace the earlier one.
  * @param[in] fn	Callback function
  * @param[in] arg	User defined argument
  */
