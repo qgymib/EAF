@@ -89,6 +89,11 @@ typedef struct test_quick_config
 extern test_quick_config_t quick_config;
 
 /**
+ * @brief Global string buffer
+ */
+extern char quick_buffer[1024];
+
+/**
  * @brief A global hook for ctest.
  */
 extern const ctest_hook_t quick_hook;

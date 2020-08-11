@@ -14,8 +14,6 @@ typedef struct test_monitor_ctx
 	{
 		unsigned	pend_once : 1;
 	}mask;
-
-	char			buffer[1024];
 }test_monitor_ctx_t;
 
 static test_monitor_ctx_t s_test_monitor_ctx;

@@ -46,6 +46,8 @@ test_quick_config_t quick_config = {
 	eaf_log_level_info,
 };
 
+char quick_buffer[1024];
+
 static void _quick_hook_before_fixture_setup(const char* fixture_name)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(fixture_name);

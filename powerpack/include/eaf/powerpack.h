@@ -30,6 +30,7 @@ extern "C" {
 #include "eaf/powerpack/net.h"
 #include "eaf/powerpack/random.h"
 #include "eaf/powerpack/ringbuffer.h"
+#include "eaf/powerpack/string.h"
 #include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
 #include "eaf/powerpack/watchdog.h"
