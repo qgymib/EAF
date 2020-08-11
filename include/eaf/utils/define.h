@@ -150,6 +150,12 @@ extern "C" {
 #define _In_
 
 /**
+ * @brief Like #_In_, but parameter may be null
+ * @see \_In\_
+ */
+#define _In_opt_
+
+/**
  * @brief Output parameter.
  *
  * Annotates output parameters that are scalars, structures, pointers to
@@ -161,7 +167,7 @@ extern "C" {
 #define _Out_
 
 /**
- * @brief Like #_Out_, but parameters are optional.
+ * @brief Like #_Out_, but parameter may be optional.
  * @see \_Out\_
  */
 #define _Out_opt_
