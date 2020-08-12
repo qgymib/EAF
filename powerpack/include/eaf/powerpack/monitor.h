@@ -21,12 +21,6 @@ extern "C" {
 #define EAF_MONITOR_ID							(0x00040000)
 
 /**
- * @ingroup PowerPack-Monitor
- * @defgroup PowerPack-Monitor-Print Print
- * @{
- */
-
-/**
  * @brief Stringify type
  * @see eaf_monitor_stringify_req_t
  */
@@ -35,6 +29,11 @@ typedef enum eaf_monitor_stringify_type
 	eaf_monitor_stringify_type_normal,			/**< human readable string */
 	eaf_monitor_stringify_type_json,			/**< json */
 }eaf_monitor_stringify_type_t;
+
+/**
+ * @name Stringify
+ */
+/**@{*/
 
 /**
  * @brief Request ID for monitor message: stringify
@@ -67,9 +66,7 @@ typedef struct eaf_monitor_stringify_rsp
 #endif
 }eaf_monitor_stringify_rsp_t;
 
-/**
- * @}
- */
+/**@}*/
 
 /**
  * @brief Initialize monitor
