@@ -72,12 +72,6 @@ static eaf_monitor_ctx_t g_monitor_ctx = {
 	},																		// .hook
 };
 
-static void _monitor_on_refresh_timer_closed(uv_handle_t* handle)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
-	g_monitor_ctx2.mask.refresh_timer_running = 0;
-}
-
 static void _monitor_reset_flush_nolock(void)
 {
 	/* reset service counter */
@@ -108,13 +102,6 @@ static void _monitor_reset_flush_nolock(void)
 		}
 		uv_mutex_unlock(&record->objlock);
 	}
-}
-
-static void _monitor_on_uv_timer_close(uv_handle_t* handle)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(handle);
-
-	g_monitor_ctx2.mask.refresh_timer_running = 0;
 }
 
 static int _monitor_cmp_service_record_group(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
@@ -652,7 +639,7 @@ static void _monitor_on_req_stringify(uint32_t from, uint32_t to, eaf_msg_t* msg
 
 static void _monitor_on_timer(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
-	int ret;
+    int ret;
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
 
 	/* We cannot block on this lock because it might affect libuv loop */
@@ -669,6 +656,7 @@ static void _monitor_on_timer(uint32_t from, uint32_t to, eaf_msg_t* msg)
 
 	/* restart timer */
 	EAF_TIMER_DELAY(ret, EAF_MONITOR_ID, _monitor_on_timer, g_monitor_ctx.config.timeout_sec * 1000);
+    EAF_SUPPRESS_UNUSED_VARIABLE(ret);
 }
 
 static int _monitor_on_service_init(void)
