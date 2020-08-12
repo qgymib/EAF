@@ -125,7 +125,8 @@ typedef struct eaf_map_low
  * @return			An iterator
  */
 EAF_API eaf_map_low_node_t* eaf_map_low_first(_In_ const eaf_map_low_t* root)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Returns an iterator to the end
@@ -133,7 +134,8 @@ EAF_API eaf_map_low_node_t* eaf_map_low_first(_In_ const eaf_map_low_t* root)
  * @return			An iterator
  */
 EAF_API eaf_map_low_node_t* eaf_map_low_last(_In_ const eaf_map_low_t* root)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get an iterator next to the given one.
@@ -141,7 +143,8 @@ EAF_API eaf_map_low_node_t* eaf_map_low_last(_In_ const eaf_map_low_t* root)
  * @return			Next iterator
  */
 EAF_API eaf_map_low_node_t* eaf_map_low_next(_In_ const eaf_map_low_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get an iterator before the given one.
@@ -149,7 +152,8 @@ EAF_API eaf_map_low_node_t* eaf_map_low_next(_In_ const eaf_map_low_node_t* node
  * @return			Previous iterator
  */
 EAF_API eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Inserting data into the tree.
@@ -166,7 +170,8 @@ EAF_API eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node
  */
 EAF_API void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
 	_Inout_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link)
-	EAF_ATTRIBUTE_NONNULL(1, 2, 3);
+	EAF_ATTRIBUTE_NONNULL(1, 2, 3)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief re-balancing ("recoloring") the tree.
@@ -176,7 +181,8 @@ EAF_API void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
  */
 EAF_API void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
 	_Inout_ eaf_map_low_t* root)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Delete the node from the map.
@@ -186,7 +192,8 @@ EAF_API void eaf_map_low_insert_color(_Inout_ eaf_map_low_node_t* node,
  */
 EAF_API void eaf_map_low_erase(_Inout_ eaf_map_low_t* root,
 	_Inout_ eaf_map_low_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

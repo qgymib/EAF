@@ -30,14 +30,16 @@ typedef struct eaf_sem eaf_sem_t;
  * @param[in] count	Initial count
  * @return			Semaphore handler
  */
-EAF_API eaf_sem_t* eaf_sem_create(_In_ unsigned long count);
+EAF_API eaf_sem_t* eaf_sem_create(_In_ unsigned long count)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Destroy a semaphore
  * @param[in] handler	Semaphore handler
  */
 EAF_API void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Decrements (locks) the semaphore pointed to by handler.
@@ -46,7 +48,8 @@ EAF_API void eaf_sem_destroy(_Post_invalid_ eaf_sem_t* handler)
  * @return					#eaf_errno
  */
 EAF_API int eaf_sem_pend(_Inout_ eaf_sem_t* handler, _In_ unsigned long timeout)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Increments (unlocks) the semaphore pointed to by handler.
@@ -54,7 +57,8 @@ EAF_API int eaf_sem_pend(_Inout_ eaf_sem_t* handler, _In_ unsigned long timeout)
  * @return					#eaf_errno
  */
 EAF_API int eaf_sem_post(_Inout_ eaf_sem_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

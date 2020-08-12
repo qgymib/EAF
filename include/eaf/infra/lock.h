@@ -34,28 +34,32 @@ typedef enum eaf_lock_attr
  * @param[in] attr	Attribute
  * @return			Lock handler
  */
-EAF_API eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr);
+EAF_API eaf_lock_t* eaf_lock_create(_In_ eaf_lock_attr_t attr)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Destroy a lock
  * @param[in,out] handler	the lock you want to destroy
  */
 EAF_API void eaf_lock_destroy(_Post_invalid_ eaf_lock_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Enter critical section
  * @param[in,out] handler	The lock
  */
 EAF_API void eaf_lock_enter(_Inout_ eaf_lock_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Leave critical section
  * @param[in,out] handler	The lock
  */
 EAF_API void eaf_lock_leave(_Inout_ eaf_lock_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

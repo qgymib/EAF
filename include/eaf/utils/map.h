@@ -73,7 +73,8 @@ typedef struct eaf_map
  */
 EAF_API void eaf_map_init(_Out_ eaf_map_t* handler, _In_ eaf_map_cmp_fn cmp,
 	_Inout_opt_ void* arg)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Insert the node into map.
@@ -100,7 +101,8 @@ EAF_API void eaf_map_erase(_Inout_ eaf_map_t* handler, _Inout_ eaf_map_node_t* n
  * @return			The number of nodes
  */
 EAF_API size_t eaf_map_size(_In_ const eaf_map_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Finds element with specific key
@@ -138,7 +140,8 @@ EAF_API eaf_map_node_t* eaf_map_find_upper(_In_ const eaf_map_t* handler,
  * @return			An iterator
  */
 EAF_API eaf_map_node_t* eaf_map_begin(_In_ const eaf_map_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Returns an iterator to the end
@@ -146,7 +149,8 @@ EAF_API eaf_map_node_t* eaf_map_begin(_In_ const eaf_map_t* handler)
  * @return			An iterator
  */
 EAF_API eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get an iterator next to the given one.
@@ -154,7 +158,8 @@ EAF_API eaf_map_node_t* eaf_map_end(_In_ const eaf_map_t* handler)
  * @return			Next iterator
  */
 EAF_API eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get an iterator before the given one.
@@ -162,7 +167,8 @@ EAF_API eaf_map_node_t* eaf_map_next(_In_ const eaf_map_node_t* node)
  * @return			Previous iterator
  */
 EAF_API eaf_map_node_t* eaf_map_prev(_In_ const eaf_map_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

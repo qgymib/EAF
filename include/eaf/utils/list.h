@@ -62,7 +62,8 @@ typedef struct eaf_list
  * @param[out] handler	Pointer to list
  */
 EAF_API void eaf_list_init(_Out_ eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Insert a node to the head of the list.
@@ -72,7 +73,8 @@ EAF_API void eaf_list_init(_Out_ eaf_list_t* handler)
  */
 EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Insert a node to the tail of the list.
@@ -82,7 +84,8 @@ EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
  */
 EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Insert a node in front of a given node.
@@ -93,7 +96,8 @@ EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
  */
 EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2, 3);
+	EAF_ATTRIBUTE_NONNULL(1, 2, 3)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Insert a node right after a given node.
@@ -104,7 +108,8 @@ EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
  */
 EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
 	_Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2, 3);
+	EAF_ATTRIBUTE_NONNULL(1, 2, 3)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Delete a exist node
@@ -114,7 +119,8 @@ EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
  */
 EAF_API void eaf_list_erase(_Inout_ eaf_list_t* handler,
 	_Inout_ eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1, 2);
+	EAF_ATTRIBUTE_NONNULL(1, 2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get the number of nodes in the list.
@@ -122,7 +128,8 @@ EAF_API void eaf_list_erase(_Inout_ eaf_list_t* handler,
  * @return				The number of nodes
  */
 EAF_API size_t eaf_list_size(_In_ const eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get the first node and remove it from the list.
@@ -130,7 +137,8 @@ EAF_API size_t eaf_list_size(_In_ const eaf_list_t* handler)
  * @return					The first node
  */
 EAF_API eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get the last node and remove it from the list.
@@ -138,7 +146,8 @@ EAF_API eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler)
  * @return					The last node
  */
 EAF_API eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get the last node.
@@ -146,7 +155,8 @@ EAF_API eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler)
  * @return				The first node
  */
 EAF_API eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get the last node.
@@ -154,7 +164,8 @@ EAF_API eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler)
  * @return				The last node
  */
 EAF_API eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
 * @brief Get next node.
@@ -162,7 +173,8 @@ EAF_API eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler)
 * @return			The next node
 */
 EAF_API eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get previous node.
@@ -170,7 +182,8 @@ EAF_API eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node)
  * @return			previous node
  */
 EAF_API eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

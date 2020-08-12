@@ -42,7 +42,8 @@ typedef enum eaf_errno
  * @param[in] err	Error code
  * @return			Description
  */
-EAF_API const char* eaf_strerror(_In_ int err);
+EAF_API const char* eaf_strerror(_In_ int err)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}

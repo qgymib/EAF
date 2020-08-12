@@ -65,26 +65,30 @@ typedef void(*eaf_thread_fn)(_Inout_opt_ void* arg);
 EAF_API eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
 	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg)
 	EAF_ATTRIBUTE_ACCESS(read_only, 1)
-	EAF_ATTRIBUTE_NONNULL(2);
+	EAF_ATTRIBUTE_NONNULL(2)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Wait for thread exit and destroy it
  * @param[in] handler	Thread handler
  */
 EAF_API void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler)
-	EAF_ATTRIBUTE_NONNULL(1);
+	EAF_ATTRIBUTE_NONNULL(1)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Get current thread id.
  * @return			thread id
  */
-EAF_API unsigned long eaf_thread_id(void);
+EAF_API unsigned long eaf_thread_id(void)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @brief Causes the calling thread to sleep for msec milliseconds.
  * @param[in] msec	milliseconds
  */
-EAF_API void eaf_thread_sleep(unsigned msec);
+EAF_API void eaf_thread_sleep(unsigned msec)
+	EAF_ATTRIBUTE_NOTHROW;
 
 /**
  * @}
