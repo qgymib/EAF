@@ -63,13 +63,16 @@ typedef void(*eaf_thread_fn)(_Inout_opt_ void* arg);
  * @return				Thread handler
  */
 EAF_API eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
-	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg);
+	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg)
+	EAF_ATTRIBUTE_ACCESS(read_only, 1)
+	EAF_ATTRIBUTE_NONNULL(2);
 
 /**
  * @brief Wait for thread exit and destroy it
  * @param[in] handler	Thread handler
  */
-EAF_API void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler);
+EAF_API void eaf_thread_destroy(_Post_invalid_ eaf_thread_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get current thread id.

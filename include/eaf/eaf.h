@@ -37,7 +37,6 @@ extern "C" {
  * @defgroup EAF-Utils Utils
  * @{
  */
-#include "eaf/utils/define.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/list.h"
 #include "eaf/utils/map.h"

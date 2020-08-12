@@ -100,19 +100,22 @@ EAF_API eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
  * @param[in] size		The size of user structure
  * @return				The pointer of the response
  */
-EAF_API eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size);
+EAF_API eaf_msg_t* eaf_msg_create_rsp(_In_ eaf_msg_t* req, _In_ size_t size)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Add reference count
  * @param[in,out] msg		The message you want to add reference
  */
-EAF_API void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg);
+EAF_API void eaf_msg_add_ref(_Inout_ eaf_msg_t* msg)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Reduce reference count
  * @param[in,out] msg		The message you want to reduce reference
  */
-EAF_API void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
+EAF_API void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get user structure address.
@@ -120,14 +123,16 @@ EAF_API void eaf_msg_dec_ref(_Inout_ eaf_msg_t* msg);
  * @param[out] size		The size of user structure
  * @return				The address of user structure
  */
-EAF_API void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size);
+EAF_API void* eaf_msg_get_data(_In_ eaf_msg_t* msg, _Out_opt_ size_t* size)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get message type
  * @param[in] msg		Message
  * @return				#eaf_msg_type
  */
-EAF_API eaf_msg_type_t eaf_msg_get_type(_In_ const eaf_msg_t* msg);
+EAF_API eaf_msg_type_t eaf_msg_get_type(_In_ const eaf_msg_t* msg)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Replace exist response handler with given one.
@@ -135,14 +140,16 @@ EAF_API eaf_msg_type_t eaf_msg_get_type(_In_ const eaf_msg_t* msg);
  * @param[in,out] msg	The message
  * @param[in] fn		Response handler
  */
-EAF_API void eaf_msg_set_rsp_fn(_Inout_ eaf_msg_t* msg, _In_ eaf_msg_handle_fn fn);
+EAF_API void eaf_msg_set_rsp_fn(_Inout_ eaf_msg_t* msg, _In_ eaf_msg_handle_fn fn)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get response handler
  * @param[in] msg	The message
  * @return			The response handler
  */
-EAF_API eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg);
+EAF_API eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Set receipt
@@ -150,14 +157,16 @@ EAF_API eaf_msg_handle_fn eaf_msg_get_rsp_fn(_In_ const eaf_msg_t* msg);
  * @param[in,out] msg	The message
  * @param[in] receipt	Receipt
  */
-EAF_API void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt);
+EAF_API void eaf_msg_set_receipt(_Inout_ eaf_msg_t* msg, _In_ int receipt)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get receipt
  * @param[in] msg	The message
  * @return			Receipt
  */
-EAF_API int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg);
+EAF_API int eaf_msg_get_receipt(_In_ const eaf_msg_t* msg)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @}

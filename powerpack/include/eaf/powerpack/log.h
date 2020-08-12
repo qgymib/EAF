@@ -14,7 +14,7 @@ extern "C" {
  */
 
 #include <stdarg.h>
-#include "eaf/utils/define.h"
+#include "eaf/eaf.h"
 
 #if defined(WITHOUT_LOG)
 #	define EAF_LOG_INTERNAL_WRAPPER(level, file, func, line, mode, fmt, ...)	\

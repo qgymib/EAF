@@ -13,8 +13,7 @@ extern "C" {
  * @{
  */
 
-#include "eaf/utils/define.h"
-#include <stdint.h>
+#include "eaf/eaf.h"
 
 /**
  * @brief Clock time

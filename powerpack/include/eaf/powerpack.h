@@ -21,7 +21,6 @@ extern "C" {
  *
  * @{
  */
-#include "eaf/eaf.h"
 #include "eaf/powerpack/define.h"
 #include "eaf/powerpack/hash.h"
 #include "eaf/powerpack/log.h"

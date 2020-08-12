@@ -55,7 +55,8 @@ static unsigned int _random_non_failure(void)
 	return g_random_ctx.seed >> 33;
 }
 
-int eaf_random_init(uint32_t seed)
+EAF_API
+int eaf_random_init(_In_ uint32_t seed)
 {
 	g_random_ctx.seed = seed - 1;
 
@@ -77,6 +78,7 @@ int eaf_random_init(uint32_t seed)
 #endif
 }
 
+EAF_API
 void eaf_random_exit(void)
 {
 #if !defined(_MSC_VER)
@@ -91,7 +93,8 @@ void eaf_random_exit(void)
 	g_random_ctx.seed = RANDOM_DEFAULT_SEED;
 }
 
-void eaf_random(void* buffer, size_t size)
+EAF_API
+void eaf_random(_Out_ void* buffer, _In_ size_t size)
 {
 	size_t diff_size;
 	void* start_pos;
@@ -147,6 +150,7 @@ void eaf_random(void* buffer, size_t size)
 	return;
 }
 
+EAF_API
 uint32_t eaf_random32(void)
 {
 	uint32_t pad;
@@ -155,6 +159,7 @@ uint32_t eaf_random32(void)
 	return pad;
 }
 
+EAF_API
 uint64_t eaf_random64(void)
 {
 	uint64_t pad;

@@ -698,7 +698,7 @@ static void _eaf_service_thread(void* arg)
 	}
 
 	/* Wait for start */
-	while (EAF_ACCESS(eaf_ctx_state_t, g_eaf_ctx->state) == eaf_ctx_state_init)
+	while (g_eaf_ctx->state == eaf_ctx_state_init)
 	{
 		eaf_compat_sem_pend(&group->msgq.sem, (unsigned long)-1);
 	}

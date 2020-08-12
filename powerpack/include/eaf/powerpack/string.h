@@ -32,10 +32,9 @@ extern "C" {
  */
 EAF_API int eaf_string_apply(_Inout_ char* buffer, _In_ size_t size, _Inout_opt_ size_t* token,
 	_Printf_format_string_ const char* fmt, ...)
-#if defined(_GUNC_)
-	__attribute__((format(printf, 4, 5)))
-#endif
-;
+	EAF_ATTRIBUTE_ACCESS(write_only, 1)
+	EAF_ATTRIBUTE_ACCESS(read_only, 4)
+	EAF_ATTRIBUTE_FORMAT_PRINTF(4, 5);
 
 /**
  * @}

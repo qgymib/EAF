@@ -17,7 +17,6 @@ extern "C" {
 #include "eaf/core/internal/service.h"
 #include "eaf/core/message.h"
 #include "eaf/infra/thread.h"
-#include "eaf/utils/define.h"
 
 /**
  * @brief Coroutine body
@@ -264,7 +263,8 @@ EAF_API int eaf_resume(_In_ uint32_t srv_id);
  * @param[in] size	The size of service group table
  * @return			#eaf_errno
  */
-EAF_API int eaf_init(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t size);
+EAF_API int eaf_init(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t size)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Load EAF.
@@ -302,7 +302,8 @@ EAF_API int eaf_exit(void);
  * @param[in] entry		Service entry. Must be globally accessible.
  * @return				#eaf_errno
  */
-EAF_API int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* /*static*/ entry);
+EAF_API int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* /*static*/ entry)
+	EAF_ATTRIBUTE_NONNULL(2);
 
 /**
  * @brief Send request
@@ -311,7 +312,8 @@ EAF_API int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* /*static
  * @param[in,out] req	The request
  * @return				#eaf_errno
  */
-EAF_API int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req);
+EAF_API int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* req)
+	EAF_ATTRIBUTE_NONNULL(3);
 
 /**
  * @brief Send response
@@ -320,7 +322,8 @@ EAF_API int eaf_send_req(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t
  * @param[in,out] rsp	The response
  * @return				#eaf_errno
  */
-EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp);
+EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* rsp)
+	EAF_ATTRIBUTE_NONNULL(3);
 
 /**
  * @brief Inject a system wide hook
@@ -328,14 +331,16 @@ EAF_API int eaf_send_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t
  * @param[in] size	sizeof(*hook)
  * @return			#eaf_errno
  */
-EAF_API int eaf_inject(_In_ const eaf_hook_t* /* static */ hook, _In_ size_t size);
+EAF_API int eaf_inject(_In_ const eaf_hook_t* /* static */ hook, _In_ size_t size)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Undo inject system wide hook.
  * @param[in] hook	The hook already registered
  * @return			#eaf_errno
  */
-EAF_API int eaf_uninject(_In_ const eaf_hook_t* hook);
+EAF_API int eaf_uninject(_In_ const eaf_hook_t* hook)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get caller's service id

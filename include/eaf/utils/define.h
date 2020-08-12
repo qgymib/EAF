@@ -1,11 +1,17 @@
-/** @file
- * Macros
+/**
+ * @file
  */
 #ifndef __EAF_UTILS_DEFINE_H__
 #define __EAF_UTILS_DEFINE_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @name Tool
+ * Some common macros to help program.
+ */
+/**@{*/
 
 /**
  * @def EAF_API
@@ -20,12 +26,12 @@ extern "C" {
 #		define EAF_API	__declspec(dllimport)
 #	else
 		/* Building static library. */
-#		define EAF_API	/* nothing */
+#		define EAF_API
 #	endif
 #elif defined(__GNUC__) && __GNUC__ >= 4
 #	define EAF_API	__attribute__((visibility("default")))
 #else
-#	define EAF_API	/* nothing */
+#	define EAF_API
 #endif
 
 /**
@@ -37,14 +43,6 @@ extern "C" {
  */
 #define EAF_CONTAINER_OF(ptr, TYPE, member)	\
 	((TYPE*)((char*)(ptr) - (size_t)&((TYPE*)0)->member))
-
-/**
- * @brief Force access data
- * @param TYPE	Data type
- * @param x		data
- * @return		data value
- */
-#define EAF_ACCESS(TYPE, x)		(*(volatile TYPE*)&(x))
 
 /**
  * @brief Get array length
@@ -74,7 +72,9 @@ extern "C" {
  * @param[in] b	Token `b'
  */
 #define EAF_JOIN(a, b)			EAF_INTERNAL_JOIN(a, b)
+/**@cond DOXYGEN_INTERNAL*/
 #define EAF_INTERNAL_JOIN(a, b)	a##b
+/**@endcond*/
 
 /**
  * @def EAF_COUNT_ARG
@@ -82,12 +82,16 @@ extern "C" {
  */
 #ifdef _MSC_VER // Microsoft compilers
 #   define EAF_COUNT_ARG(...)  EAF_INTERNAL_EXPAND_ARGS_PRIVATE(EAF_INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
+/**@cond DOXYGEN_INTERNAL*/
 #   define EAF_INTERNAL_ARGS_AUGMENTER(...) unused, __VA_ARGS__
 #   define EAF_INTERNAL_EXPAND_ARGS_PRIVATE(...) EAF_EXPAND(EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 #   define EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
+/**@endcond*/
 #else // Non-Microsoft compilers
 #   define EAF_COUNT_ARG(...) EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(0, ## __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+/**@cond DOXYGEN_INTERNAL*/
 #   define EAF_INTERNAL_GET_ARG_COUNT_PRIVATE(_0, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, count, ...) count
+/**@endcond*/
 #endif
 
 /**
@@ -96,6 +100,7 @@ extern "C" {
  */
 #define EAF_SUPPRESS_UNUSED_VARIABLE(...)	\
 	EAF_EXPAND(EAF_JOIN(EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_, EAF_COUNT_ARG(__VA_ARGS__))(__VA_ARGS__))
+/**@cond DOXYGEN_INTERNAL*/
 #define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_1(_0)	\
 	(void)_0
 #define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_2(_0, _1)	\
@@ -114,6 +119,9 @@ extern "C" {
 	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5; (void)_6; (void)_7
 #define EAF_INTERNAL_SUPPRESS_UNUSED_VARIABLE_9(_0, _1, _2, _3, _4, _5, _6, _7, _8)	\
 	(void)_0; (void)_1; (void)_2; (void)_3; (void)_4; (void)_5; (void)_6; (void)_7; (void)_8
+/**@endcond*/
+
+/**@}*/
 
 /**
  * @internal
@@ -131,11 +139,12 @@ extern "C" {
 #endif
 
 /**
- * @internal
+ * @name SAL
  * SAL provides a set of annotations to describe how a function uses
  * its parameters - the assumptions it makes about them, and the guarantees it
  * makes upon finishing.
  */
+/**@{*/
 #if defined(_MSC_VER)
 #include <sal.h>
 #else
@@ -219,6 +228,163 @@ extern "C" {
 #define _Scanf_format_string_
 
 #endif
+
+/**@}*/
+
+/**
+ * @name Attribute
+ * Use attributes to specify certain function properties that:
+ * + Static analysis - better warnings and errors help you catch errors before they become a real issue.
+ * + Optimizations - compiler hints help speed up your code.
+ * + Manage public APIs
+ *   + Visibility - keeping internal symbols private can make your program faster and smaller.
+ *   + Versioning - help consumers avoid functions which are deprecated or too new for all the platforms they want to support.
+ * + C/C++ interoperability - make it easier to use code in both C and C++ compilers.
+ */
+/**@{*/
+
+/**@cond DOXYGEN_INTERNAL*/
+/**
+ * @def EAF_GNUC_PREREQ
+ * @brief Convenience macro to test the version of gcc.
+ *
+ * Use like this:
+ * ```
+ * #if EAF_GNUC_PREREQ (2,8)
+ * ... code requiring gcc 2.8 or later ...
+ * #endif
+ * ```
+ * @note only works for GCC 2.0 and later, because \__GNUC_MINOR\__ was added in 2.0.
+ */
+#if defined __GNUC__ && defined __GNUC_MINOR__
+#	define EAF_GNUC_PREREQ(maj, min) \
+		((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#else
+#	define EAF_GNUC_PREREQ(maj, min) 0
+#endif
+/**@endcond*/
+
+/**
+ * @def EAF_ATTRIBUTE_ACCESS
+ * @brief The access attribute enables the detection of invalid or unsafe accesses
+ *   by functions to which they apply or their callers, as well as write-only
+ *   accesses to objects that are never read from.
+ *
+ * + access (access-mode, ref-index)
+ * + access (access-mode, ref-index, size-index)
+ *
+ * The access attribute specifies that a function to whose by-reference arguments
+ * the attribute applies accesses the referenced object according to access-mode.
+ * The access-mode argument is required and must be one of four names: read_only,
+ * read_write, write_only, or none. The remaining two are positional arguments.
+ *
+ * The required ref-index positional argument denotes a function argument of
+ * pointer (or in C++, reference) type that is subject to the access. The same
+ * pointer argument can be referenced by at most one distinct access attribute.
+ *
+ * The optional size-index positional argument denotes a function argument of
+ * integer type that specifies the maximum size of the access. The size is the
+ * number of elements of the type referenced by ref-index, or the number of
+ * bytes when the pointer type is void*. When no size-index argument is specified,
+ * the pointer argument must be either null or point to a space that is suitably
+ * aligned and large for at least one object of the referenced type (this implies
+ * that a past-the-end pointer is not a valid argument). The actual size of the
+ * access may be less but it must not be more.
+ *
+ * The *read_only* access mode specifies that the pointer to which it applies is
+ * used to read the referenced object but not write to it. Unless the argument
+ * specifying the size of the access denoted by size-index is zero, the
+ * referenced object must be initialized. The mode implies a stronger guarantee
+ * than the const qualifier which, when cast away from a pointer, does not
+ * prevent the pointed-to object from being modified. Examples of the use of
+ * the read_only access mode is the argument to the puts function, or the second
+ * and third arguments to the memcpy function.
+ *
+ * The *read_write* access mode applies to arguments of pointer types without the
+ * const qualifier. It specifies that the pointer to which it applies is used
+ * to both read and write the referenced object. Unless the argument specifying
+ * the size of the access denoted by size-index is zero, the object referenced
+ * by the pointer must be initialized. An example of the use of the read_write
+ * access mode is the first argument to the strcat function.
+ *
+ * The *write_only* access mode applies to arguments of pointer types without the
+ * const qualifier. It specifies that the pointer to which it applies is used
+ * to write to the referenced object but not read from it. The object referenced
+ * by the pointer need not be initialized. An example of the use of the
+ * write_only access mode is the first argument to the strcpy function, or the
+ * first two arguments to the fgets function.
+ *
+ * The access mode *none* specifies that the pointer to which it applies is not
+ * used to access the referenced object at all. Unless the pointer is null the
+ * pointed-to object must exist and have at least the size as denoted by the
+ * size-index argument. The object need not be initialized. The mode is
+ * intended to be used as a means to help validate the expected object size,
+ * for example in functions that call __builtin_object_size.
+ */
+#if EAF_GNUC_PREREQ(10, 0)
+#	define EAF_ATTRIBUTE_ACCESS(access_mode, ref_index, ...) \
+		__attribute__((__access__(access_mode, ref_index, ##__VA_ARGS__)))
+#else
+#	define EAF_ATTRIBUTE_ACCESS(access_mode, ref_index, ...)
+#endif
+
+/**
+ * @def EAF_ATTRIBUTE_FORMAT_PRINTF
+ * @brief The format attribute specifies that a function takes printf style
+ *   arguments that should be type-checked against a format string.
+ */
+#if EAF_GNUC_PREREQ(3, 1)
+#	define EAF_ATTRIBUTE_FORMAT_PRINTF(string_index, first_to_check) \
+		__attribute__((__format__(__printf__, string_index, first_to_check)))
+#else
+#	define EAF_ATTRIBUTE_FORMAT_PRINTF(string_index, first_to_check)
+#endif
+
+/**
+ * @def EAF_ATTRIBUTE_NONNULL
+ * @brief The nonnull attribute may be applied to a function that takes at
+ *   least one argument of a pointer type.
+ *
+ *  It indicates that the referenced arguments must be non-null pointers.
+ */
+#if EAF_GNUC_PREREQ(3, 3)
+#	define EAF_ATTRIBUTE_NONNULL(...)	__attribute__((__nonnull__(__VA_ARGS__)))
+#else
+#	define EAF_ATTRIBUTE_NONNULL(...)
+#endif
+
+/**
+ * @def EAF_ATTRIBUTE_NOTHROW
+ * @brief The nothrow attribute is used to inform the compiler that a function
+ *   cannot throw an exception.
+ */
+#if EAF_GNUC_PREREQ(3, 3)
+#	define EAF_ATTRIBUTE_NOTHROW	__attribute__((__nothrow__))
+#else
+#	define EAF_ATTRIBUTE_NOTHROW
+#endif
+
+/**
+ * @def EAF_ATTRIBUTE_PURE
+ * @brief Calls to functions that have no observable effects on the state of
+ *   the program other than to return a value may lend themselves to optimizations
+ *   such as common subexpression elimination. Declaring such functions with
+ *   the pure attribute allows GCC to avoid emitting some calls in repeated
+ *   invocations of the function with the same argument values.
+ *
+ * The pure attribute prohibits a function from modifying the state of the
+ * program that is observable by means other than inspecting the function's
+ * return value. However, functions declared with the pure attribute can safely
+ * read any non-volatile objects, and modify the value of objects in a way that
+ * does not affect their return value or the observable state of the program. 
+ */
+#if EAF_GNUC_PREREQ(2, 96)
+#	define EAF_ATTRIBUTE_PURE	__attribute__((__pure__))
+#else
+#	define EAF_ATTRIBUTE_PURE
+#endif
+
+/**@}*/
 
 #ifdef __cplusplus
 }

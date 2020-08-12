@@ -61,7 +61,8 @@ typedef struct eaf_list
  * @brief Initialize Double Linked List.
  * @param[out] handler	Pointer to list
  */
-EAF_API void eaf_list_init(_Out_ eaf_list_t* handler);
+EAF_API void eaf_list_init(_Out_ eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Insert a node to the head of the list.
@@ -70,7 +71,8 @@ EAF_API void eaf_list_init(_Out_ eaf_list_t* handler);
  * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
-	_Inout_ eaf_list_node_t* node);
+	_Inout_ eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1, 2);
 
 /**
  * @brief Insert a node to the tail of the list.
@@ -79,7 +81,8 @@ EAF_API void eaf_list_push_front(_Inout_ eaf_list_t* handler,
  * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
-	_Inout_ eaf_list_node_t* node);
+	_Inout_ eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1, 2);
 
 /**
  * @brief Insert a node in front of a given node.
@@ -89,7 +92,8 @@ EAF_API void eaf_list_push_back(_Inout_ eaf_list_t* handler,
  * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
-	_Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
+	_Inout_ eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1, 2, 3);
 
 /**
  * @brief Insert a node right after a given node.
@@ -99,7 +103,8 @@ EAF_API void eaf_list_insert_before(_Inout_ eaf_list_t* handler,
  * @param[in,out] node		Pointer to a new node
  */
 EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
-	_Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node);
+	_Inout_  eaf_list_node_t* pos, _Inout_ eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1, 2, 3);
 
 /**
  * @brief Delete a exist node
@@ -108,56 +113,64 @@ EAF_API void eaf_list_insert_after(_Inout_ eaf_list_t* handler,
  * @param[in,out] node		The node you want to delete
  */
 EAF_API void eaf_list_erase(_Inout_ eaf_list_t* handler,
-	_Inout_ eaf_list_node_t* node);
+	_Inout_ eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1, 2);
 
 /**
  * @brief Get the number of nodes in the list.
  * @param[in] handler	Pointer to list
  * @return				The number of nodes
  */
-EAF_API size_t eaf_list_size(_In_ const eaf_list_t* handler);
+EAF_API size_t eaf_list_size(_In_ const eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get the first node and remove it from the list.
  * @param[in,out] handler	Pointer to list
  * @return					The first node
  */
-EAF_API eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler);
+EAF_API eaf_list_node_t* eaf_list_pop_front(_Inout_ eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get the last node and remove it from the list.
  * @param[in,out] handler	Pointer to list
  * @return					The last node
  */
-EAF_API eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler);
+EAF_API eaf_list_node_t* eaf_list_pop_back(_Inout_ eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get the last node.
  * @param[in] handler	Pointer to list
  * @return				The first node
  */
-EAF_API eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler);
+EAF_API eaf_list_node_t* eaf_list_begin(_In_ const eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get the last node.
  * @param[in] handler	The handler of list
  * @return				The last node
  */
-EAF_API eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler);
+EAF_API eaf_list_node_t* eaf_list_end(_In_ const eaf_list_t* handler)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
 * @brief Get next node.
 * @param[in] node	Current node
 * @return			The next node
 */
-EAF_API eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node);
+EAF_API eaf_list_node_t* eaf_list_next(_In_ const eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get previous node.
  * @param[in] node	current node
  * @return			previous node
  */
-EAF_API eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node);
+EAF_API eaf_list_node_t* eaf_list_prev(_In_ const eaf_list_node_t* node)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @}

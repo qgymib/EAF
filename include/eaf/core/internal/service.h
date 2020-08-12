@@ -167,14 +167,16 @@ EAF_API eaf_group_local_t* eaf_group_begin(void);
  * @param[in] gls	Current Group Local Storage node
  * @return			Next Group Local Storage node
  */
-EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls);
+EAF_API eaf_group_local_t* eaf_group_next(eaf_group_local_t* gls)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Returns an iterator to the beginning.
  * @param[in] gls	Current Group Local Storage node
  * @return			The begin node of Service Local Storage
  */
-EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls);
+EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get an iterator next to the given one.
@@ -182,21 +184,25 @@ EAF_API eaf_service_local_t* eaf_service_begin(eaf_group_local_t* gls);
  * @param[in] sls	Current Service Local Storage node
  * @return			Next Service Local Storage node
  */
-EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls, eaf_service_local_t* sls);
+EAF_API eaf_service_local_t* eaf_service_next(eaf_group_local_t* gls,
+	eaf_service_local_t* sls)
+	EAF_ATTRIBUTE_NONNULL(1, 2);
 
 /**
  * @brief Get message queue size.
  * @param[in] sls	Service Local Storage
  * @return			The size of message queue
  */
-EAF_API size_t eaf_message_queue_size(_In_ const eaf_service_local_t* sls);
+EAF_API size_t eaf_message_queue_size(_In_ const eaf_service_local_t* sls)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Get message queue capacity.
  * @param[in] sls	Service Local Storage
  * @return			The capacity of message queue
  */
-EAF_API size_t eaf_message_queue_capacity(_In_ const eaf_service_local_t* sls);
+EAF_API size_t eaf_message_queue_capacity(_In_ const eaf_service_local_t* sls)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @}

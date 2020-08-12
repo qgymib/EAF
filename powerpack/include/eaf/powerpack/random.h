@@ -26,32 +26,33 @@ extern "C" {
  * @param[in] seed	The seed for pseudo-random algorithm
  * @return			#eaf_errno
  */
-int eaf_random_init(uint32_t seed);
+EAF_API int eaf_random_init(_In_ uint32_t seed);
 
 /**
  * @brief Exit random
  */
-void eaf_random_exit(void);
+EAF_API void eaf_random_exit(void);
 
 /**
  * @brief Fill buffer with random data
- * @param[in] buffer	Buffer area
+ * @param[out] buffer	Buffer area
  * @param[in] size		Buffer size
- * @return				#eaf_errno
  */
-void eaf_random(void* buffer, size_t size);
+EAF_API void eaf_random(_Out_ void* buffer, _In_ size_t size)
+	EAF_ATTRIBUTE_ACCESS(write_only, 1, 2)
+	EAF_ATTRIBUTE_NONNULL(1);
 
 /**
  * @brief Generate a random uint32_t integer
  * @return		Random integer
  */
-uint32_t eaf_random32(void);
+EAF_API uint32_t eaf_random32(void);
 
 /**
  * @brief Generate a random uinit64_t integer
  * @return		Random integer
  */
-uint64_t eaf_random64(void);
+EAF_API uint64_t eaf_random64(void);
 
 /**
  * @}

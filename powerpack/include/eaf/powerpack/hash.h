@@ -39,7 +39,9 @@ extern "C" {
  * @return			Hash result in 32 bits
  */
 uint32_t eaf_hash32_bkdr(_In_ const void* data, _In_ size_t size,
-	_In_ uint32_t seed);
+	_In_ uint32_t seed)
+	EAF_ATTRIBUTE_ACCESS(read_only, 1, 2)
+	EAF_ATTRIBUTE_PURE;
 
 /**
  * @brief Make 64 bits hash with BKDR algorithm
@@ -49,7 +51,9 @@ uint32_t eaf_hash32_bkdr(_In_ const void* data, _In_ size_t size,
  * @return			Hash result in 64 bits
  */
 uint64_t eaf_hash64_bkdr(_In_ const void* data, _In_ size_t size,
-	_In_ uint64_t seed);
+	_In_ uint64_t seed)
+	EAF_ATTRIBUTE_ACCESS(read_only, 1, 2)
+	EAF_ATTRIBUTE_PURE;
 
 /**
  * @}
