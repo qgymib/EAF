@@ -538,11 +538,9 @@ static size_t _monitor_stringify_json_fill_nolock(char* buffer, size_t size)
 			_monitor_calculate_cpu(record->counter.flush_use_time, g_record->counter.flush_use_time));
 	}
 
-	/* close group */
-	write_size += eaf_string_apply(buffer, size, &token, "]}");
+	/* close group and finish json */
+	write_size += eaf_string_apply(buffer, size, &token, "]}]}");
 
-	/* The end of json string */
-	write_size += eaf_string_apply(buffer, size, &token, "]}");
 	return write_size;
 }
 
@@ -671,6 +669,21 @@ static void _monitor_on_service_exit(void)
 	// do nothing
 }
 
+static void _monitor_on_req_flush(uint32_t from, uint32_t to, eaf_msg_t* msg)
+{
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+
+	uv_mutex_lock(&g_monitor_ctx2.refresh.objlock);
+	_monitor_reset_flush_nolock();
+	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
+
+	eaf_msg_t* rsp = eaf_msg_create_rsp(msg, sizeof(eaf_monitor_flush_rsp_t));
+	((eaf_monitor_flush_rsp_t*)eaf_msg_get_data(rsp, NULL))->ret = eaf_errno_success;
+	eaf_send_rsp(EAF_MONITOR_ID, from, rsp);
+	eaf_msg_dec_ref(rsp);
+}
+
+EAF_API
 int eaf_monitor_init(unsigned sec)
 {
 	int ret = eaf_errno_success;
@@ -694,7 +707,8 @@ int eaf_monitor_init(unsigned sec)
 	}
 
 	static eaf_message_table_t msg_table[] = {
-		{ EAF_MINITOR_MSG_STRINGIFY_REQ, _monitor_on_req_stringify },
+		{ EAF_MINITOR_MSG_STRINGIFY_REQ,	_monitor_on_req_stringify },
+		{ EAF_MONITOR_MSG_FLUSH_REQ,		_monitor_on_req_flush },
 	};
 
 	static eaf_entrypoint_t entry = {
@@ -719,6 +733,7 @@ err_init_refresh_lock:
 	return ret;
 }
 
+EAF_API
 void eaf_monitor_exit(void)
 {
 	eaf_map_node_t* it;
@@ -763,11 +778,4 @@ void eaf_monitor_exit(void)
 	}
 	free(g_monitor_ctx.group.table);
 	g_monitor_ctx.group.table = NULL;
-}
-
-void eaf_monitor_flush(void)
-{
-	uv_mutex_lock(&g_monitor_ctx2.refresh.objlock);
-	_monitor_reset_flush_nolock();
-	uv_mutex_unlock(&g_monitor_ctx2.refresh.objlock);
 }

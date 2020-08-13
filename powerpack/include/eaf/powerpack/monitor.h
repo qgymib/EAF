@@ -32,6 +32,7 @@ typedef enum eaf_monitor_stringify_type
 
 /**
  * @name Stringify
+ * Serialize application information as string.
  */
 /**@{*/
 
@@ -69,21 +70,47 @@ typedef struct eaf_monitor_stringify_rsp
 /**@}*/
 
 /**
+ * @name Flush
+ * Refresh performance counter.
+ */
+/**@{*/
+
+/**
+ * @brief Request ID for monitor message: flush
+ */
+#define EAF_MONITOR_MSG_FLUSH_REQ				(EAF_MONITOR_ID + 0x0002)
+/**
+ * @brief Request for monitor message: flush
+ */
+typedef struct eaf_monitor_flush_req
+{
+	uint32_t						reserve;	/**< Reserve field */
+}eaf_monitor_flush_req_t;
+/**
+ * @brief Response ID for monitor message: flush
+ */
+#define EAF_MONITOR_MSG_FLUSH_RSP				EAF_MONITOR_MSG_FLUSH_REQ
+/**
+ * @brief Response for monitor message: flush
+ */
+typedef struct eaf_monitor_flush_rsp
+{
+	int32_t							ret;		/**< #eaf_errno */
+}eaf_monitor_flush_rsp_t;
+
+/**@}*/
+
+/**
  * @brief Initialize monitor
  * @param[in] sec	Refresh time interval
  * @return		#eaf_errno
  */
-int eaf_monitor_init(unsigned sec);
+EAF_API int eaf_monitor_init(unsigned sec);
 
 /**
  * @brief Exit monitor
  */
-void eaf_monitor_exit(void);
-
-/**
- * @brief Reset all necessary counters.
- */
-void eaf_monitor_flush(void);
+EAF_API void eaf_monitor_exit(void);
 
 /**
  * @}
