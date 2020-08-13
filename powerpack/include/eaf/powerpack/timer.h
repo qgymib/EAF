@@ -75,6 +75,11 @@ typedef struct eaf_timer_delay_rsp
  */
 
 /**
+ * @name Setup and Teardown
+ */
+/**@{*/
+
+/**
  * Initialize timer
  * @return	eaf_errno
  */
@@ -84,6 +89,8 @@ int eaf_timer_init(void);
  * Cleanup timer
  */
 void eaf_timer_exit(void);
+
+/**@}*/
 
 /**
  * @}
