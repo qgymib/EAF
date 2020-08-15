@@ -262,6 +262,17 @@ extern "C" {
 #else
 #	define EAF_GNUC_PREREQ(maj, min) 0
 #endif
+
+/**
+ * @def EAF_HAS_ATTRIBUTE
+ * @brief Test whether the `attribute` referenced by its `operand` is
+ *   recognized by compiler
+ */
+#if defined(__has_attribute)
+#	define EAF_HAS_ATTRIBUTE(attribute) __has_attribute(attribute)
+#else
+#	define EAF_HAS_ATTRIBUTE(attribute) (0)
+#endif
 /**@endcond*/
 
 /**
