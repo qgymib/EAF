@@ -77,3 +77,7 @@ dkms.conf
 # eclipse files
 .cproject
 .project
+
+# LSP support for clangd
+compile_commands.json
+
