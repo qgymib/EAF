@@ -78,7 +78,13 @@ dkms.conf
 .cproject
 .project
 
-# LSP support for clangd
+# lsp support for clangd
 compile_commands.json
 .clangd
+
+# generic editor files
+*.swap
+*.swp
+*.back
+*.bak
 
