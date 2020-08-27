@@ -1,4 +1,7 @@
+#include <string.h>
+#include <strings.h>
 #include "ctest/ctest.h"
+#include "eaf/powerpack/log.h"
 #include "quick2.h"
 #if defined(_MSC_VER)
 #	define _CRTDBG_MAP_ALLOC
@@ -18,30 +21,64 @@
 #endif
 
 /**
- * Check whether `exp` is in argv
- * @param ret	result (bool)
- * @param argc	argc
- * @param argv	argv
- * @param exp	string
+ * @brief Parse command line argument
+ * @param[in] argc		The number of arguments
+ * @param[in] argv		Argument list
+ * @param[in] opt		The argument to be parsed
+ * @param[in] val		Does it need a value
+ * @param[in] buffer	A buffer to store value
+ * @param[in] size		The size of the buffer
+ * @return				<0: option not found;
+ *						0: option found and not value given;
+ *						>0: the length of value should be written
  */
-#define FIND_ARG(ret, argc, argv, exp)	\
-	do {\
-		int i = 0;\
-		for (ret = 0; i < argc; i++) {\
-			if (strstr(argv[i], exp) != NULL) {\
-				ret = 1;\
-				break;\
-			}\
-		}\
-	} while (0)
+static int ctest_parse_option(int argc, char* argv[], const char* opt, int val, char* buffer, size_t size)
+{
+	int idx;
+	size_t opt_len = strlen(opt);
+	for (idx = 0; idx < argc; idx++)
+	{
+		if (strncmp(argv[idx], opt, opt_len) != 0)
+		{
+			continue;
+		}
+
+		goto parse_opt;
+	}
+
+	return -1;
+
+parse_opt:
+	if (!val)
+	{
+		return 0;
+	}
+
+	if (strlen(argv[idx]) == opt_len)
+	{
+		goto parse_next;
+	}
+
+	return snprintf(buffer, size, "%s", argv[idx] + opt_len + 1);
+
+parse_next:
+	if (++idx > argc)
+	{
+		return 0;
+	}
+
+	if (*argv[idx] != '-')
+	{
+		return snprintf(buffer, size, "%s", argv[idx]);
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
 #if defined(_MSC_VER)
-	int flag_leack_check = 0;
-	FIND_ARG(flag_leack_check, argc, argv, "ctest_check_leak");
-
-	if (flag_leack_check)
+	int flag_leack_check;
+	if ((flag_leack_check = ctest_parse_option(argc, argv, "--ctest_check_leak", 0, NULL, 0)) == 0)
 	{
 		_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
 		_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
@@ -52,17 +89,35 @@ int main(int argc, char* argv[])
 	}
 #endif
 
+	if (ctest_parse_option(argc, argv, "--log_level", 1, quick_buffer, sizeof(quick_buffer)) > 0)
+	{
+		if (strcasecmp(quick_buffer, "trace") == 0)
+		{
+			quick_config.log_level = eaf_log_level_trace;
+		}
+		else if (strcasecmp(quick_buffer, "debug") == 0)
+		{
+			quick_config.log_level = eaf_log_level_debug;
+		}
+		else if (strcasecmp(quick_buffer, "info") == 0)
+		{
+			quick_config.log_level = eaf_log_level_info;
+		}
+	}
+	else
+	{
+		quick_config.log_level = eaf_log_level_error;
+	}
+
 	int ret = ctest_run_tests(argc, argv, &quick_hook);
 
 #if defined(_MSC_VER)
-	if (flag_leack_check)
+	if (flag_leack_check == 0)
 	{
 		_CrtDumpMemoryLeaks();
 	}
 
-	int flag_pause_on_exit;
-	FIND_ARG(flag_pause_on_exit, argc, argv, "ctest_pause_on_exit");
-	if (flag_pause_on_exit)
+	if (ctest_parse_option(argc, argv, "--ctest_pause_on_exit", 0, NULL, 0) == 0)
 	{
 		system("pause");
 	}

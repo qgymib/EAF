@@ -1,5 +1,5 @@
-#ifndef __TEST_QUICK2_IUNTERNAL_H__
-#define __TEST_QUICK_INTERNAL_H__
+#ifndef __TEST_QUICK2_INTERNAL_H__
+#define __TEST_QUICK2_INTERNAL_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
