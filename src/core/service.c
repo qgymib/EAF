@@ -39,20 +39,20 @@
 
 typedef enum eaf_ctx_state
 {
-	eaf_ctx_state_init,							/**< 初始状态 */
-	eaf_ctx_state_busy,							/**< 运行状态 */
-	eaf_ctx_state_exit,							/**< 退出状态 */
+	eaf_ctx_state_init,							/**< Initialize state */
+	eaf_ctx_state_busy,							/**< Running state */
+	eaf_ctx_state_exit,							/**< Exit state */
 }eaf_ctx_state_t;
 
 typedef struct eaf_msgq_record
 {
-	eaf_list_node_t					node;		/**< 侵入式节点 */
+	eaf_list_node_t					node;		/**< List node */
 
 	union
 	{
 		struct
 		{
-			eaf_msg_handle_fn		req_fn;		/**< 请求处理函数 */
+			eaf_msg_handle_fn		req_fn;		/**< Request handler */
 		}req;
 	}info;
 
@@ -60,26 +60,26 @@ typedef struct eaf_msgq_record
 	{
 		uint32_t					from;
 		uint32_t					to;
-		struct eaf_service*			service;	/**< 服务句柄 */
-		eaf_msg_full_t*				msg;		/**< 消息 */
+		struct eaf_service*			service;	/**< Point to service */
+		eaf_msg_full_t*				msg;		/**< Message */
 	}data;
 }eaf_msgq_record_t;
 
 typedef struct eaf_service
 {
-	const eaf_entrypoint_t*			entry;		/**< 加载信息 */
+	const eaf_entrypoint_t*			entry;		/**< Service entrypoint information */
 
 	struct
 	{
 		eaf_service_local_t			local;		/**< Service Local Information */
-		eaf_list_node_t				node;		/**< 侵入式节点。在ready_list或wait_list中 */
+		eaf_list_node_t				node;		/**< List node. Either in ready_list or wait_list */
 	}runtime;
 
 	struct
 	{
-		eaf_msgq_record_t*			cur_msg;	/**< 正在处理的消息 */
-		eaf_list_t					queue;		/**< 缓存的消息 */
-		size_t						capacity;	/**< 消息队列容量 */
+		eaf_msgq_record_t*			cur_msg;	/**< Current process message */
+		eaf_list_t					queue;		/**< Message queue */
+		size_t						capacity;	/**< The max capacity of message queue */
 	}msgq;
 }eaf_service_t;
 
@@ -89,27 +89,27 @@ typedef struct eaf_service
 #endif
 typedef struct eaf_group
 {
-	eaf_compat_lock_t				objlock;	/**< 线程锁 */
-	eaf_compat_thread_t				working;	/**< 承载线程 */
+	eaf_compat_lock_t				objlock;	/**< Thread lock */
+	eaf_compat_thread_t				working;	/**< Thread handler */
 	size_t							index;		/**< Group index */
 
 	struct 
 	{
-		eaf_group_local_t			local;		/**< local storage */
-		eaf_service_t*				cur_run;	/**< 当前正在处理的服务 */
+		eaf_group_local_t			local;		/**< Group Local Storage */
+		eaf_service_t*				cur_run;	/**< The current running service */
 		eaf_list_t					busy_list;	/**< INIT/BUSY */
 		eaf_list_t					wait_list;	/**< INIT_YIELD/IDLE/PEND */
 	}coroutine;
 
 	struct
 	{
-		eaf_compat_sem_t			sem;		/**< 信号量 */
+		eaf_compat_sem_t			sem;		/**< Message queue semaphore */
 	}msgq;
 
 	struct
 	{
-		size_t						size;		/**< 服务表长度 */
-		eaf_service_t				table[];	/**< 服务表 */
+		size_t						size;		/**< The length of service table */
+		eaf_service_t				table[];	/**< Service table */
 	}service;
 }eaf_group_t;
 #if defined(_MSC_VER)
@@ -118,9 +118,9 @@ typedef struct eaf_group
 
 typedef struct eaf_ctx
 {
-	eaf_ctx_state_t					state;		/**< 状态 */
-	eaf_compat_sem_t				ready;		/**< 退出信号 */
-	eaf_thread_storage_t			tls;		/**< 线程私有变量 */
+	eaf_ctx_state_t					state;		/**< Global EAF state */
+	eaf_compat_sem_t				ready;		/**< Exit semaphore */
+	eaf_thread_storage_t			tls;		/**< Thread local storage */
 
 	struct
 	{
@@ -129,8 +129,8 @@ typedef struct eaf_ctx
 
 	struct
 	{
-		size_t						size;		/**< 服务组长度 */
-		eaf_group_t**				table;		/**< 服务组 */
+		size_t						size;		/**< The length of group table */
+		eaf_group_t**				table;		/**< Group table */
 	}group;
 
 	const eaf_hook_t*				hook;		/**< Hook */
@@ -473,7 +473,7 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 		return;
 	}
 
-	/* 取出消息。若消息队列为空，则将服务置于IDLE状态 */
+	/* Pop message. If the message queue is empty, the set service state to IDLE */
 	eaf_compat_lock_enter(&group->objlock);
 	do 
 	{
@@ -507,9 +507,9 @@ static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_
 	eaf_compat_lock_enter(&group->objlock);
 	do
 	{
-		/* 切换至IDLE态 */
+		/* Switch to IDLE */
 		_eaf_service_set_state_nolock(group, service, eaf_service_state_idle);
-		/* 消息队列非空时，切换至BUSY */
+		/* If message queue is not empty, switch state to BUSY */
 		if (eaf_list_size(&service->msgq.queue) > 0)
 		{
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
@@ -519,16 +519,16 @@ static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_
 }
 
 /**
- * 继续进行初始化
+ * @brief Continue initialize
  */
 static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 {
 	/* No need to call #_eaf_hook_service_init_before() because it's alyready done */
 	int ret = service->entry->on_init();
 
-	/* 检查是否执行yield */
+	/* Check whether `yield' was called */
 	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
-	{/* 若init阶段进行了yield */
+	{
 		_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
 		_eaf_group_call_yield_hook(group);
 		return 0;
@@ -536,13 +536,12 @@ static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
 	_eaf_service_reset_yield_branch(service);
 	_eaf_hook_service_init_after(service->runtime.local.id, ret);
 
-	/* 初始化失败时返回错误 */
 	if (ret < 0)
 	{
 		return -1;
 	}
 
-	/* 标记完成初始化 */
+	/* Mark the service is done with initialize */
 	_eaf_group_finish_service_init_lock(group, service);
 	return 0;
 }
@@ -578,8 +577,8 @@ static int _eaf_service_thread_loop(eaf_group_t* group)
 }
 
 /**
- * @brief 获取当前线程对应的服务组
- * @return		服务组
+ * @brief Get group for current thread
+ * @return		Group
  */
 static eaf_group_t* _eaf_get_current_group(void)
 {
@@ -617,9 +616,9 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		_eaf_hook_service_init_before(service->runtime.local.id);
 		int ret = service->entry->on_init();
 
-		/* 检查是否执行yield */
+		/* Check whether `yield' was called */
 		if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
-		{/* 若init阶段进行了yield */
+		{
 			_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
 
 			/* call user hook */
@@ -636,7 +635,6 @@ static int _eaf_group_init(eaf_group_t* group, size_t* idx)
 		_eaf_service_reset_yield_branch(service);
 		_eaf_hook_service_init_after(service->runtime.local.id, ret);
 
-		/* 若初始化失败则返回错误 */
 		if (ret < 0)
 		{
 			return -1;
@@ -680,9 +678,9 @@ static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 }
 
 /**
-* 工作线程
-* @param arg	eaf_service_group_t
-*/
+ * @brief Working thread
+ * @param[in] arg	eaf_service_group_t
+ */
 static void _eaf_service_thread(void* arg)
 {
 	size_t init_idx = 0;
@@ -707,7 +705,7 @@ static void _eaf_service_thread(void* arg)
 		return;
 	}
 
-	/* 进行初始化 */
+	/* Do initialize */
 	int init_count = _eaf_group_init(group, &init_idx);
 
 	/* Set failure flag if initialize failed */
@@ -716,16 +714,16 @@ static void _eaf_service_thread(void* arg)
 		g_eaf_ctx->mask.init_failure = 1;
 	}
 
-	/* 通告初始化完毕 */
+	/* Notify we are done initialize */
 	eaf_compat_sem_post(&g_eaf_ctx->ready);
 
-	/* 失败时清理 */
+	/* Cleanup if failure */
 	if (init_count <= 0)
 	{
 		goto cleanup;
 	}
 
-	/* 事件循环 */
+	/* Event looping */
 	while (g_eaf_ctx->state == eaf_ctx_state_busy
 		&& _eaf_service_thread_loop(group) == 0)
 	{
@@ -753,10 +751,10 @@ static void _eaf_cleanup_service(eaf_service_t* service)
 
 static void _eaf_cleanup_group(eaf_group_t* group)
 {
-	/* 向队列推送以保证线程感知到状态改变 */
+	/* Ensure working thread known we need to stop */
 	eaf_compat_sem_post(&group->msgq.sem);
 
-	/* 等待线程退出 */
+	/* Wait for thread exit */
 	eaf_compat_thread_exit(&group->working);
 
 	size_t i;
@@ -765,7 +763,7 @@ static void _eaf_cleanup_group(eaf_group_t* group)
 		_eaf_cleanup_service(&group->service.table[i]);
 	}
 
-	/* 清理资源 */
+	/* Cleanup resources */
 	eaf_compat_lock_exit(&group->objlock);
 	eaf_compat_sem_exit(&group->msgq.sem);
 }
@@ -773,7 +771,7 @@ static void _eaf_cleanup_group(eaf_group_t* group)
 static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg, uint32_t from, uint32_t to,
 	void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg, int flag)
 {
-	/* 检查消息队列容量 */
+	/* Check message queue size */
 	if (!HAS_FLAG(flag, PUSH_FLAG_FORCE) &&
 		eaf_list_size(&service->msgq.queue) >= service->msgq.capacity)
 	{
@@ -840,7 +838,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 	eaf_msg_full_t* real_msg = EAF_MSG_I2C(req);
 	req->from = from;
 
-	/* 查询接收服务 */
+	/* Query service */
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(to, &group);
 
@@ -850,7 +848,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 		return eaf_errno_notfound;
 	}
 
-	/* 查找消息处理函数 */
+	/* Find message handler */
 	size_t i;
 	eaf_msg_handle_fn msg_proc = NULL;
 	for (i = 0; i < service->entry->msg_table_size; i++)
@@ -871,7 +869,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 #	pragma warning(push)
 #	pragma warning(disable : 4054)
 #endif
-	/* 推送消息 */
+	/* Push message */
 	return _eaf_service_push_msg(group, service, real_msg, from, to,
 		_eaf_service_on_req_fix, (void*)msg_proc, PUSH_FLAG_LOCK);
 #if defined(_MSC_VER)
@@ -880,7 +878,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 }
 
 /**
- * Send response
+ * @brief Send response
  * @note rsp->from shows who send this response
  * @param[in] to	Who will receive this response
  * @param[in] rsp	Response message
@@ -899,7 +897,7 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 		return eaf_errno_notfound;
 	}
 
-	/* 推送消息 */
+	/* Push message */
 	return _eaf_service_push_msg(group, service, real_msg, from, to,
 		NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
