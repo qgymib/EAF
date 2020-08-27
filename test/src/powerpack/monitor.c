@@ -73,8 +73,8 @@ TEST_FIXTURE_SETUP(powerpack_monitor)
 {
 	memset(&s_test_monitor_ctx, 0, sizeof(s_test_monitor_ctx));
 	ASSERT_EQ_D32(test_dial_init(&s_test_monitor_ctx.check_point), 0);
-	s_test_monitor_ctx.max_count = 1000;
-	s_test_monitor_ctx.wait_round = 500;
+	s_test_monitor_ctx.max_count = 100;
+	s_test_monitor_ctx.wait_round = 50;
 
 	QUICK_DEPLOY_SERVICE(0, TEST_QUICK_S0, _test_monitor_on_init, NULL, QUICK_DEPLOY_NO_MSG);
 	QUICK_DEPLOY_SERVICE(1, TEST_QUICK_S1, NULL, NULL, {
