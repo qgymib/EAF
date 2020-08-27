@@ -91,9 +91,9 @@ static void _log_direct(const eaf_log_info_t* info, const char* fmt, va_list ap)
 	}
 
 	/* time */
-	printf("[%s %02u:%02u:%02u.%03u %s:%d]<%s> ", prefix,
+	printf("[%s %02u:%02u:%02u.%03u %s:%d %s]<%s> ", prefix,
 		cur_time.hour, cur_time.minute, cur_time.second, cur_time.mseconds,
-		_log_filename(info->file), info->line, info->mode);
+		_log_filename(info->file), info->line, info->func, info->mode);
 
 	vprintf(fmt, ap);
 	printf("\n");
