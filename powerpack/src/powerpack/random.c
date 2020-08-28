@@ -5,13 +5,13 @@
 #if defined(_MSC_VER)
 /* `_CRT_RAND_S' was needed by `rand_s()' */
 #define _CRT_RAND_S
-#include <stdlib.h>
+#	include <stdlib.h>
 #else
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdlib.h>
+#	include <sys/types.h>
+#	include <sys/stat.h>
+#	include <fcntl.h>
+#	include <unistd.h>
+#	include <stdlib.h>
 #endif
 
 /**
@@ -36,12 +36,11 @@ static random_ctx_t g_random_ctx = {
 };
 
 /**
-* @brief Non-failure random algorithm.
-*
-* Linear Congruence Algorithm
-*
-* @return Random number
-*/
+ * @brief Non-failure random algorithm.
+ *
+ * Linear Congruence Algorithm
+ * @return Random number
+ */
 static unsigned int _random_non_failure(void)
 {
 #if defined(_MSC_VER)
