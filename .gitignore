@@ -81,6 +81,7 @@ dkms.conf
 # lsp support for clangd
 compile_commands.json
 .clangd
+.ccls-cache
 
 # generic editor files
 *.swap
