@@ -1,5 +1,4 @@
 #include <string.h>
-#include <strings.h>
 #include "ctest/ctest.h"
 #include "eaf/powerpack/log.h"
 #include "quick2.h"
