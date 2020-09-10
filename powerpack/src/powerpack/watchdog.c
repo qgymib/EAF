@@ -111,7 +111,9 @@ static void _watchdog_set_timestamp(eaf_clock_time_t* t, uint32_t ms)
 
 static void _watchdog_calculate_timeout(eaf_watchdog_record_t* record)
 {
-	int ret = eaf_time_getclock(&record->data.timestamp);
+	int ret; EAF_SUPPRESS_UNUSED_VARIABLE(ret);
+
+	ret = eaf_time_getclock(&record->data.timestamp);
 	assert(ret == 0);
 
 	eaf_clock_time_t timeout;
@@ -124,19 +126,24 @@ static void _watchdog_calculate_timeout(eaf_watchdog_record_t* record)
 static void _watchdog_on_timer(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
 	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
-	int ret;
+
+	/* Require timer delay */
+	int ret; EAF_SUPPRESS_UNUSED_VARIABLE(ret);
 	EAF_TIMER_DELAY(ret, EAF_WATCHDOG_ID, _watchdog_on_timer, WATCHDOG_TIMER_INTERVAL);
 
+	/* Get the oldest timer in timer stack */
 	eaf_map_node_t* it = eaf_map_begin(&g_watchdog_ctx.timeout_table);
 	if (it == NULL)
 	{
 		return;
 	}
 
+	/* Get current time */
 	eaf_clock_time_t current_time;
 	ret = eaf_time_getclock(&current_time);
 	assert(ret == 0);
 
+	/* Check timestamp */
 	eaf_watchdog_record_t* record = EAF_CONTAINER_OF(it, eaf_watchdog_record_t, node_timeout);
 	if (eaf_time_diffclock(&record->data.timestamp, &current_time, NULL) > 0)
 	{
@@ -158,7 +165,8 @@ static void _watchdog_register_heartbeat(eaf_watchdog_record_t* record)
 
 static void _watchdog_on_req_register(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)to;
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+
 	int ret;
 	eaf_watchdog_register_req_t* req = eaf_msg_get_data(msg, NULL);
 
@@ -204,8 +212,9 @@ static eaf_watchdog_record_t* _watchdog_find_record(uint32_t id)
 
 static void _watchdog_on_req_unregister(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	(void)to;
-	eaf_watchdog_record_t* record = _watchdog_find_record(((eaf_watchdog_unregister_req_t*)eaf_msg_get_data(msg, NULL))->id);
+	EAF_SUPPRESS_UNUSED_VARIABLE(to);
+	eaf_watchdog_record_t* record =
+		_watchdog_find_record(((eaf_watchdog_unregister_req_t*)eaf_msg_get_data(msg, NULL))->id);
 	if (record == NULL)
 	{
 		_watchdog_send_response_unregister(from, msg, eaf_errno_notfound);
