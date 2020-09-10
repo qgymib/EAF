@@ -218,6 +218,7 @@ static void _monitor_dataflow_insert_new_record(uint32_t from, uint32_t to)
 
 	/* Must success */
 	assert(ret == 0);
+	EAF_SUPPRESS_UNUSED_VARIABLE(ret); // maybe unused
 }
 
 static void _monitor_update_message_path(uint32_t from, uint32_t to)
