@@ -339,13 +339,15 @@ static void _monitor_on_message_handle_after(uint32_t from, uint32_t to, eaf_msg
 static void _monitor_on_load_before(void)
 {
 	g_monitor_ctx.group.size = eaf_group_size();
-	g_monitor_ctx.group.table = malloc(sizeof(monitor_service_record_t) * g_monitor_ctx.group.size);
+	g_monitor_ctx.group.table = malloc(sizeof(monitor_group_record_t) * g_monitor_ctx.group.size);
 	assert(g_monitor_ctx.group.table != NULL);
 
 	size_t idx = 0;
 	eaf_group_local_t* gls;
 	for (gls = eaf_group_begin(); gls != NULL; gls = eaf_group_next(gls), idx++)
 	{
+		assert(idx < g_monitor_ctx.group.size);
+
 		g_monitor_ctx.group.table[idx].gls = gls;
 		g_monitor_ctx.group.table[idx].counter.flush_use_time = 0;
 		if (uv_mutex_init(&g_monitor_ctx.group.table[idx].objlock) < 0)
