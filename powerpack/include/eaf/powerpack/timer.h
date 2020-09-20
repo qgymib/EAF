@@ -64,6 +64,7 @@ typedef struct eaf_timer_delay_rsp
 			sizeof(eaf_timer_delay_req_t), rsp_fn);\
 		if (req == NULL) {\
 			ret = eaf_errno_memory;\
+			break;\
 		}\
 		((eaf_timer_delay_req_t*)eaf_msg_get_data(req, NULL))->msec = timeout;\
 		ret = eaf_send_req(from, EAF_TIMER_ID, req);\
