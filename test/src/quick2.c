@@ -139,7 +139,7 @@ int test_quick2_internal_deploy(uint32_t gid, uint32_t sid, eaf_entrypoint_t* en
 		}
 
 		service_table[index_service].srv_id = sid;
-		g_test_quick2_ctx2.entry_table[gid * TEST_QUICK_GROUP_NUM + index_service] = entry;
+		g_test_quick2_ctx2.entry_table[(size_t)gid * TEST_QUICK_GROUP_NUM + index_service] = entry;
 
 		break;
 	}
@@ -164,7 +164,7 @@ int test_quick2_internal_reserve(uint32_t gid, uint32_t sid)
 		}
 
 		service_table[index_service].srv_id = sid;
-		g_test_quick2_ctx2.entry_table[gid * TEST_QUICK_GROUP_NUM + index_service] = NULL;
+		g_test_quick2_ctx2.entry_table[(size_t)gid * TEST_QUICK_GROUP_NUM + index_service] = NULL;
 		break;
 	}
 
