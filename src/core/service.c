@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <limits.h>
+#include <string.h>
 #include "eaf/utils/list.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/define.h"
