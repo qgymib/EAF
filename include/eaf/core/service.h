@@ -53,7 +53,16 @@ extern "C" {
  * @brief A static initializer for #eaf_hook_t
  * @see eaf_hook_t
  */
-#define EAF_HOOK_INITIALIZER	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EAF_HOOK_INITIALIZER	{ EAF_REPEAT(15, NULL) }
+
+typedef enum eaf_service_attribute
+{
+	/**
+	 * @brief Service will still alive during teardown stage.
+	 * @see eaf_teardown()
+	 */
+	eaf_service_attribute_alive	= 0x01 << 0x00,
+} eaf_service_attribute_t;
 
 /**
  * @brief Request table
@@ -91,6 +100,7 @@ typedef struct eaf_service_table
 {
 	uint32_t						srv_id;			/**< Service ID */
 	uint32_t						msgq_size;		/**< The capacity of message queue */
+	uint32_t						attribute;		/**< Service attribute, see #eaf_service_attribute_t */
 }eaf_service_table_t;
 
 /**
@@ -280,14 +290,30 @@ EAF_API int eaf_init(_In_ const eaf_group_table_t* /*static*/ info, _In_ size_t 
 EAF_API int eaf_load(void);
 
 /**
+ * @brief Teardown EAF.
+ *
+ * Teardown is a weak version #eaf_exit. If this function is called, EAF will
+ * close every service which has no #eaf_service_attribute_alive
+ *
+ * @return #eaf_errno
+ */
+EAF_API int eaf_teardown(void);
+
+/**
  * @brief Exit EAF.
  *
- * At this stage, EAF will tear down every registered services.
- * After this call return, EAF guarantee every registered services was exited.
- *
+ * At this stage, EAF will exit every registered services.
+ * EAF does not guarantee every service is exited after this call.
+ * @note This is a asynchronous call.
  * @return			#eaf_errno
  */
 EAF_API int eaf_exit(void);
+
+/**
+ * @brief Wait for EAF exit and cleanup all resources
+ * @return			#eaf_errno
+ */
+EAF_API int eaf_cleanup(void);
 
 /**
  * @brief Register service

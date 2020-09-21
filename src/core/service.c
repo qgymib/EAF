@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <limits.h>
-#include "eaf/core/service.h"
 #include "eaf/utils/list.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/define.h"
@@ -10,6 +9,7 @@
 #include "compat/semaphore.h"
 #include "utils/memory.h"
 #include "message.h"
+#include "service.h"
 
 /*
  * Before Visual Studio 2015, there is a bug that a `do { } while (0)` will triger C4127 warning
@@ -36,105 +36,6 @@
 			return 1;\
 		}\
 	} while (0)
-
-typedef enum eaf_ctx_state
-{
-	eaf_ctx_state_init,							/**< Initialize state */
-	eaf_ctx_state_busy,							/**< Running state */
-	eaf_ctx_state_exit,							/**< Exit state */
-}eaf_ctx_state_t;
-
-typedef struct eaf_msgq_record
-{
-	eaf_list_node_t					node;		/**< List node */
-
-	union
-	{
-		struct
-		{
-			eaf_msg_handle_fn		req_fn;		/**< Request handler */
-		}req;
-	}info;
-
-	struct
-	{
-		uint32_t					from;
-		uint32_t					to;
-		struct eaf_service*			service;	/**< Point to service */
-		eaf_msg_full_t*				msg;		/**< Message */
-	}data;
-}eaf_msgq_record_t;
-
-typedef struct eaf_service
-{
-	const eaf_entrypoint_t*			entry;		/**< Service entrypoint information */
-
-	struct
-	{
-		eaf_service_local_t			local;		/**< Service Local Information */
-		eaf_list_node_t				node;		/**< List node. Either in ready_list or wait_list */
-	}runtime;
-
-	struct
-	{
-		eaf_msgq_record_t*			cur_msg;	/**< Current process message */
-		eaf_list_t					queue;		/**< Message queue */
-		size_t						capacity;	/**< The max capacity of message queue */
-	}msgq;
-}eaf_service_t;
-
-#if defined(_MSC_VER)
-#	pragma warning(push)
-#	pragma warning(disable : 4200)
-#endif
-typedef struct eaf_group
-{
-	eaf_compat_lock_t				objlock;	/**< Thread lock */
-	eaf_compat_thread_t				working;	/**< Thread handler */
-	size_t							index;		/**< Group index */
-
-	struct 
-	{
-		eaf_group_local_t			local;		/**< Group Local Storage */
-		eaf_service_t*				cur_run;	/**< The current running service */
-		eaf_list_t					busy_list;	/**< INIT/BUSY */
-		eaf_list_t					wait_list;	/**< INIT_YIELD/IDLE/PEND */
-	}coroutine;
-
-	struct
-	{
-		eaf_compat_sem_t			sem;		/**< Message queue semaphore */
-	}msgq;
-
-	struct
-	{
-		size_t						size;		/**< The length of service table */
-		eaf_service_t				table[];	/**< Service table */
-	}service;
-}eaf_group_t;
-#if defined(_MSC_VER)
-#	pragma warning(pop)
-#endif
-
-typedef struct eaf_ctx
-{
-	eaf_ctx_state_t					state;		/**< Global EAF state */
-	eaf_compat_sem_t				ready;		/**< Exit semaphore */
-	eaf_thread_storage_t			tls;		/**< Thread local storage */
-
-	struct
-	{
-		unsigned					init_failure : 1;
-	}mask;
-
-	struct
-	{
-		size_t						size;		/**< The length of group table */
-		eaf_group_t**				table;		/**< Group table */
-	}group;
-
-	const eaf_hook_t*				hook;		/**< Hook */
-}eaf_ctx_t;
 
 static eaf_ctx_t* g_eaf_ctx			= NULL;		/**< Global runtime */
 
@@ -677,6 +578,64 @@ static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 	}
 }
 
+static void _eaf_service_teardown_hanle_message_nolock(eaf_service_t* service, eaf_msgq_record_t* msg)
+{
+	if (eaf_msg_get_type(&msg->data.msg->msg) == eaf_msg_type_req)
+	{
+		/* Send default response */
+		eaf_msg_t* rsp = eaf_msg_create_rsp(&msg->data.msg->msg, 0);
+		assert(rsp != NULL);
+
+		eaf_msg_set_receipt(rsp, eaf_errno_state);
+		eaf_send_rsp(service->runtime.local.id, msg->data.from, rsp);
+		eaf_msg_dec_ref(rsp);
+	}
+
+	_eaf_service_destroy_msg_record(msg);
+}
+
+static void _eaf_service_teardown_cleanup_msgq(eaf_group_t* group, eaf_service_t* service)
+{
+	eaf_list_node_t* node;
+	if (service->msgq.cur_msg != NULL)
+	{
+		_eaf_service_teardown_hanle_message_nolock(service, service->msgq.cur_msg);
+		service->msgq.cur_msg = NULL;
+	}
+
+	eaf_compat_lock_enter(&group->objlock);
+	while ((node = eaf_list_pop_front(&service->msgq.queue)) != NULL)
+	{
+		eaf_compat_lock_leave(&group->objlock);
+		{
+			_eaf_service_teardown_hanle_message_nolock(service,
+					EAF_CONTAINER_OF(node, eaf_msgq_record_t, node));
+		}
+		eaf_compat_lock_enter(&group->objlock);
+	}
+	eaf_compat_lock_leave(&group->objlock);
+}
+
+static void _eaf_service_teardown(eaf_group_t* group)
+{
+	size_t i;
+	for (i = 0; i < group->service.size; i++)
+	{
+		eaf_service_t* service = &group->service.table[i];
+		if (service->mask.alive || service->entry == NULL)
+		{
+			continue;
+		}
+
+		/* Set state to exit */
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
+
+		/* Cleanup resource */
+		service->entry->on_exit();
+		_eaf_service_teardown_cleanup_msgq(group, service);
+	}
+}
+
 /**
  * @brief Working thread
  * @param[in] arg	eaf_service_group_t
@@ -723,17 +682,24 @@ static void _eaf_service_thread(void* arg)
 		goto cleanup;
 	}
 
+loop:
 	/* Event looping */
 	while (g_eaf_ctx->state == eaf_ctx_state_busy
 		&& _eaf_service_thread_loop(group) == 0)
 	{
 	}
 
+	if (g_eaf_ctx->state == eaf_ctx_state_teardown)
+	{
+		_eaf_service_teardown(group);
+		goto loop;
+	}
+
 cleanup:
 	_eaf_group_exit(group, init_idx);
 }
 
-static void _eaf_cleanup_service(eaf_service_t* service)
+static void _eaf_cleanup_msgq(eaf_service_t* service)
 {
 	eaf_list_node_t* it;
 	while ((it = eaf_list_pop_front(&service->msgq.queue)) != NULL)
@@ -751,16 +717,13 @@ static void _eaf_cleanup_service(eaf_service_t* service)
 
 static void _eaf_cleanup_group(eaf_group_t* group)
 {
-	/* Ensure working thread known we need to stop */
-	eaf_compat_sem_post(&group->msgq.sem);
-
 	/* Wait for thread exit */
 	eaf_compat_thread_exit(&group->working);
 
 	size_t i;
 	for (i = 0; i < group->service.size; i++)
 	{
-		_eaf_cleanup_service(&group->service.table[i]);
+		_eaf_cleanup_msgq(&group->service.table[i]);
 	}
 
 	/* Cleanup resources */
@@ -902,6 +865,30 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 		NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
 }
 
+/**
+ * @brief Do exit
+ * @param[in] teardown	Is it a teardown procedure
+ * @return				#eaf_errno
+ */
+static int _eaf_exit(int teardown)
+{
+	size_t i;
+	if (g_eaf_ctx->state != eaf_ctx_state_teardown
+		&& g_eaf_ctx->state != eaf_ctx_state_exit)
+	{
+		_eaf_hook_cleanup_before();
+	}
+
+	g_eaf_ctx->state = teardown ? eaf_ctx_state_teardown : eaf_ctx_state_exit;
+
+	for (i = 0; i < g_eaf_ctx->group.size; i++)
+	{
+		eaf_compat_sem_post(&g_eaf_ctx->group.table[i]->msgq.sem);
+	}
+
+	return eaf_errno_success;
+}
+
 int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 {
 	size_t i;
@@ -976,6 +963,8 @@ int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 		size_t idx;
 		for (idx = 0; idx < info[init_idx].service.size; idx++)
 		{
+			g_eaf_ctx->group.table[init_idx]->service.table[idx].mask.alive =
+				!!(info[init_idx].service.table[idx].attribute & eaf_service_attribute_alive);
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.local.id =
 				info[init_idx].service.table[idx].srv_id;
 			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity =
@@ -1039,20 +1028,32 @@ int eaf_load(void)
 	return ret;
 }
 
-int eaf_exit(void)
+int eaf_teardown(void)
 {
-	size_t i;
-	if (g_eaf_ctx == NULL)
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state == eaf_ctx_state_teardown)
 	{
 		return eaf_errno_state;
 	}
 
-	_eaf_hook_cleanup_before();
+	return _eaf_exit(1);
+}
 
-	/* change state */
-	g_eaf_ctx->state = eaf_ctx_state_exit;
+int eaf_exit(void)
+{
+	if (g_eaf_ctx == NULL || g_eaf_ctx->state == eaf_ctx_state_exit)
+	{
+		return eaf_errno_state;
+	}
 
-	/* exit thread */
+	return _eaf_exit(0);
+}
+
+int eaf_cleanup(void)
+{
+	size_t i;
+	const eaf_hook_t* hook = g_eaf_ctx->hook;
+
+	/* Wait for group exit */
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
 		_eaf_cleanup_group(g_eaf_ctx->group.table[i]);
@@ -1060,8 +1061,6 @@ int eaf_exit(void)
 
 	eaf_compat_sem_exit(&g_eaf_ctx->ready);
 	eaf_thread_storage_exit(&g_eaf_ctx->tls);
-
-	const eaf_hook_t* hook = g_eaf_ctx->hook;
 
 	/* resource cleanup */
 	EAF_FREE(g_eaf_ctx);

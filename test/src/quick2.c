@@ -103,6 +103,7 @@ static void _quick_hook_before_fixture_teardown(const char* fixture_name)
 	EAF_SUPPRESS_UNUSED_VARIABLE(fixture_name);
 
 	eaf_exit();
+	eaf_cleanup();
 	g_test_quick2_ctx.mask.inited = 0;
 	g_test_quick2_ctx.mask.loaded = 0;
 }
