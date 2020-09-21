@@ -561,7 +561,7 @@ static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 	for (i = (int)max_idx - 1; i >= 0; i--)
 	{
 		eaf_service_t* service = &group->service.table[i];
-		if (service->runtime.local.state == eaf_service_state_exit)
+		if (service->runtime.local.state == eaf_service_state_exit || service->entry == NULL)
 		{
 			continue;
 		}
@@ -569,12 +569,9 @@ static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 		_eaf_group_set_cur_run(group, service);
 		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
 
-		if (service->entry != NULL && service->entry->on_exit != NULL)
-		{
-			_eaf_hook_service_exit_before(service->runtime.local.id);
-			service->entry->on_exit();
-			_eaf_hook_service_exit_after(service->runtime.local.id);
-		}
+		_eaf_hook_service_exit_before(service->runtime.local.id);
+		service->entry->on_exit();
+		_eaf_hook_service_exit_after(service->runtime.local.id);
 	}
 }
 
@@ -731,9 +728,11 @@ static void _eaf_cleanup_group(eaf_group_t* group)
 	eaf_compat_sem_exit(&group->msgq.sem);
 }
 
-static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf_msg_full_t* msg, uint32_t from, uint32_t to,
+static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service,
+	eaf_msg_full_t* msg, uint32_t from, uint32_t to,
 	void(*on_create)(eaf_msgq_record_t* record, void* arg), void* arg, int flag)
 {
+	int ret = eaf_errno_success;
 	/* Check message queue size */
 	if (!HAS_FLAG(flag, PUSH_FLAG_FORCE) &&
 		eaf_list_size(&service->msgq.queue) >= service->msgq.capacity)
@@ -758,9 +757,16 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 		on_create(record, arg);
 	}
 
+	/* Push to queue */
 	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_enter(&group->objlock); }
 	do
 	{
+		if (service->runtime.local.state == eaf_service_state_exit)
+		{
+			ret = eaf_errno_state;
+			break;
+		}
+
 		if (service->runtime.local.state == eaf_service_state_idle)
 		{
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
@@ -768,6 +774,14 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service, eaf
 		eaf_list_push_back(&service->msgq.queue, &record->node);
 	} while (0);
 	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_leave(&group->objlock); }
+
+	/* Revert if failure */
+	if (ret != eaf_errno_success)
+	{
+		eaf_msg_dec_ref(EAF_MSG_C2I(msg));
+		EAF_FREE(record);
+		return ret;
+	}
 
 	eaf_compat_sem_post(&group->msgq.sem);
 	return eaf_errno_success;
@@ -1076,12 +1090,15 @@ int eaf_register(_In_ uint32_t id, _In_ const eaf_entrypoint_t* entry)
 	{
 		return eaf_errno_state;
 	}
+	if (entry->on_init == NULL || entry->on_exit == NULL)
+	{
+		return eaf_errno_invalid;
+	}
 
-	size_t i;
+	size_t i, idx;
 	eaf_service_t* service = NULL;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
-		size_t idx;
 		for (idx = 0; idx < g_eaf_ctx->group.table[i]->service.size; idx++)
 		{
 			if (g_eaf_ctx->group.table[i]->service.table[idx].runtime.local.id == id)
