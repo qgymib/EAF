@@ -884,13 +884,19 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
  * @param[in] teardown	Is it a teardown procedure
  * @return				#eaf_errno
  */
-static int _eaf_exit(int teardown)
+static int _eaf_exit(eaf_exit_executor_t executor, int reason, int teardown)
 {
 	size_t i;
 	if (g_eaf_ctx->state != eaf_ctx_state_teardown
 		&& g_eaf_ctx->state != eaf_ctx_state_exit)
 	{
 		_eaf_hook_cleanup_before();
+	}
+
+	if (!teardown)
+	{
+		g_eaf_ctx->summary.executor = executor;
+		g_eaf_ctx->summary.reason = reason;
 	}
 
 	g_eaf_ctx->state = teardown ? eaf_ctx_state_teardown : eaf_ctx_state_exit;
@@ -1049,20 +1055,20 @@ int eaf_teardown(void)
 		return eaf_errno_state;
 	}
 
-	return _eaf_exit(1);
+	return _eaf_exit(eaf_exit_executor_user, 0, 1);
 }
 
-int eaf_exit(void)
+int eaf_exit(_In_ int reason)
 {
 	if (g_eaf_ctx == NULL || g_eaf_ctx->state == eaf_ctx_state_exit)
 	{
 		return eaf_errno_state;
 	}
 
-	return _eaf_exit(0);
+	return _eaf_exit(eaf_exit_executor_user, reason, 0);
 }
 
-int eaf_cleanup(void)
+int eaf_cleanup(_Out_opt_ eaf_cleanup_summary_t* summary)
 {
 	size_t i;
 	const eaf_hook_t* hook = g_eaf_ctx->hook;
@@ -1075,6 +1081,11 @@ int eaf_cleanup(void)
 
 	eaf_compat_sem_exit(&g_eaf_ctx->ready);
 	eaf_thread_storage_exit(&g_eaf_ctx->tls);
+
+	if (summary != NULL)
+	{
+		memcpy(summary, &g_eaf_ctx->summary, sizeof(*summary));
+	}
 
 	/* resource cleanup */
 	EAF_FREE(g_eaf_ctx);

@@ -96,6 +96,7 @@ typedef struct eaf_ctx
 	eaf_ctx_state_t					state;		/**< Global EAF state */
 	eaf_compat_sem_t				ready;		/**< Exit semaphore */
 	eaf_thread_storage_t			tls;		/**< Thread local storage */
+	eaf_cleanup_summary_t			summary;	/**< Exit summary */
 
 	struct
 	{

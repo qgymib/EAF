@@ -116,6 +116,18 @@ typedef struct eaf_group_table
 	}service;										/**< Configure table */
 }eaf_group_table_t;
 
+typedef enum eaf_exit_executor
+{
+	eaf_exit_executor_eaf,
+	eaf_exit_executor_user,
+}eaf_exit_executor_t;
+
+typedef struct eaf_cleanup_summary
+{
+	eaf_exit_executor_t		executor;	/**< Who called #eaf_exit() */
+	int						reason;		/**< #eaf_errno */
+}eaf_cleanup_summary_t;
+
 /**
  * @brief Hook
  */
@@ -303,16 +315,19 @@ EAF_API int eaf_teardown(void);
  *
  * At this stage, EAF will exit every registered services.
  * EAF does not guarantee every service is exited after this call.
+ *
  * @note This is a asynchronous call.
- * @return			#eaf_errno
+ * @param[in] reason	Exit reason
+ * @return				#eaf_errno
  */
-EAF_API int eaf_exit(void);
+EAF_API int eaf_exit(_In_ int reason);
 
 /**
  * @brief Wait for EAF exit and cleanup all resources
- * @return			#eaf_errno
+ * @param[out] summary	Platform summary
+ * @return				#eaf_errno
  */
-EAF_API int eaf_cleanup(void);
+EAF_API int eaf_cleanup(_Out_opt_ eaf_cleanup_summary_t* summary);
 
 /**
  * @brief Register service
