@@ -14,7 +14,6 @@ extern "C" {
  * @{
  */
 
-#include <stddef.h>
 #include "eaf/utils/map_low.h"
 
 /**

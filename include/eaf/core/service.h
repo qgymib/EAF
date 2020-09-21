@@ -13,7 +13,6 @@ extern "C" {
  * @{
  */
 
-#include <stdint.h>
 #include "eaf/core/internal/service.h"
 #include "eaf/core/message.h"
 #include "eaf/infra/thread.h"
@@ -53,7 +52,7 @@ extern "C" {
  * @brief A static initializer for #eaf_hook_t
  * @see eaf_hook_t
  */
-#define EAF_HOOK_INITIALIZER	{ EAF_REPEAT(15, NULL) }
+#define EAF_HOOK_INITIALIZER		{ EAF_REPEAT(15, NULL) }
 
 typedef enum eaf_service_attribute
 {

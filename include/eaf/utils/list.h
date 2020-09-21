@@ -20,7 +20,6 @@ extern "C" {
  * @{
  */
 
-#include <stddef.h>
 #include "eaf/utils/define.h"
 
 /**

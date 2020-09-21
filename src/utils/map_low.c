@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "eaf/utils/map_low.h"
 
 /*

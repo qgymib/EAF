@@ -28,7 +28,6 @@ extern "C" {
  * @{
  */
 
-#include <stdint.h>
 #include "eaf/eaf.h"
 
 /**

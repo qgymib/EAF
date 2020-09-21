@@ -1,4 +1,3 @@
-#include <stddef.h>
 #include "errno.h"
 
 typedef struct eaf_errno_table

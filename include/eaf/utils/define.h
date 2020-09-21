@@ -172,7 +172,7 @@ extern "C" {
  * along with macros specifying their limits and macro functions to create
  * values of these types.
  * @note define `EAF_NO_STDINT_MSVC_2008' to disable stdint support for
- * MSVC-2008
+ *   MSVC-2008
  */
 #if defined(_MSC_VER) && _MSC_VER < 1600 && !defined(EAF_NO_STDINT_MSVC_2008)
 	/* copy from libuv-1.37.0 */
@@ -180,6 +180,7 @@ extern "C" {
 #else
 #	include <stdint.h>
 #endif
+#include <stddef.h>
 
 /**
  * @name SAL

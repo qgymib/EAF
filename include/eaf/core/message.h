@@ -13,8 +13,6 @@ extern "C" {
  * @{
  */
 
-#include <stdint.h>
-#include <stddef.h>
 #include "eaf/utils/define.h"
 
 struct eaf_msg;
