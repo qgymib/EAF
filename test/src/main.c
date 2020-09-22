@@ -1,6 +1,6 @@
 #include <string.h>
 #include "ctest/ctest.h"
-#include "eaf/powerpack/log.h"
+#include "eaf/powerpack.h"
 #include "quick2.h"
 #if defined(_MSC_VER)
 #	define _CRTDBG_MAP_ALLOC
@@ -66,7 +66,7 @@ parse_opt:
 		goto parse_next;
 	}
 
-	return snprintf(buffer, size, "%s", argv[idx] + opt_len + 1);
+	return eaf_string_apply(buffer, size, NULL, "%s", argv[idx] + opt_len + 1);
 
 parse_next:
 	if (++idx > argc)
@@ -76,7 +76,7 @@ parse_next:
 
 	if (*argv[idx] != '-')
 	{
-		return snprintf(buffer, size, "%s", argv[idx]);
+		return eaf_string_apply(buffer, size, NULL, "%s", argv[idx]);
 	}
 	return 0;
 }
