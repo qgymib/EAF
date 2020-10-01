@@ -90,7 +90,7 @@ typedef struct eaf_msg
  * @return				The pointer of the request
  */
 EAF_API eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
-	_In_ eaf_msg_handle_fn rsp_fn);
+	_In_opt_ eaf_msg_handle_fn rsp_fn);
 
 /**
  * @brief Create response.

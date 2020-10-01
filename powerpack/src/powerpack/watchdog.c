@@ -171,6 +171,8 @@ static void _watchdog_on_req_register(uint32_t from, uint32_t to, struct eaf_msg
 	eaf_watchdog_register_req_t* req = eaf_msg_get_data(msg, NULL);
 
 	eaf_watchdog_record_t* record = malloc(sizeof(eaf_watchdog_record_t));
+	assert(record != NULL);
+
 	memset(&record->data, 0, sizeof(record->data));
 	record->data.id = req->id;
 	record->data.timeout = req->timeout;

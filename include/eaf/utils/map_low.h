@@ -168,7 +168,7 @@ EAF_API eaf_map_low_node_t* eaf_map_low_prev(_In_ const eaf_map_low_node_t* node
  * @see eaf_map_low_insert_color
  */
 EAF_API void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
-	_Inout_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link)
+	_Inout_opt_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link)
 	EAF_ATTRIBUTE_NONNULL(1, 2, 3)
 	EAF_ATTRIBUTE_NOTHROW;
 

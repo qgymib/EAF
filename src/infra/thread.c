@@ -8,7 +8,7 @@ struct eaf_thread
 	eaf_compat_thread_t		thr;
 };
 
-eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg, _In_ eaf_thread_fn fn, _Inout_opt_ void* arg)
+eaf_thread_t* eaf_thread_create(_In_opt_ const eaf_thread_attr_t* cfg, _In_ eaf_thread_fn fn, _Inout_opt_ void* arg)
 {
 	eaf_thread_t* handler = EAF_MALLOC(sizeof(eaf_thread_t));
 	if (handler == NULL)

@@ -59,7 +59,7 @@ static void _time_getclocktime_init_once(void)
 
 #endif
 
-int eaf_time_get(_Inout_ eaf_clock_time_t* tv)
+int eaf_time_get(_Out_ eaf_clock_time_t* tv)
 {
 	/**
 	 * uv_gettimeofday() was added in libuv-1.28.0, which was release in
@@ -104,7 +104,7 @@ int eaf_time_get(_Inout_ eaf_clock_time_t* tv)
 #endif
 }
 
-int eaf_time_getsystem(_Inout_ eaf_calendar_time_t* tv)
+int eaf_time_getsystem(_Out_ eaf_calendar_time_t* tv)
 {
 #if defined(_MSC_VER)
 	SYSTEMTIME cur_time;
@@ -224,7 +224,7 @@ int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 	return t1 == little_t ? -1 : 1;
 }
 
-int eaf_time_addclock(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
+int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
 {
 	/**
 	 * How to check overflow:

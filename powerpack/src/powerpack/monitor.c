@@ -350,10 +350,10 @@ static void _monitor_on_load_before(void)
 
 	size_t idx = 0;
 	eaf_group_local_t* gls;
-	for (gls = eaf_group_begin(); gls != NULL; gls = eaf_group_next(gls), idx++)
+	for (gls = eaf_group_begin();
+		gls != NULL && idx < g_monitor_ctx.group.size;
+		gls = eaf_group_next(gls), idx++)
 	{
-		assert(idx < g_monitor_ctx.group.size);
-
 		g_monitor_ctx.group.table[idx].gls = gls;
 		g_monitor_ctx.group.table[idx].counter.flush_use_time = 0;
 		if (uv_mutex_init(&g_monitor_ctx.group.table[idx].objlock) < 0)

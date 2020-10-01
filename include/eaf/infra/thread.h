@@ -61,7 +61,7 @@ typedef void(*eaf_thread_fn)(_Inout_opt_ void* arg);
  * @param[in,out] arg	User defined arg
  * @return				Thread handler
  */
-EAF_API eaf_thread_t* eaf_thread_create(_In_ const eaf_thread_attr_t* cfg,
+EAF_API eaf_thread_t* eaf_thread_create(_In_opt_ const eaf_thread_attr_t* cfg,
 	_In_ eaf_thread_fn fn, _Inout_opt_ void* arg)
 	EAF_ATTRIBUTE_ACCESS(read_only, 1)
 	EAF_ATTRIBUTE_NONNULL(2)

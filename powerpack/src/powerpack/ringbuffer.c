@@ -482,12 +482,12 @@ size_t eaf_ringbuffer_heap_cost(void)
 	return EAF_ALIGN(sizeof(struct eaf_ringbuffer), sizeof(void*));
 }
 
-size_t eaf_ringbuffer_node_cost(size_t size)
+size_t eaf_ringbuffer_node_cost(_In_ size_t size)
 {
 	return EAF_ALIGN(sizeof(ring_buffer_node_t) + size, sizeof(void*));
 }
 
-eaf_ringbuffer_t* eaf_ringbuffer_init(void* buffer, size_t size)
+eaf_ringbuffer_t* eaf_ringbuffer_init(_Inout_ void* buffer, _In_ size_t size)
 {
 	/* 计算头部起始地点 */
 	eaf_ringbuffer_t* handler = (void*)EAF_ALIGN(buffer, sizeof(void*));
@@ -511,8 +511,8 @@ eaf_ringbuffer_t* eaf_ringbuffer_init(void* buffer, size_t size)
 	return handler;
 }
 
-eaf_ringbuffer_token_t* eaf_ringbuffer_reserve(eaf_ringbuffer_t* handler, size_t len,
-	int flags)
+eaf_ringbuffer_token_t* eaf_ringbuffer_reserve(_Inout_ eaf_ringbuffer_t* handler,
+	_In_ size_t len, _In_ int flags)
 {
 	/* node must aligned */
 	const size_t node_size = eaf_ringbuffer_node_cost(len);
@@ -527,7 +527,7 @@ eaf_ringbuffer_token_t* eaf_ringbuffer_reserve(eaf_ringbuffer_t* handler, size_t
 	return _ring_buffer_reserve_none_empty(handler, len, node_size, flags);
 }
 
-eaf_ringbuffer_token_t* eaf_ringbuffer_consume(eaf_ringbuffer_t* handler)
+eaf_ringbuffer_token_t* eaf_ringbuffer_consume(_Inout_ eaf_ringbuffer_t* handler)
 {
 	if (handler->node.oldest_reserve == NULL
 		|| handler->node.oldest_reserve->state != stat_committed)
@@ -545,7 +545,8 @@ eaf_ringbuffer_token_t* eaf_ringbuffer_consume(eaf_ringbuffer_t* handler)
 	return &token_node->token;
 }
 
-int eaf_ringbuffer_commit(eaf_ringbuffer_t* handler, eaf_ringbuffer_token_t* token, int flags)
+int eaf_ringbuffer_commit(_Inout_ eaf_ringbuffer_t* handler,
+	_Inout_ eaf_ringbuffer_token_t* token, _In_ int flags)
 {
 	ring_buffer_node_t* node = EAF_CONTAINER_OF(token, ring_buffer_node_t, token);
 
@@ -554,7 +555,8 @@ int eaf_ringbuffer_commit(eaf_ringbuffer_t* handler, eaf_ringbuffer_token_t* tok
 		_ring_buffer_commit_for_consume(handler, node, flags);
 }
 
-size_t eaf_ringbuffer_count(eaf_ringbuffer_t* handler, eaf_ringbuffer_counter_t* counter)
+size_t eaf_ringbuffer_count(_In_ eaf_ringbuffer_t* handler,
+	_Out_opt_ eaf_ringbuffer_counter_t* counter)
 {
 	if (counter != NULL)
 	{

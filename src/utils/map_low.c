@@ -469,7 +469,8 @@ ____rb_erase_color(_In_ eaf_map_low_node_t* parent, _Inout_ eaf_map_low_t* root)
 	}
 }
 
-void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node, _Inout_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link)
+void eaf_map_low_link_node(_Inout_ eaf_map_low_node_t* node,
+	_Inout_opt_ eaf_map_low_node_t* parent, _Outptr_ eaf_map_low_node_t** rb_link)
 {
 	node->__rb_parent_color = parent;
 	node->rb_left = node->rb_right = NULL;

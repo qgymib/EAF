@@ -97,7 +97,7 @@ void eaf_message_exit(void);
  * @param[in,out] local	Service local Information
  * @param[in,out] arg	Request message
  */
-void eaf_message_internal_proxy(_Inout_ eaf_service_local_t* local, _Inout_opt_ void* arg);
+void eaf_message_internal_proxy(_Inout_ eaf_service_local_t* local, _Inout_ void* arg);
 
 /**
  * @private
@@ -115,7 +115,7 @@ void eaf_message_internal_response_handler(_In_ uint32_t from, _In_ uint32_t to,
  * @param[out] rsp		The response message with reference count set to 1.
  * @return				Operation result.
  */
-int eaf_message_internal_finalize(_In_ uint64_t uuid, _Out_ eaf_msg_t** rsp);
+int eaf_message_internal_finalize(_In_ uint64_t uuid, _Outptr_result_maybenull_ eaf_msg_t** rsp);
 
 /**
  * @}

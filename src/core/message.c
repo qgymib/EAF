@@ -31,7 +31,8 @@ static void _eaf_msg_destroy(eaf_msg_full_t* msg)
 	EAF_FREE(msg);
 }
 
-eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size, _In_ eaf_msg_handle_fn rsp_fn)
+eaf_msg_t* eaf_msg_create_req(_In_ uint32_t msg_id, _In_ size_t size,
+	_In_opt_ eaf_msg_handle_fn rsp_fn)
 {
 	eaf_msg_full_t* msg = _eaf_msg_create(msg_id, size);
 	if (msg == NULL)
