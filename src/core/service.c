@@ -1119,6 +1119,15 @@ int eaf_exit(_In_ int reason)
 
 int eaf_cleanup(_Out_opt_ eaf_cleanup_summary_t* summary)
 {
+	if (g_eaf_ctx == NULL)
+	{
+		if (summary != NULL)
+		{
+			memset(summary, 0, sizeof(*summary));
+		}
+		return eaf_errno_state;
+	}
+
 	size_t i;
 	const eaf_hook_t* hook = g_eaf_ctx->hook;
 
