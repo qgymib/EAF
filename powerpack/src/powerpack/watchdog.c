@@ -256,11 +256,15 @@ static void _watchdog_on_req_heartbeat(uint32_t from, uint32_t to, struct eaf_ms
 	_watchdog_send_response_heartbeat(from, msg, eaf_errno_success);
 }
 
-static int _watchdog_on_init(void)
+static void _watchdog_on_init(void)
 {
 	int ret;
 	EAF_TIMER_DELAY(ret, EAF_WATCHDOG_ID, _watchdog_on_timer, WATCHDOG_TIMER_INTERVAL);
-	return ret;
+
+	if (ret < 0)
+	{
+		eaf_exit(ret);
+	}
 }
 
 static void _watchdog_on_exit(void)

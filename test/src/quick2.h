@@ -78,6 +78,18 @@ extern "C" {
 			"%s(%d)", eaf_strerror(_a), _a);\
 	} while (0)
 
+/**
+ * @brief Skip init stage. User should handle it.
+ */
+#define QUICK_SKIP_INIT()	\
+	test_quick2_internal_skip_init()
+
+/**
+ * @brief Skip load stage. User should handle it.
+ */
+#define QUICK_SKIP_LOAD()	\
+	test_quick2_internal_skip_load();
+
 typedef struct test_quick_config
 {
 	eaf_log_level_t	log_level;
@@ -102,6 +114,8 @@ int test_quick2_internal_deploy(uint32_t gid, uint32_t sid, eaf_entrypoint_t* en
 int test_quick2_internal_reserve(uint32_t gid, uint32_t sid);
 int test_quick2_internal_force_init_eaf(void);
 int test_quick2_internal_force_load_eaf(void);
+void test_quick2_internal_skip_init(void);
+void test_quick2_internal_skip_load(void);
 
 #ifdef __cplusplus
 }

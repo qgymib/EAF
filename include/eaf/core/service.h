@@ -60,7 +60,12 @@ typedef enum eaf_service_attribute
 	 * @brief Service will still alive during teardown stage.
 	 * @see eaf_teardown()
 	 */
-	eaf_service_attribute_alive	= 0x01 << 0x00,
+	eaf_service_attribute_alive		= 0x01 << 0x00,
+
+	/**
+	 * @brief Service will not initialized until there is a incoming request.
+	 */
+	eaf_service_attribute_lazyload	= 0x01 << 0x01,
 } eaf_service_attribute_t;
 
 /**
@@ -82,9 +87,8 @@ typedef struct eaf_entrypoint
 
 	/**
 	 * @brief Initialize callback
-	 * @return		0 if success, -1 otherwise
 	 */
-	int (*on_init)(void);
+	void (*on_init)(void);
 
 	/**
 	 * @brief Exit callback
@@ -145,7 +149,7 @@ typedef struct eaf_hook
 	 * @see eaf_entrypoint_t::on_init
 	 * @param[in] id	Service ID
 	 */
-	void(*on_service_init_after)(_In_ uint32_t id, _In_ int ret);
+	void(*on_service_init_after)(_In_ uint32_t id);
 
 	/**
 	 * @brief Hook a service is going to exit

@@ -61,12 +61,11 @@ static void _test_monitor_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	s_test_monitor_ctx.counter++;
 }
 
-static int _test_monitor_on_init(void)
+static void _test_monitor_on_init(void)
 {
 	int ret;
 	EAF_MESSAGE_SEND_REQUEST(ret, TEST_QUICK_S1_REQ1, 0, _test_monitor_on_rsp, TEST_QUICK_S0, TEST_QUICK_S1, );
 	ASSERT_EQ_D32(ret, 0);
-	return 0;
 }
 
 TEST_FIXTURE_SETUP(powerpack_monitor)

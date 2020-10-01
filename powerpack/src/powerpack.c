@@ -38,7 +38,7 @@
 	return ret;
 
 static void _pp_hook_on_service_init_before(uint32_t id);
-static void _pp_hook_on_service_init_after(uint32_t id, int ret);
+static void _pp_hook_on_service_init_after(uint32_t id);
 static void _pp_hook_on_service_exit_before(uint32_t id);
 static void _pp_hook_on_service_exit_after(uint32_t id);
 static void _pp_hook_on_service_yield(uint32_t id);
@@ -88,9 +88,9 @@ static void _pp_hook_on_service_init_before(uint32_t id)
 	FOREACH_VOID_HOOK(on_service_init_before, id);
 }
 
-static void _pp_hook_on_service_init_after(uint32_t id, int ret)
+static void _pp_hook_on_service_init_after(uint32_t id)
 {
-	FOREACH_VOID_HOOK(on_service_init_after, id, ret);
+	FOREACH_VOID_HOOK(on_service_init_after, id);
 }
 
 static void _pp_hook_on_service_exit_before(uint32_t id)

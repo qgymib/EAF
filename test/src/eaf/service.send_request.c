@@ -26,7 +26,7 @@ static void _test_send_request_s1_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* 
 	eaf_sem_post(s_test_send_request_ctx.s_service_send_request_sem);
 }
 
-static int _test_send_request_s1_on_init(void)
+static void _test_send_request_s1_on_init(void)
 {
 	eaf_msg_t* req = eaf_msg_create_req(TEST_SERVICE_S2_MSG, sizeof(int), _test_send_request_s1_on_rsp);
 	ASSERT(req != NULL);
@@ -34,8 +34,6 @@ static int _test_send_request_s1_on_init(void)
 
 	ASSERT(eaf_send_req(TEST_SERVICE_S1, TEST_SERVICE_S2, req) == 0);
 	eaf_msg_dec_ref(req);
-
-	return 0;
 }
 
 static void _test_send_request_s2_on_req(uint32_t from, uint32_t to, eaf_msg_t* req)

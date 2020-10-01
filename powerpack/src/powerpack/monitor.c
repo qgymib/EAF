@@ -267,11 +267,14 @@ static const char* _monitor_state_2_string(eaf_service_state_t state)
 {
 	switch (state)
 	{
-	case eaf_service_state_init:
-		return "init";
+	case eaf_service_state_init0:
+		return "init0";
 
-	case eaf_service_state_init_yield:
-		return "init_y";
+	case eaf_service_state_init1:
+		return "init1";
+
+	case eaf_service_state_init2:
+		return "init2";
 
 	case eaf_service_state_idle:
 		return "idle";
@@ -282,8 +285,11 @@ static const char* _monitor_state_2_string(eaf_service_state_t state)
 	case eaf_service_state_yield:
 		return "yield";
 
-	case eaf_service_state_exit:
-		return "exit";
+	case eaf_service_state_exit0:
+		return "exit0";
+
+	case eaf_service_state_exit1:
+		return "exit1";
 
 	default:
 		break;
@@ -660,11 +666,15 @@ static void _monitor_on_timer(uint32_t from, uint32_t to, eaf_msg_t* msg)
     EAF_SUPPRESS_UNUSED_VARIABLE(ret);
 }
 
-static int _monitor_on_service_init(void)
+static void _monitor_on_service_init(void)
 {
 	int ret;
 	EAF_TIMER_DELAY(ret, EAF_MONITOR_ID, _monitor_on_timer, g_monitor_ctx.config.timeout_sec * 1000);
-	return ret;
+
+	if (ret < 0)
+	{
+		eaf_exit(ret);
+	}
 }
 
 static void _monitor_on_service_exit(void)

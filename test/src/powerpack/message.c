@@ -2,6 +2,7 @@
 #include "quick2.h"
 
 #define TEST_SERVICE_S1			0xF0010000
+#define TEST_SERVICE_S1_REQ		(TEST_SERVICE_S1 + 0x0001)
 
 #define TEST_SERVICE_S2			0xF0020000
 #define TEST_SERVICE_S2_REQ		(TEST_SERVICE_S2 + 0x0001)
@@ -14,8 +15,10 @@ typedef struct test_send_req_ctx
 
 static test_send_req_ctx_t s_test_send_req_ctx;
 
-static int _test_powerpack_message_s1_on_init(void)
+static void _test_powerpack_message_s1_on_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
 {
+	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
+
 	eaf_reenter
 	{
 		int ret;
@@ -31,8 +34,6 @@ static int _test_powerpack_message_s1_on_init(void)
 		ASSERT_EQ_D32(ret, 0, "error:%s(%d)", eaf_strerror(_a), _a);
 		ASSERT_EQ_D32(eaf_sem_post(s_test_send_req_ctx.s_test_pp_message_sem), 0);
 	};
-
-	return 0;
 }
 
 static void _test_powerpack_message_s2_on_req(uint32_t from, uint32_t to, eaf_msg_t* msg)
@@ -53,7 +54,9 @@ TEST_FIXTURE_SETUP(powerpack_message)
 	memset(&s_test_send_req_ctx, 0, sizeof(s_test_send_req_ctx));
 	ASSERT_NE_PTR(s_test_send_req_ctx.s_test_pp_message_sem = eaf_sem_create(0), NULL);
 
-	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S1, _test_powerpack_message_s1_on_init, NULL, QUICK_DEPLOY_NO_MSG);
+	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S1, NULL, NULL, {
+		{ TEST_SERVICE_S1_REQ, _test_powerpack_message_s1_on_req }
+	});
 	QUICK_DEPLOY_SERVICE(0, TEST_SERVICE_S2, NULL, NULL, {
 		{ TEST_SERVICE_S2_REQ, _test_powerpack_message_s2_on_req }
 	});
@@ -76,6 +79,10 @@ TEST_FIXTURE_TEAREDOWN(powerpack_message)
 
 TEST_F(powerpack_message, send_req)
 {
+	int ret;
+	EAF_MESSAGE_SEND_REQUEST(ret, TEST_SERVICE_S1_REQ, 0, NULL, TEST_SERVICE_S1, TEST_SERVICE_S1, );
+	ASSERT_EQ_D32(ret, 0);
+
 	ASSERT_EQ_D32(eaf_sem_pend(s_test_send_req_ctx.s_test_pp_message_sem, 1000), 0);
 	ASSERT_EQ_D32(s_test_send_req_ctx.s_test_pp_message_rsp, 200);
 }

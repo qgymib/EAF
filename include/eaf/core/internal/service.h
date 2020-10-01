@@ -84,12 +84,55 @@ extern "C" {
  */
 typedef enum eaf_service_state
 {
-	eaf_service_state_init,						/**< Init */
-	eaf_service_state_init_yield,				/**< Init but user yield */
-	eaf_service_state_idle,						/**< No pending work */
-	eaf_service_state_busy,						/**< Busy */
-	eaf_service_state_yield,					/**< Wait for resume */
-	eaf_service_state_exit,						/**< Exit */
+	/**
+	 * @brief Initialize state: 0
+	 *
+	 * This is a initial state.
+	 */
+	eaf_service_state_init0,
+
+	/**
+	 * @brief Initialize state: 1
+	 *
+	 * At this state, service is doing initialize.
+	 */
+	eaf_service_state_init1,
+
+	/**
+	 * @brief Initialize state: 2
+	 *
+	 * At this state, service initialize is delayed.
+	 */
+	eaf_service_state_init2,
+
+	/**
+	 * @brief IDLE state
+	 */
+	eaf_service_state_idle,
+
+	/**
+	 * @brief BUSY state
+	 */
+	eaf_service_state_busy,
+
+	/**
+	 * @brief YIELD state
+	 */
+	eaf_service_state_yield,
+
+	/**
+	 * @brief Exit state: 0
+	 *
+	 * At this state, service is exiting
+	 */
+	eaf_service_state_exit0,
+
+	/**
+	 * @brief Exit state: 1
+	 *
+	 * At this state, service is exited
+	 */
+	eaf_service_state_exit1,
 }eaf_service_state_t;
 
 /**

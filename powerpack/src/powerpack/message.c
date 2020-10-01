@@ -43,9 +43,8 @@ static int _message_on_cmp_record(const eaf_map_node_t* key1, const eaf_map_node
 	return rec_1->data.uuid < rec_2->data.uuid ? -1 : 1;
 }
 
-static int _message_on_init(void)
+static void _message_on_init(void)
 {
-	return eaf_errno_success;
 }
 
 static void _message_on_exit(void)

@@ -1,3 +1,4 @@
+#include <string.h>
 #include "quick2.h"
 
 #define TEST_QUICK_GROUP_NUM	4
@@ -71,8 +72,7 @@ static void _quick_hook_before_fixture_setup(const char* fixture_name)
 		g_test_quick2_ctx2.entry_table[i] = NULL;
 	}
 
-	g_test_quick2_ctx.mask.inited = 0;
-	g_test_quick2_ctx.mask.loaded = 0;
+	memset(&g_test_quick2_ctx.mask, 0, sizeof(g_test_quick2_ctx.mask));
 }
 
 static void _quick_hook_after_fixture_setup(const char* fixture_name, int ret)
@@ -104,13 +104,10 @@ static void _quick_hook_before_fixture_teardown(const char* fixture_name)
 
 	eaf_exit(0);
 	eaf_cleanup(NULL);
-	g_test_quick2_ctx.mask.inited = 0;
-	g_test_quick2_ctx.mask.loaded = 0;
 }
 
-static int _test_default_init(void)
+static void _test_default_init(void)
 {
-	return 0;
 }
 
 static void _test_default_exit(void)
@@ -233,4 +230,14 @@ int test_quick2_internal_force_load_eaf(void)
 
 	g_test_quick2_ctx.mask.loaded = 1;
 	return eaf_errno_success;
+}
+
+void test_quick2_internal_skip_init(void)
+{
+	g_test_quick2_ctx.mask.inited = 1;
+}
+
+void test_quick2_internal_skip_load(void)
+{
+	g_test_quick2_ctx.mask.loaded = 1;
 }

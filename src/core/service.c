@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
 #include "eaf/utils/list.h"
 #include "eaf/utils/errno.h"
 #include "eaf/utils/define.h"
@@ -20,8 +21,7 @@
 #	pragma warning(disable : 4127)
 #endif
 
-#define PUSH_FLAG_LOCK			(0x01 << 0x00)
-#define PUSH_FLAG_FORCE			(0x01 << 0x01)
+#define PUSH_FLAG_FORCE			(0x01 << 0x00)
 #define HAS_FLAG(flag, bit)		((flag) & (bit))
 
 /**
@@ -121,11 +121,11 @@ static void _eaf_hook_service_init_before(uint32_t id)
 	}
 }
 
-static void _eaf_hook_service_init_after(uint32_t id, int ret)
+static void _eaf_hook_service_init_after(uint32_t id)
 {
 	if (g_eaf_ctx->hook != NULL && g_eaf_ctx->hook->on_service_init_after != NULL)
 	{
-		g_eaf_ctx->hook->on_service_init_after(id, ret);
+		g_eaf_ctx->hook->on_service_init_after(id);
 	}
 }
 
@@ -236,30 +236,34 @@ static void _eaf_service_set_state_nolock(eaf_group_t* group,
 {
 	switch (service->runtime.local.state)
 	{
-	case eaf_service_state_init_yield:
+	case eaf_service_state_init0:
+	case eaf_service_state_init2:
 	case eaf_service_state_idle:
 	case eaf_service_state_yield:
-	case eaf_service_state_exit:
+	case eaf_service_state_exit1:
 		eaf_list_erase(&group->coroutine.wait_list, &service->runtime.node);
 		break;
 
-	case eaf_service_state_init:
+	case eaf_service_state_init1:
 	case eaf_service_state_busy:
+	case eaf_service_state_exit0:
 		eaf_list_erase(&group->coroutine.busy_list, &service->runtime.node);
 		break;
 	}
 
 	switch (state)
 	{
-	case eaf_service_state_init_yield:
+	case eaf_service_state_init0:
+	case eaf_service_state_init2:
 	case eaf_service_state_idle:
 	case eaf_service_state_yield:
-	case eaf_service_state_exit:
+	case eaf_service_state_exit1:
 		eaf_list_push_back(&group->coroutine.wait_list, &service->runtime.node);
 		break;
 
-	case eaf_service_state_init:
+	case eaf_service_state_init1:
 	case eaf_service_state_busy:
+	case eaf_service_state_exit0:
 		eaf_list_push_back(&group->coroutine.busy_list, &service->runtime.node);
 		break;
 	}
@@ -363,8 +367,59 @@ static void _eaf_service_resume_message(eaf_group_t* group, eaf_service_t* servi
 	_eaf_service_reset(service);
 }
 
+/**
+ * @brief Clear control bits
+ */
+static void _eaf_group_clear_cc0(eaf_group_t* group)
+{
+	group->coroutine.local.cc[0] = 0;
+}
+
+static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_t* service)
+{
+	eaf_compat_lock_enter(&group->objlock);
+	do
+	{
+		/* Switch to IDLE */
+		_eaf_service_set_state_nolock(group, service, eaf_service_state_idle);
+		/* If message queue is not empty, switch state to BUSY */
+		if (eaf_list_size(&service->msgq.queue) > 0)
+		{
+			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
+		}
+	} while (0);
+	eaf_compat_lock_leave(&group->objlock);
+}
+
+static void _eaf_do_service_init(eaf_group_t* group, eaf_service_t* service)
+{
+	_eaf_group_clear_cc0(group);
+	_eaf_hook_service_init_before(service->runtime.local.id);
+	service->entry->on_init();
+
+	/**
+	 * yield can not be called during init stage.
+	 */
+	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
+	{
+		printf("coroutine is not support during initialize stage. service:%#10x\n", service->runtime.local.id);
+		assert(0);
+	}
+
+	_eaf_service_reset_yield_branch(service);
+	_eaf_hook_service_init_after(service->runtime.local.id);
+
+	_eaf_group_finish_service_init_lock(group, service);
+}
+
 static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 {
+	/* If initialize is delay, do it right now */
+	if (service->runtime.local.state == eaf_service_state_init1)
+	{
+		_eaf_do_service_init(group, service);
+	}
+
 	/* the state of service must be BUSY */
 	assert(service->runtime.local.state == eaf_service_state_busy);
 
@@ -404,75 +459,18 @@ static void _eaf_handle_new_message(eaf_group_t* group, eaf_service_t* service)
 	_eaf_service_resume_message(group, service);
 }
 
-static void _eaf_group_finish_service_init_lock(eaf_group_t* group, eaf_service_t* service)
-{
-	eaf_compat_lock_enter(&group->objlock);
-	do
-	{
-		/* Switch to IDLE */
-		_eaf_service_set_state_nolock(group, service, eaf_service_state_idle);
-		/* If message queue is not empty, switch state to BUSY */
-		if (eaf_list_size(&service->msgq.queue) > 0)
-		{
-			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
-		}
-	} while (0);
-	eaf_compat_lock_leave(&group->objlock);
-}
-
-/**
- * @brief Continue initialize
- */
-static int _eaf_service_resume_init(eaf_group_t* group, eaf_service_t* service)
-{
-	/* No need to call #_eaf_hook_service_init_before() because it's alyready done */
-	int ret = service->entry->on_init();
-
-	/* Check whether `yield' was called */
-	if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
-	{
-		_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
-		_eaf_group_call_yield_hook(group);
-		return 0;
-	}
-	_eaf_service_reset_yield_branch(service);
-	_eaf_hook_service_init_after(service->runtime.local.id, ret);
-
-	if (ret < 0)
-	{
-		return -1;
-	}
-
-	/* Mark the service is done with initialize */
-	_eaf_group_finish_service_init_lock(group, service);
-	return 0;
-}
-
-/**
- * @brief Clear control bits
- */
-static void _eaf_group_clear_cc0(eaf_group_t* group)
-{
-	group->coroutine.local.cc[0] = 0;
-}
-
 static int _eaf_service_thread_loop(eaf_group_t* group)
 {
 	eaf_service_t* service = _eaf_get_first_busy_service_lock(group);
 	if (service == NULL)
 	{
-		eaf_compat_sem_pend(&group->msgq.sem, (unsigned)-1);
+		eaf_compat_sem_pend(&group->msgq.sem, EAF_COMPAT_SEM_INFINITY);
 		return 0;
 	}
 	eaf_compat_sem_pend(&group->msgq.sem, 0);
 
 	_eaf_group_set_cur_run(group, service);
 	_eaf_group_clear_cc0(group);
-
-	if (service->runtime.local.state == eaf_service_state_init)
-	{
-		return _eaf_service_resume_init(group, service);
-	}
 
 	_eaf_handle_new_message(group, service);
 	return 0;
@@ -488,92 +486,64 @@ static eaf_group_t* _eaf_get_current_group(void)
 }
 
 /**
- * Init this service group.
- * @param [in] group	Service Group
- * @param [out] idx		The index if failure
- * @return				The number of service init, or -1 if failed
- */
-static int _eaf_group_init(eaf_group_t* group, size_t* idx)
-{
-	int counter = 0;
-	for (*idx = 0; *idx < group->service.size; *idx += 1)
-	{
-		eaf_service_t* service = &group->service.table[*idx];
-		_eaf_group_set_cur_run(group, service);
-
-		/*
-		 * If service is not available, remove it from ready list and set state
-		 * to #eaf_service_state_exit.
-		 */
-		if (service->entry == NULL || service->entry->on_init == NULL)
-		{
-			service->runtime.local.state = eaf_service_state_exit;
-			eaf_list_erase(&group->coroutine.busy_list, &service->runtime.node);
-
-			continue;
-		}
-
-		_eaf_group_clear_cc0(group);
-
-		_eaf_hook_service_init_before(service->runtime.local.id);
-		int ret = service->entry->on_init();
-
-		/* Check whether `yield' was called */
-		if (_eaf_group_check_cc0(group, EAF_SERVICE_CC0_YIELD))
-		{
-			_eaf_service_set_state_lock(group, service, eaf_service_state_init_yield);
-
-			/* call user hook */
-			_eaf_group_call_yield_hook(group);
-
-			/*
-			 * need to consider it as init success,
-			 * because if no service finish init process here, this thread will be exited.
-			 */
-			counter++;
-
-			continue;
-		}
-		_eaf_service_reset_yield_branch(service);
-		_eaf_hook_service_init_after(service->runtime.local.id, ret);
-
-		if (ret < 0)
-		{
-			return -1;
-		}
-
-		_eaf_group_finish_service_init_lock(group, service);
-		counter++;
-	}
-
-	return counter;
-}
-
-/**
  * @brief Exit group in reverse
  * @param[in] group		Group
  * @param[in] max_idx	The max idx. This index it self should not be exit
  */
 static void _eaf_group_exit(eaf_group_t* group, size_t max_idx)
 {
-	assert(max_idx < INT_MAX);
-
 	int i;
+
+	if (max_idx > group->service.size)
+	{
+		max_idx = group->service.size;
+	}
+
 	for (i = (int)max_idx - 1; i >= 0; i--)
 	{
 		eaf_service_t* service = &group->service.table[i];
-		if (service->runtime.local.state == eaf_service_state_exit || service->entry == NULL)
+		if (service->runtime.local.state == eaf_service_state_exit1 || service->entry == NULL)
 		{
 			continue;
 		}
 
 		_eaf_group_set_cur_run(group, service);
-		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit0);
 
 		_eaf_hook_service_exit_before(service->runtime.local.id);
 		service->entry->on_exit();
 		_eaf_hook_service_exit_after(service->runtime.local.id);
+
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit1);
 	}
+}
+
+/**
+ * Init this service group.
+ * @param [in] group	Service Group
+ * @param [out] idx		The index if failure
+ * @return				The number of service init, or -1 if failed
+ */
+static int _eaf_group_init_necessary(eaf_group_t* group)
+{
+	int counter = 0;
+	size_t idx = 0;
+
+	for (idx = 0; idx < group->service.size; idx++)
+	{
+		eaf_service_t* service = &group->service.table[idx];
+		_eaf_group_set_cur_run(group, service);
+
+		if (service->runtime.local.state != eaf_service_state_init1)
+		{
+			continue;
+		}
+
+		_eaf_do_service_init(group, service);
+		counter++;
+	}
+
+	return counter;
 }
 
 static void _eaf_service_teardown_hanle_message_nolock(eaf_service_t* service, eaf_msgq_record_t* msg)
@@ -626,11 +596,13 @@ static void _eaf_service_teardown(eaf_group_t* group)
 		}
 
 		/* Set state to exit */
-		_eaf_service_set_state_lock(group, service, eaf_service_state_exit);
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit0);
 
 		/* Cleanup resource */
 		service->entry->on_exit();
 		_eaf_service_teardown_cleanup_msgq(group, service);
+
+		_eaf_service_set_state_lock(group, service, eaf_service_state_exit1);
 	}
 }
 
@@ -638,9 +610,8 @@ static void _eaf_service_teardown(eaf_group_t* group)
  * @brief Working thread
  * @param[in] arg	eaf_service_group_t
  */
-static void _eaf_service_thread(void* arg)
+static void _eaf_thread(void* arg)
 {
-	size_t init_idx = 0;
 	eaf_group_t* group = arg;
 
 	/* Set thread id */
@@ -655,7 +626,7 @@ static void _eaf_service_thread(void* arg)
 	/* Wait for start */
 	while (g_eaf_ctx->state == eaf_ctx_state_init)
 	{
-		eaf_compat_sem_pend(&group->msgq.sem, (unsigned long)-1);
+		eaf_compat_sem_pend(&group->msgq.sem, EAF_COMPAT_SEM_INFINITY);
 	}
 	if (g_eaf_ctx->state != eaf_ctx_state_busy)
 	{
@@ -663,38 +634,39 @@ static void _eaf_service_thread(void* arg)
 	}
 
 	/* Do initialize */
-	int init_count = _eaf_group_init(group, &init_idx);
-
-	/* Set failure flag if initialize failed */
-	if (init_count < 0)
-	{
-		g_eaf_ctx->mask.init_failure = 1;
-	}
+	int init_count = _eaf_group_init_necessary(group);
 
 	/* Notify we are done initialize */
 	eaf_compat_sem_post(&g_eaf_ctx->ready);
 
-	/* Cleanup if failure */
+	/* Set failure flag if initialize failed */
+	if (init_count < 0)
+	{
+		g_eaf_ctx->mask.failure = 1;
+	}
+	/* If failure or no available service, exit thread */
 	if (init_count <= 0)
 	{
-		goto cleanup;
+		return;
 	}
 
-loop:
 	/* Event looping */
 	while (g_eaf_ctx->state == eaf_ctx_state_busy
 		&& _eaf_service_thread_loop(group) == 0)
 	{
 	}
 
+	/* Teardown */
 	if (g_eaf_ctx->state == eaf_ctx_state_teardown)
 	{
 		_eaf_service_teardown(group);
-		goto loop;
+	}
+	while (g_eaf_ctx->state == eaf_ctx_state_teardown
+		&& _eaf_service_thread_loop(group) == 0)
+	{
 	}
 
-cleanup:
-	_eaf_group_exit(group, init_idx);
+	_eaf_group_exit(group, (size_t)-1);
 }
 
 static void _eaf_cleanup_msgq(eaf_service_t* service)
@@ -759,22 +731,33 @@ static int _eaf_service_push_msg(eaf_group_t* group, eaf_service_t* service,
 	}
 
 	/* Push to queue */
-	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_enter(&group->objlock); }
+	eaf_compat_lock_enter(&group->objlock);
 	do
 	{
-		if (service->runtime.local.state == eaf_service_state_exit)
+		if (service->runtime.local.state == eaf_service_state_exit0)
 		{
 			ret = eaf_errno_state;
 			break;
 		}
 
-		if (service->runtime.local.state == eaf_service_state_idle)
+		switch (service->runtime.local.state)
 		{
+			/* For lazyload */
+		case eaf_service_state_init2:
+			_eaf_service_set_state_nolock(group, service, eaf_service_state_init1);
+			break;
+
+		case eaf_service_state_idle:
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
+			break;
+
+		default:
+			break;
 		}
+
 		eaf_list_push_back(&service->msgq.queue, &record->node);
 	} while (0);
-	if (HAS_FLAG(flag, PUSH_FLAG_LOCK)) { eaf_compat_lock_leave(&group->objlock); }
+	eaf_compat_lock_leave(&group->objlock);
 
 	/* Revert if failure */
 	if (ret != eaf_errno_success)
@@ -820,7 +803,6 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 	eaf_group_t* group;
 	eaf_service_t* service = _eaf_service_find_service(to, &group);
 
-	/* if service not found, send to rpc */
 	if (service == NULL)
 	{
 		return eaf_errno_notfound;
@@ -849,7 +831,7 @@ static int _eaf_send_req(uint32_t from, uint32_t to, eaf_msg_t* req)
 #endif
 	/* Push message */
 	return _eaf_service_push_msg(group, service, real_msg, from, to,
-		_eaf_service_on_req_fix, (void*)msg_proc, PUSH_FLAG_LOCK);
+		_eaf_service_on_req_fix, (void*)msg_proc, 0);
 #if defined(_MSC_VER)
 #	pragma warning(pop)
 #endif
@@ -877,7 +859,7 @@ static int _eaf_send_rsp(uint32_t from, uint32_t to, eaf_msg_t* rsp)
 
 	/* Push message */
 	return _eaf_service_push_msg(group, service, real_msg, from, to,
-		NULL, NULL, PUSH_FLAG_LOCK | PUSH_FLAG_FORCE);
+		NULL, NULL, PUSH_FLAG_FORCE);
 }
 
 /**
@@ -910,22 +892,139 @@ static int _eaf_exit(eaf_exit_executor_t executor, int reason, int teardown)
 	return eaf_errno_success;
 }
 
-int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
+static void _eaf_init_fix_address(const eaf_group_table_t* info, size_t size)
 {
-	size_t i;
-	if (g_eaf_ctx != NULL)
-	{
-		return eaf_errno_duplicate;
-	}
+	g_eaf_ctx->group.size = size;
+	g_eaf_ctx->group.table = (eaf_group_t**)(g_eaf_ctx + 1);
+	g_eaf_ctx->group.table[0] = (eaf_group_t*)((char*)g_eaf_ctx->group.table + sizeof(eaf_group_t*) * size);
 
-	/* calculate memory size */
+	size_t i;
+	for (i = 1; i < size; i++)
+	{
+		g_eaf_ctx->group.table[i] = (eaf_group_t*)
+			((char*)g_eaf_ctx->group.table[i - 1] + sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i - 1].service.size);
+	}
+}
+
+static size_t _eaf_init_calculate_malloc_size(const eaf_group_table_t* info, size_t size)
+{
 	size_t malloc_size = sizeof(eaf_ctx_t) + sizeof(eaf_group_t*) * size;
+
+	size_t i;
 	for (i = 0; i < size; i++)
 	{
 		malloc_size += sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i].service.size;
 	}
 
-	g_eaf_ctx = EAF_CALLOC(1, malloc_size);
+	return malloc_size;
+}
+
+static void _eaf_init_service(eaf_group_t* group, eaf_service_t* service, eaf_service_table_t* info)
+{
+	/* Convert mask */
+	service->mask.alive = !!(info->attribute & eaf_service_attribute_alive);
+	service->mask.lazyload = !!(info->attribute & eaf_service_attribute_lazyload);
+
+	service->runtime.local.id = info->srv_id;
+	service->msgq.capacity = info->msgq_size;
+	eaf_list_init(&service->msgq.queue);
+
+	/* by default, service should in init0 state */
+	service->runtime.local.state = eaf_service_state_init0;
+	eaf_list_push_back(&group->coroutine.wait_list, &service->runtime.node);
+}
+
+static int _eaf_init_group(const eaf_group_table_t* info, size_t size)
+{
+	size_t i, idx;
+	for (idx = 0; idx < size; idx++)
+	{
+		g_eaf_ctx->group.table[idx]->index = idx;
+		g_eaf_ctx->group.table[idx]->service.size = info[idx].service.size;
+		eaf_list_init(&g_eaf_ctx->group.table[idx]->coroutine.busy_list);
+		eaf_list_init(&g_eaf_ctx->group.table[idx]->coroutine.wait_list);
+		if (eaf_compat_lock_init(&g_eaf_ctx->group.table[idx]->objlock, eaf_lock_attr_normal) < 0)
+		{
+			goto err;
+		}
+		if (eaf_compat_sem_init(&g_eaf_ctx->group.table[idx]->msgq.sem, 0) < 0)
+		{
+			eaf_compat_lock_exit(&g_eaf_ctx->group.table[idx]->objlock);
+			goto err;
+		}
+
+		for (i = 0; i < info[idx].service.size; i++)
+		{
+			_eaf_init_service(g_eaf_ctx->group.table[idx],
+				&g_eaf_ctx->group.table[idx]->service.table[i],
+				&info[idx].service.table[i]);
+		}
+
+		if (eaf_compat_thread_init(&g_eaf_ctx->group.table[idx]->working, &info[idx].attr,
+			_eaf_thread, g_eaf_ctx->group.table[idx]) < 0)
+		{
+			eaf_compat_sem_exit(&g_eaf_ctx->group.table[idx]->msgq.sem);
+			eaf_compat_lock_exit(&g_eaf_ctx->group.table[idx]->objlock);
+			goto err;
+		}
+	}
+
+	return 0;
+
+err:
+	for (i = 0; i < idx; i++)
+	{
+		eaf_compat_sem_post(&g_eaf_ctx->group.table[i]->msgq.sem);
+
+		eaf_compat_thread_exit(&g_eaf_ctx->group.table[i]->working);
+		eaf_compat_sem_exit(&g_eaf_ctx->group.table[i]->msgq.sem);
+		eaf_compat_lock_exit(&g_eaf_ctx->group.table[i]->objlock);
+	}
+
+	return -1;
+}
+
+static void _eaf_load_fix_state(void)
+{
+	size_t i, j;
+	for (i = 0; i < g_eaf_ctx->group.size; i++)
+	{
+		eaf_group_t* group = g_eaf_ctx->group.table[i];
+
+		eaf_compat_lock_enter(&group->objlock);
+		for (j = 0; j < group->service.size; j++)
+		{
+			eaf_service_t* service = &group->service.table[j];
+
+			/* If no entry, service is dead */
+			if (service->entry == NULL)
+			{
+				_eaf_service_set_state_nolock(group, service, eaf_service_state_exit1);
+				continue;
+			}
+
+			/* If lazyload was set, do not initialize */
+			if (service->mask.lazyload)
+			{
+				_eaf_service_set_state_nolock(group, service, eaf_service_state_init2);
+				continue;
+			}
+
+			/* In normal condition, service will do initialize */
+			_eaf_service_set_state_nolock(group, service, eaf_service_state_init1);
+		}
+		eaf_compat_lock_leave(&group->objlock);
+	}
+}
+
+int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
+{
+	if (g_eaf_ctx != NULL)
+	{
+		return eaf_errno_duplicate;
+	}
+
+	g_eaf_ctx = EAF_CALLOC(1, _eaf_init_calculate_malloc_size(info, size));
 	if (g_eaf_ctx == NULL)
 	{
 		return eaf_errno_memory;
@@ -945,72 +1044,18 @@ int eaf_init(_In_ const eaf_group_table_t* info, _In_ size_t size)
 		return eaf_errno_unknown;
 	}
 
-	/* fix address */
-	g_eaf_ctx->group.size = size;
-	g_eaf_ctx->group.table = (eaf_group_t**)(g_eaf_ctx + 1);
-	g_eaf_ctx->group.table[0] = (eaf_group_t*)((char*)g_eaf_ctx->group.table + sizeof(eaf_group_t*) * size);
-	for (i = 1; i < size; i++)
+	/* Fix address */
+	_eaf_init_fix_address(info, size);
+
+	/* Initialize */
+	if (_eaf_init_group(info, size) < 0)
 	{
-		g_eaf_ctx->group.table[i] = (eaf_group_t*)
-			((char*)g_eaf_ctx->group.table[i - 1] + sizeof(eaf_group_t) + sizeof(eaf_service_t) * info[i - 1].service.size);
-	}
-
-	/* initialize resource */
-	size_t init_idx;	// Initialize index
-	for (init_idx = 0; init_idx < size; init_idx++)
-	{
-		g_eaf_ctx->group.table[init_idx]->index = init_idx;
-		g_eaf_ctx->group.table[init_idx]->service.size = info[init_idx].service.size;
-		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list);
-		eaf_list_init(&g_eaf_ctx->group.table[init_idx]->coroutine.wait_list);
-		if (eaf_compat_lock_init(&g_eaf_ctx->group.table[init_idx]->objlock, eaf_lock_attr_normal) < 0)
-		{
-			goto err;
-		}
-		if (eaf_compat_sem_init(&g_eaf_ctx->group.table[init_idx]->msgq.sem, 0) < 0)
-		{
-			eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
-			goto err;
-		}
-
-		if (eaf_compat_thread_init(&g_eaf_ctx->group.table[init_idx]->working, &info[init_idx].attr,
-			_eaf_service_thread, g_eaf_ctx->group.table[init_idx]) < 0)
-		{
-			eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
-			eaf_compat_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
-			goto err;
-		}
-
-		size_t idx;
-		for (idx = 0; idx < info[init_idx].service.size; idx++)
-		{
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].mask.alive =
-				!!(info[init_idx].service.table[idx].attribute & eaf_service_attribute_alive);
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.local.id =
-				info[init_idx].service.table[idx].srv_id;
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.capacity =
-				info[init_idx].service.table[idx].msgq_size;
-			eaf_list_init(&g_eaf_ctx->group.table[init_idx]->service.table[idx].msgq.queue);
-
-			/* by default, service should in init0 state */
-			g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.local.state = eaf_service_state_init;
-			eaf_list_push_back(&g_eaf_ctx->group.table[init_idx]->coroutine.busy_list,
-				&g_eaf_ctx->group.table[init_idx]->service.table[idx].runtime.node);
-		}
+		goto err;
 	}
 
 	return eaf_errno_success;
 
 err:
-	for (i = 0; i < init_idx; i++)
-	{
-		eaf_compat_sem_post(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
-
-		eaf_compat_thread_exit(&g_eaf_ctx->group.table[init_idx]->working);
-		eaf_compat_sem_exit(&g_eaf_ctx->group.table[init_idx]->msgq.sem);
-		eaf_compat_lock_exit(&g_eaf_ctx->group.table[init_idx]->objlock);
-	}
-
 	eaf_thread_storage_exit(&g_eaf_ctx->tls);
 	eaf_compat_sem_exit(&g_eaf_ctx->ready);
 
@@ -1030,7 +1075,10 @@ int eaf_load(void)
 
 	_eaf_hook_load_before();
 
-	/* start all thread */
+	/* Fix initialize state */
+	_eaf_load_fix_state();
+
+	/* Start all thread */
 	g_eaf_ctx->state = eaf_ctx_state_busy;
 	for (i = 0; i < g_eaf_ctx->group.size; i++)
 	{
@@ -1043,7 +1091,7 @@ int eaf_load(void)
 		eaf_compat_sem_pend(&g_eaf_ctx->ready, EAF_COMPAT_SEM_INFINITY);
 	}
 
-	int ret = g_eaf_ctx->mask.init_failure ? eaf_errno_state : eaf_errno_success;
+	int ret = g_eaf_ctx->mask.failure ? eaf_errno_state : eaf_errno_success;
 	_eaf_hook_load_after(ret);
 
 	return ret;
@@ -1202,10 +1250,6 @@ int eaf_resume(_In_ uint32_t srv_id)
 			_eaf_service_set_state_nolock(group, service, eaf_service_state_busy);
 			break;
 
-		case eaf_service_state_init_yield:
-			_eaf_service_set_state_nolock(group, service, eaf_service_state_init);
-			break;
-
 		default:
 			ret = eaf_errno_state;
 			break;
@@ -1213,7 +1257,10 @@ int eaf_resume(_In_ uint32_t srv_id)
 	} while (0);
 	eaf_compat_lock_leave(&group->objlock);
 
-	eaf_compat_sem_post(&group->msgq.sem);
+	if (ret == eaf_errno_success)
+	{
+		eaf_compat_sem_post(&group->msgq.sem);
+	}
 
 	return ret;
 }

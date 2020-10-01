@@ -24,7 +24,7 @@ static void _test_timer_on_rsp(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	eaf_sem_post(s_test_timer_delay_ctx.s_timer_sem);
 }
 
-static int _test_timer_on_init(void)
+static void _test_timer_on_init(void)
 {
 	eaf_time_getclock(&s_test_timer_delay_ctx.s_timer_start);
 
@@ -35,8 +35,6 @@ static int _test_timer_on_init(void)
 		}
 	);
 	ASSERT_EQ_D32(ret, 0);
-
-	return 0;
 }
 
 TEST_FIXTURE_SETUP(powerpack_timer)

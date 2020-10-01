@@ -213,10 +213,9 @@ static void _timer_on_req_delay(uint32_t from, uint32_t to, eaf_msg_t* msg)
 	return;
 }
 
-static int _timer_on_init(void)
+static void _timer_on_init(void)
 {
 	g_timer_ctx.mask.looping = 1;
-	return 0;
 }
 
 static void _timer_on_exit(void)
