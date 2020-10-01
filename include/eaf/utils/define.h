@@ -238,6 +238,12 @@ extern "C" {
 #define _Outptr_opt_
 
 /**
+ * @brief Parameter must not be null, and in the post-state the pointed-to location can be
+ *   null.
+ */
+#define _Outptr_result_maybenull_
+
+/**
  * @brief Parameter may be null, and in the post-state the pointed-to location can be
  *   null.
  */
