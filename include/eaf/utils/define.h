@@ -190,7 +190,12 @@ extern "C" {
  */
 /**@{*/
 #if defined(_MSC_VER)
-#include <sal.h>
+#	include <sal.h>
+#	if _MSC_VER < 1400
+#		define _Printf_format_string_	/* nothing */
+#	elif _MSC_VER == 1400
+#		define _Printf_format_string_	__format_string
+#	endif
 #else
 
 /**

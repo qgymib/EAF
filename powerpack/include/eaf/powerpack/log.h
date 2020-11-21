@@ -191,13 +191,14 @@ typedef void(*eaf_log_callback_fn)(_In_ const eaf_log_info_t* info,
  */
 void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	_In_ const char* func, _In_ int line, _In_ const char* mod,
-	_In_ const char* fmt, ...);
+	_In_ _Printf_format_string_ const char* fmt, ...)
+	EAF_ATTRIBUTE_FORMAT_PRINTF(6, 7);
 
 /**
  * @brief Set log level
  * @param[in] level		Log level
  */
-void eaf_log_set_level(eaf_log_level_t level);
+void eaf_log_set_level(_In_ eaf_log_level_t level);
 
 /**
  * @brief Get current filter level

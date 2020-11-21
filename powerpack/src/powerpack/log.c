@@ -101,7 +101,7 @@ static void _log_direct(const eaf_log_info_t* info, const char* fmt, va_list ap)
 
 void eaf_log(_In_ eaf_log_level_t level, _In_ const char* file,
 	_In_ const char* func, _In_ int line, _In_ const char* mod,
-	_In_ const char* fmt, ...)
+	_In_ _Printf_format_string_ const char* fmt, ...)
 {
 	eaf_log_info_t info;
 	info.file = file;
@@ -179,7 +179,7 @@ void eaf_log_exit(void)
 	_log_reset_default_config();
 }
 
-void eaf_log_set_level(eaf_log_level_t level)
+void eaf_log_set_level(_In_ eaf_log_level_t level)
 {
 	g_eaf_log_ctx.filter_level = level;
 }
