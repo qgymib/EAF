@@ -13,7 +13,7 @@ extern "C" {
 /**
  * @berif The number of milliseconds in one second
  */
-#define MSEC_IN_SEC		(1000)
+#define MSEC_IN_SEC		(1 * 1000)
 
 /**
  * @berif The number of microseconds in one second

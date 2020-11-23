@@ -14,85 +14,13 @@ extern "C" {
  */
 
 #include "eaf/eaf.h"
+#include "eaf/powerpack/time.h"
 #include "eaf/powerpack/define.h"
 
 /**
  * @brief WatchDog Service ID
  */
 #define EAF_WATCHDOG_ID					(0x00020000)
-
-/**
- * @ingroup PowerPack-WatchDog
- * @defgroup PowerPack-WatchDog-Register Register
- * @{
- */
-
-/**
- * @brief Request ID for watchdog message: register
- */
-#define EAF_WATCHDOG_MSG_REGISTER_REQ	(EAF_WATCHDOG_ID + 0x0001)
-/**
- * @brief Request for watchdog message: register
- */
-typedef struct eaf_watchdog_register_req
-{
-	uint32_t		id;			/**< Unique ID, typically your Service ID */
-
-	/**
-	* Timeout in milliseconds.
-	* + If non-zero, user must send #EAF_WATCHDOG_MSG_HEARTBEAT_REQ to watchdog
-	*   within `timeout', otherwise will trigger reboot.
-	*/
-	uint32_t		timeout;
-}eaf_watchdog_register_req_t;
-/**
- * @brief Response ID for watchdog message: register
- */
-#define EAF_WATCHDOG_MSG_REGISTER_RSP	EAF_WATCHDOG_MSG_REGISTER_REQ
-/**
- * @brief Response for watchdog message: register
- */
-typedef struct eaf_watchdog_register_rsp
-{
-	int32_t			ret;		/**< Result */
-}eaf_watchdog_register_rsp_t;
-
-/**
- * @}
- */
-
-/**
- * @ingroup PowerPack-WatchDog
- * @defgroup PowerPack-WatchDog-UnRegister UnRegister
- * @{
- */
-
-/**
- * @brief Request ID for watchdog message: unregister
- */
-#define EAF_WATCHDOG_MSG_UNREGISTER_REQ		(EAF_WATCHDOG_ID + 0x0002)
-/**
- * @brief Request for watchdog message: unregister
- */
-typedef struct eaf_watchdog_unregister_req
-{
-	uint32_t		id;			/**< Unique ID */
-}eaf_watchdog_unregister_req_t;
-/**
- * @brief Response ID for watchdog message: unregister
- */
-#define EAF_WATCHDOG_MSG_UNREGISTER_RSP		EAF_WATCHDOG_MSG_UNREGISTER_REQ
-/**
- * @brief Response for watchdog message: unregister
- */
-typedef struct eaf_watchdog_unregister_rsp
-{
-	int32_t			ret;		/**< Result */
-}eaf_watchdog_unregister_rsp_t;
-
-/**
- * @}
- */
 
 /**
  * @ingroup PowerPack-WatchDog
@@ -109,7 +37,12 @@ typedef struct eaf_watchdog_unregister_rsp
  */
 typedef struct eaf_watchdog_heartbeat_req
 {
-	uint32_t		id;			/**< Unique ID */
+	/**
+	 * Service will be consider as abnormal if response was not handled by watchdog
+	 * before `threshold'.
+	 * @see eaf_time_getclock()
+	 */
+	eaf_clock_time_t	threshold;
 }eaf_watchdog_heartbeat_req_t;
 /**
  * @brief Response ID for watchdog message: heartbeat
@@ -120,7 +53,7 @@ typedef struct eaf_watchdog_heartbeat_req
  */
 typedef struct eaf_watchdog_heartbeat_rsp
 {
-	int32_t			ret;		/**< Result */
+	int32_t				ret;			/**< Result */
 }eaf_watchdog_heartbeat_rsp_t;
 
 /**
@@ -129,18 +62,32 @@ typedef struct eaf_watchdog_heartbeat_rsp
 
 /**
  * @brief WatchDog timeout callback
- * @param[in] id		Unique ID
+ * @param[in] sid		Service ID
  * @param[in,out] arg	User defined argument
  */
-typedef void(*eaf_watchdog_on_error_fn)(_In_ uint32_t id, _Inout_opt_ void* arg);
+typedef void(*eaf_watchdog_on_error_fn)(_In_ uint32_t sid, _Inout_opt_ void* arg);
+
+typedef struct eaf_watchdog_watch_list
+{
+	uint32_t		sid;			/**< Service ID */
+	uint32_t		interval;		/**< The time between two heartbeat query in millisecond */
+	uint32_t		timeout;		/**< The timeout of heartbeat response in millisecond */
+	uint32_t		jitter;			/**< The number of EXTRA continuous timeout for the service allowed.
+									     Additionally, if response was not received in `jitter * timeout`,
+										 the timeout callback will also be called */
+}eaf_watchdog_watch_list_t;
 
 /**
  * @brief Initialize WatchDog
+ * @param[in] table		The services need to watch. This value must be globally
+ *                      accessable and cannot be freed until watchdog exit.
+ * @param[in] size		Table size
  * @param[in] fn		WatchDog timeout callback
  * @param[in,out] arg	User defined argument
  * @return				#eaf_errno
  */
-int eaf_watchdog_init(_In_ eaf_watchdog_on_error_fn fn, _Inout_opt_ void* arg);
+int eaf_watchdog_init(_In_ const eaf_watchdog_watch_list_t* table, _In_ size_t size,
+	_In_ eaf_watchdog_on_error_fn fn, _Inout_opt_ void* arg);
 
 /**
  * @brief Exit Watchdog

@@ -1,96 +1,131 @@
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "eaf/eaf.h"
 #include "eaf/powerpack/time.h"
 #include "eaf/powerpack/timer.h"
+#include "eaf/powerpack/log.h"
 #include "watchdog.h"
 
 #define WATCHDOG_TIMER_INTERVAL		100
 
-static int _watchdog_on_cmp_record(const eaf_map_node_t*, const eaf_map_node_t*, void*);
-static int _watchdog_on_cmp_timeout(const eaf_map_node_t*, const eaf_map_node_t*, void*);
+#define MODULE						"watchdog"
+#define LOG_WARN(fmt, ...)			EAF_LOG_WARN(MODULE, fmt, ##__VA_ARGS__)
+
+static int _watchdog_on_cmp_begin(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
+static int _watchdog_on_cmp_end(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
+static int _watchdog_on_cmp_token(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg);
 
 typedef struct eaf_watchdog_record
 {
-	eaf_map_node_t					node_timeout;
-	eaf_map_node_t					node_record;
+	eaf_map_node_t							n_stack;
+	eaf_map_node_t							n_table;
+
 	struct
 	{
-		uint32_t					id;			/**< ID */
-		uint32_t					timeout;	/**< Timeout in milliseconds */
-		eaf_clock_time_t			timestamp;	/**< Active time */
+		eaf_clock_time_t					begin;		/**< The timestamp when heartbeat request is send */
+		eaf_clock_time_t					end;		/**< The timestamp when heartbeat response should received */
+		size_t								cerrc;		/**< Continuous error count */
+		int									token;		/**< UUID */
+		const eaf_watchdog_watch_list_t*	rec;		/**< Watch record */
 	}data;
 }eaf_watchdog_record_t;
 
 typedef struct eaf_watchdog_ctx
 {
-	eaf_map_t						record_table;
-	eaf_map_t						timeout_table;
+	/**
+	 * Heartbeat request is going to send
+	 * Sort by following field:
+	 * + data.start
+	 * + data.rec.sid
+	 */
+	eaf_map_t								idle_stack;
+
+	/**
+	 * Heartbeat request was sent but not receive response yet.
+	 * Sort by following field:
+	 * + data.start
+	 * + data.rec
+	 */
+	eaf_map_t								busy_stack;
+
+	/**
+	 * Heartbeat request was sent but not receive response yet.
+	 * Sort by following field:
+	 * + data.token
+	 */
+	eaf_map_t								busy_table;
 
 	struct
 	{
-		eaf_watchdog_on_error_fn	fn;
-		void*						arg;
+		eaf_watchdog_record_t*				records;
+		size_t								size;
+	}data;
+
+	struct
+	{
+		eaf_watchdog_on_error_fn			fn;
+		void*								arg;
 	}cb;
 }eaf_watchdog_ctx_t;
 
 static eaf_watchdog_ctx_t g_watchdog_ctx = {
-	EAF_MAP_INITIALIZER(_watchdog_on_cmp_record, NULL),
-	EAF_MAP_INITIALIZER(_watchdog_on_cmp_timeout, NULL),
-	{ NULL, NULL },
+	EAF_MAP_INITIALIZER(_watchdog_on_cmp_begin, NULL),
+	EAF_MAP_INITIALIZER(_watchdog_on_cmp_end, NULL),
+	EAF_MAP_INITIALIZER(_watchdog_on_cmp_token, NULL),
+	{ NULL, 0 }, { NULL, NULL },
 };
 
-static int _watchdog_on_cmp_record(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
+static int _watchdog_on_cmp_begin(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
 {
-	(void)arg;
-	eaf_watchdog_record_t* rec_1 = EAF_CONTAINER_OF(key1, eaf_watchdog_record_t, node_record);
-	eaf_watchdog_record_t* rec_2 = EAF_CONTAINER_OF(key2, eaf_watchdog_record_t, node_record);
-	if (rec_1->data.id == rec_2->data.id)
-	{
-		return 0;
-	}
-	return rec_1->data.id < rec_2->data.id ? -1 : 1;
-}
-
-static int _watchdog_on_cmp_timeout(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
-{
-	(void)arg;
-	eaf_watchdog_record_t* rec_1 = EAF_CONTAINER_OF(key1, eaf_watchdog_record_t, node_timeout);
-	eaf_watchdog_record_t* rec_2 = EAF_CONTAINER_OF(key2, eaf_watchdog_record_t, node_timeout);
+	EAF_SUPPRESS_UNUSED_VARIABLE(arg);
+	eaf_watchdog_record_t* rec_1 = EAF_CONTAINER_OF(key1, eaf_watchdog_record_t, n_stack);
+	eaf_watchdog_record_t* rec_2 = EAF_CONTAINER_OF(key2, eaf_watchdog_record_t, n_stack);
 
 	/* compare timestamp */
 	int ret;
-	if ((ret = eaf_time_diffclock(&rec_1->data.timestamp, &rec_2->data.timestamp, NULL)) != 0)
+	if ((ret = eaf_time_diffclock(&rec_1->data.begin, &rec_2->data.begin, NULL)) != 0)
 	{
 		return ret;
 	}
 
-	/* compare id */
-	if (rec_1->data.id == rec_2->data.id)
+	/* compare sid */
+	if (rec_1->data.rec->sid == rec_2->data.rec->sid)
 	{
 		return 0;
 	}
-	return rec_1->data.id < rec_2->data.id ? -1 : 1;
+	return rec_1->data.rec->sid < rec_2->data.rec->sid ? -1 : 1;
 }
 
-static void _watchdog_send_response_register(uint32_t to, eaf_msg_t* req, int32_t ret)
+static int _watchdog_on_cmp_end(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
 {
-	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(eaf_watchdog_register_rsp_t));
-	assert(rsp != NULL);
-	((eaf_watchdog_register_rsp_t*)eaf_msg_get_data(rsp, NULL))->ret = ret;
-	eaf_send_rsp(EAF_WATCHDOG_ID, to, rsp);
-	eaf_msg_dec_ref(rsp);
+	EAF_SUPPRESS_UNUSED_VARIABLE(arg);
+	eaf_watchdog_record_t* rec_1 = EAF_CONTAINER_OF(key1, eaf_watchdog_record_t, n_stack);
+	eaf_watchdog_record_t* rec_2 = EAF_CONTAINER_OF(key2, eaf_watchdog_record_t, n_stack);
+
+	/* compare timestamp */
+	int ret;
+	if ((ret = eaf_time_diffclock(&rec_1->data.end, &rec_2->data.end, NULL)) != 0)
+	{
+		return ret;
+	}
+
+	/* compare rec */
+	if (rec_1->data.rec == rec_2->data.rec)
+	{
+		return 0;
+	}
+	return rec_1->data.rec < rec_2->data.rec ? -1 : 1;
 }
 
-static void _watchdog_send_response_unregister(uint32_t to, eaf_msg_t* req, int32_t ret)
+static int _watchdog_on_cmp_token(const eaf_map_node_t* key1, const eaf_map_node_t* key2, void* arg)
 {
-	eaf_msg_t* rsp = eaf_msg_create_rsp(req, sizeof(eaf_watchdog_unregister_rsp_t));
-	assert(rsp != NULL);
+	EAF_SUPPRESS_UNUSED_VARIABLE(arg);
+	eaf_watchdog_record_t* rec_1 = EAF_CONTAINER_OF(key1, eaf_watchdog_record_t, n_table);
+	eaf_watchdog_record_t* rec_2 = EAF_CONTAINER_OF(key2, eaf_watchdog_record_t, n_table);
 
-	((eaf_watchdog_unregister_rsp_t*)eaf_msg_get_data(rsp, NULL))->ret = ret;
-	eaf_send_rsp(EAF_WATCHDOG_ID, to, rsp);
-	eaf_msg_dec_ref(rsp);
+	return rec_1->data.token - rec_2->data.token;
 }
 
 static void _watchdog_send_response_heartbeat(uint32_t to, eaf_msg_t* req, int32_t ret)
@@ -103,159 +138,139 @@ static void _watchdog_send_response_heartbeat(uint32_t to, eaf_msg_t* req, int32
 	eaf_msg_dec_ref(rsp);
 }
 
-static void _watchdog_set_timestamp(eaf_clock_time_t* t, uint32_t ms)
+static void _watchdog_check_busy(const eaf_clock_time_t* current_timestamp)
 {
-	t->tv_sec = ms / 1000;
-	t->tv_usec = (ms - (uint32_t)t->tv_sec * 1000) * 1000;
+	eaf_map_node_t* it = eaf_map_begin(&g_watchdog_ctx.busy_stack);
+	for (; it != NULL; it = eaf_map_next(it))
+	{
+		eaf_watchdog_record_t* record = EAF_CONTAINER_OF(it, eaf_watchdog_record_t, n_stack);
+		if (eaf_time_diffclock(current_timestamp, &record->data.end, NULL) < 0)
+		{
+			return;
+		}
+
+		eaf_clock_time_t cmp = record->data.end;
+		eaf_time_addclock_msec(&cmp, record->data.rec->timeout * record->data.rec->jitter);
+		if (eaf_time_diffclock(&record->data.end, &cmp, NULL) > 0)
+		{
+			g_watchdog_ctx.cb.fn(record->data.rec->sid, g_watchdog_ctx.cb.arg);
+		}
+	}
 }
 
-static void _watchdog_calculate_timeout(eaf_watchdog_record_t* record)
+static eaf_watchdog_record_t* _watchdog_find_record_by_token(int token)
+{
+	eaf_watchdog_record_t tmp_key; tmp_key.data.token = token;
+	eaf_map_node_t* it = eaf_map_find(&g_watchdog_ctx.busy_table, &tmp_key.n_table);
+	return it != NULL ? EAF_CONTAINER_OF(it, eaf_watchdog_record_t, n_table) : NULL;
+}
+
+static void _watchdog_on_heartbeat_rsp(_In_ uint32_t from, _In_ uint32_t to, _Inout_ eaf_msg_t* msg)
+{
+	int ret; EAF_SUPPRESS_UNUSED_VARIABLE(ret, from, to);
+
+	int token = eaf_msg_get_token(msg);
+	eaf_watchdog_record_t* record = _watchdog_find_record_by_token(token);
+	assert(record != NULL);
+
+	/* Remove from busy table */
+	eaf_map_erase(&g_watchdog_ctx.busy_table, &record->n_table);
+	eaf_map_erase(&g_watchdog_ctx.busy_stack, &record->n_stack);
+
+	/* Check whether timeout */
+	ret = eaf_time_getclock(&record->data.begin);
+	assert(ret == 0);
+
+	if (eaf_time_diffclock(&record->data.begin, &record->data.end, NULL) > 0)
+	{/* If current time is larger than end time, it means timeout */
+		record->data.cerrc++;
+	}
+	else
+	{/* Other wise clear error counter */
+		record->data.cerrc = 0;
+	}
+
+	/* If there is too many error, report */
+	if (record->data.cerrc > record->data.rec->jitter)
+	{
+		g_watchdog_ctx.cb.fn(record->data.rec->sid, g_watchdog_ctx.cb.arg);
+	}
+
+	/* Re-calculate start time */
+	eaf_time_addclock_msec(&record->data.begin, record->data.rec->interval);
+
+	/* Insert into idle table */
+	ret = eaf_map_insert(&g_watchdog_ctx.idle_stack, &record->n_stack);
+	assert(ret == 0);
+}
+
+static int _watchdog_send_request(eaf_watchdog_record_t* record)
+{
+	eaf_msg_t* req = eaf_msg_create_req(EAF_WATCHDOG_MSG_HEARTBEAT_REQ, sizeof(eaf_watchdog_heartbeat_req_t), _watchdog_on_heartbeat_rsp);
+	assert(req != NULL);
+
+	((eaf_watchdog_heartbeat_req_t*)eaf_msg_get_data(req, NULL))->threshold = record->data.end;
+	eaf_msg_set_token(req, record->data.token);
+
+	int ret = eaf_send_req(EAF_WATCHDOG_ID, record->data.rec->sid, req);
+	eaf_msg_dec_ref(req);
+
+	return ret;
+}
+
+static void _watchdog_check_idle(const eaf_clock_time_t* current_timestamp)
 {
 	int ret; EAF_SUPPRESS_UNUSED_VARIABLE(ret);
 
-	ret = eaf_time_getclock(&record->data.timestamp);
-	assert(ret == 0);
+	eaf_map_node_t* it = eaf_map_begin(&g_watchdog_ctx.idle_stack);
+	while (it != NULL)
+	{
+		eaf_watchdog_record_t* record = EAF_CONTAINER_OF(it, eaf_watchdog_record_t, n_stack);
+		if (eaf_time_diffclock(current_timestamp, &record->data.begin, NULL) < 0)
+		{
+			return;
+		}
 
-	eaf_clock_time_t timeout;
-	_watchdog_set_timestamp(&timeout, record->data.timeout);
+		/* Remove record from idle_map */
+		eaf_map_node_t* tmp = it;
+		it = eaf_map_next(it);
+		eaf_map_erase(&g_watchdog_ctx.idle_stack, tmp);
 
-	/* calculate dead time */
-	eaf_time_addclock(&record->data.timestamp, &timeout);
+		/* Re-calculate end time */
+		eaf_clock_time_t dif = { 0,0 };
+		eaf_time_addclock_msec(&dif, record->data.rec->timeout);
+		record->data.begin = *current_timestamp;
+		eaf_time_addclock_ext(&record->data.end, &record->data.begin, &dif, EAF_TIME_IGNORE_OVERFLOW);
+
+		/* If request send failed, no need to watch this service */
+		if (_watchdog_send_request(record) < 0)
+		{
+			LOG_WARN("send heartbeat to sid(0x%08" PRIx32 ") failed", record->data.rec->sid);
+			continue;
+		}
+
+		ret = eaf_map_insert(&g_watchdog_ctx.busy_stack, &record->n_stack);
+		assert(ret == 0);
+		ret = eaf_map_insert(&g_watchdog_ctx.busy_table, &record->n_table);
+		assert(ret == 0);
+	}
 }
 
 static void _watchdog_on_timer(uint32_t from, uint32_t to, struct eaf_msg* msg)
 {
-	EAF_SUPPRESS_UNUSED_VARIABLE(from, to, msg);
-
-	/* Require timer delay */
-	int ret; EAF_SUPPRESS_UNUSED_VARIABLE(ret);
-	EAF_TIMER_DELAY(ret, EAF_WATCHDOG_ID, _watchdog_on_timer, WATCHDOG_TIMER_INTERVAL);
-
-	/* Get the oldest timer in timer stack */
-	eaf_map_node_t* it = eaf_map_begin(&g_watchdog_ctx.timeout_table);
-	if (it == NULL)
-	{
-		return;
-	}
+	int ret;
+	EAF_SUPPRESS_UNUSED_VARIABLE(ret, from, to, msg);
 
 	/* Get current time */
-	eaf_clock_time_t current_time;
-	ret = eaf_time_getclock(&current_time);
+	eaf_clock_time_t current_timestamp;
+	ret = eaf_time_getclock(&current_timestamp);
 	assert(ret == 0);
 
-	/* Check timestamp */
-	eaf_watchdog_record_t* record = EAF_CONTAINER_OF(it, eaf_watchdog_record_t, node_timeout);
-	if (eaf_time_diffclock(&record->data.timestamp, &current_time, NULL) > 0)
-	{
-		return;
-	}
+	_watchdog_check_idle(&current_timestamp);
+	_watchdog_check_busy(&current_timestamp);
 
-	g_watchdog_ctx.cb.fn(record->data.id, g_watchdog_ctx.cb.arg);
-}
-
-static void _watchdog_register_heartbeat(eaf_watchdog_record_t* record)
-{
-	_watchdog_calculate_timeout(record);
-
-	if (eaf_map_insert(&g_watchdog_ctx.timeout_table, &record->node_timeout) < 0)
-	{// should not fail
-		assert(0);
-	}
-}
-
-static void _watchdog_on_req_register(uint32_t from, uint32_t to, struct eaf_msg* msg)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(to);
-
-	int ret;
-	eaf_watchdog_register_req_t* req = eaf_msg_get_data(msg, NULL);
-
-	eaf_watchdog_record_t* record = malloc(sizeof(eaf_watchdog_record_t));
-	assert(record != NULL);
-
-	memset(&record->data, 0, sizeof(record->data));
-	record->data.id = req->id;
-	record->data.timeout = req->timeout;
-
-	/* save record */
-	if ((ret = eaf_map_insert(&g_watchdog_ctx.record_table, &record->node_record)) < 0)
-	{
-		ret = eaf_errno_duplicate;
-		goto err_duplicate;
-	}
-
-	if (record->data.timeout != 0)
-	{
-		_watchdog_register_heartbeat(record);
-	}
-
-	_watchdog_send_response_register(from, msg, eaf_errno_success);
-	return;
-
-err_duplicate:
-	_watchdog_send_response_register(from, msg, ret);
-	free(record);
-	return;
-}
-
-static eaf_watchdog_record_t* _watchdog_find_record(uint32_t id)
-{
-	eaf_watchdog_record_t tmp;
-	tmp.data.id = id;
-
-	eaf_map_node_t* it = eaf_map_find(&g_watchdog_ctx.record_table, &tmp.node_record);
-	if (it == NULL)
-	{
-		return NULL;
-	}
-
-	return EAF_CONTAINER_OF(it, eaf_watchdog_record_t, node_record);
-}
-
-static void _watchdog_on_req_unregister(uint32_t from, uint32_t to, struct eaf_msg* msg)
-{
-	EAF_SUPPRESS_UNUSED_VARIABLE(to);
-	eaf_watchdog_record_t* record =
-		_watchdog_find_record(((eaf_watchdog_unregister_req_t*)eaf_msg_get_data(msg, NULL))->id);
-	if (record == NULL)
-	{
-		_watchdog_send_response_unregister(from, msg, eaf_errno_notfound);
-		return;
-	}
-
-	eaf_map_erase(&g_watchdog_ctx.record_table, &record->node_record);
-	if (record->data.timeout != 0)
-	{
-		eaf_map_erase(&g_watchdog_ctx.timeout_table, &record->node_timeout);
-	}
-
-	free(record);
-	_watchdog_send_response_unregister(from, msg, eaf_errno_success);
-}
-
-static void _watchdog_on_req_heartbeat(uint32_t from, uint32_t to, struct eaf_msg* msg)
-{
-	(void)to;
-	uint32_t id = ((eaf_watchdog_heartbeat_req_t*)eaf_msg_get_data(msg, NULL))->id;
-	eaf_watchdog_record_t* record = _watchdog_find_record(id);
-	if (record == NULL)
-	{
-		_watchdog_send_response_heartbeat(from, msg, eaf_errno_notfound);
-		return;
-	}
-
-	if (record->data.timeout == 0)
-	{
-		g_watchdog_ctx.cb.fn(id, g_watchdog_ctx.cb.arg);
-		return;
-	}
-
-	/* resort */
-	eaf_map_erase(&g_watchdog_ctx.timeout_table, &record->node_timeout);
-	_watchdog_calculate_timeout(record);
-	eaf_map_insert(&g_watchdog_ctx.timeout_table, &record->node_timeout);
-
-	_watchdog_send_response_heartbeat(from, msg, eaf_errno_success);
+	/* Require timer delay */
+	EAF_TIMER_DELAY(ret, EAF_WATCHDOG_ID, _watchdog_on_timer, WATCHDOG_TIMER_INTERVAL);
 }
 
 static void _watchdog_on_init(void)
@@ -274,28 +289,88 @@ static void _watchdog_on_exit(void)
 	// do nothing
 }
 
-int eaf_watchdog_init(_In_ eaf_watchdog_on_error_fn fn, _Inout_opt_ void* arg)
+static void _watchdog_reset_callback(void)
 {
+	g_watchdog_ctx.cb.fn = NULL;
+	g_watchdog_ctx.cb.arg = NULL;
+}
+
+static void _watchdog_free_records(void)
+{
+	free(g_watchdog_ctx.data.records);
+	g_watchdog_ctx.data.records = NULL;
+	g_watchdog_ctx.data.size = 0;
+}
+
+static void _watchdog_cleanup_idle_stack(void)
+{
+	eaf_map_node_t* node = eaf_map_begin(&g_watchdog_ctx.idle_stack);
+	while (node != NULL)
+	{
+		eaf_map_node_t* tmp = node;
+		node = eaf_map_next(node);
+		eaf_map_erase(&g_watchdog_ctx.idle_stack, tmp);
+	}
+}
+
+static void _watchdog_cleanup_busy_stack(void)
+{
+	eaf_map_node_t* node = eaf_map_begin(&g_watchdog_ctx.busy_stack);
+	while (node != NULL)
+	{
+		eaf_map_node_t* tmp = node;
+		node = eaf_map_next(node);
+		eaf_map_erase(&g_watchdog_ctx.busy_stack, tmp);
+	}
+}
+
+int eaf_watchdog_init(_In_ const eaf_watchdog_watch_list_t* table, _In_ size_t size,
+	_In_ eaf_watchdog_on_error_fn fn, _Inout_opt_ void* arg)
+{
+	int i, ret;
 	if (g_watchdog_ctx.cb.fn != NULL)
 	{
 		return eaf_errno_duplicate;
 	}
 
-	static eaf_message_table_t msg_table[] = {
-		{ EAF_WATCHDOG_MSG_REGISTER_REQ, _watchdog_on_req_register },
-		{ EAF_WATCHDOG_MSG_UNREGISTER_REQ, _watchdog_on_req_unregister },
-		{ EAF_WATCHDOG_MSG_HEARTBEAT_REQ, _watchdog_on_req_heartbeat },
-	};
+	g_watchdog_ctx.data.records = calloc(size, sizeof(eaf_watchdog_record_t));
+	if (g_watchdog_ctx.data.records == NULL)
+	{
+		return eaf_errno_memory;
+	}
+	g_watchdog_ctx.data.size = size;
 
-	static eaf_entrypoint_t entry = {
-		EAF_ARRAY_SIZE(msg_table), msg_table,
+	for (i = 0; i < (int)size; i++)
+	{
+		g_watchdog_ctx.data.records[i].data.rec = &table[i];
+		g_watchdog_ctx.data.records[i].data.token = i;
+		if (eaf_map_insert(&g_watchdog_ctx.idle_stack, &g_watchdog_ctx.data.records[i].n_stack) < 0)
+		{
+			ret = eaf_errno_duplicate;
+			goto err_register;
+		}
+	}
+
+	static const eaf_entrypoint_t entry = {
+		0, NULL,
 		_watchdog_on_init,
 		_watchdog_on_exit,
 	};
 
 	g_watchdog_ctx.cb.fn = fn;
 	g_watchdog_ctx.cb.arg = arg;
-	return eaf_register(EAF_WATCHDOG_ID, &entry);
+	if ((ret = eaf_register(EAF_WATCHDOG_ID, &entry)) != eaf_errno_success)
+	{
+		goto err_register;
+	}
+
+	return ret;
+
+err_register:
+	_watchdog_cleanup_idle_stack();
+	_watchdog_free_records();
+	_watchdog_reset_callback();
+	return ret;
 }
 
 void eaf_watchdog_exit(void)
@@ -305,24 +380,11 @@ void eaf_watchdog_exit(void)
 		return;
 	}
 
-	eaf_map_node_t* it = eaf_map_begin(&g_watchdog_ctx.record_table);
-	while (it != NULL)
-	{
-		eaf_map_node_t* tmp = it;
-		it = eaf_map_next(it);
-		eaf_map_erase(&g_watchdog_ctx.record_table, tmp);
+	_watchdog_cleanup_idle_stack();
+	_watchdog_cleanup_busy_stack();
 
-		eaf_watchdog_record_t* record = EAF_CONTAINER_OF(tmp, eaf_watchdog_record_t, node_record);
-		eaf_map_erase(&g_watchdog_ctx.record_table, &record->node_record);
-		if (record->data.timeout != 0)
-		{
-			eaf_map_erase(&g_watchdog_ctx.timeout_table, &record->node_timeout);
-		}
-		free(record);
-	}
-
-	g_watchdog_ctx.cb.fn = NULL;
-	g_watchdog_ctx.cb.arg = NULL;
+	_watchdog_free_records();
+	_watchdog_reset_callback();
 
 	return;
 }

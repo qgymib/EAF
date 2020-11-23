@@ -224,54 +224,117 @@ int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 	return t1 == little_t ? -1 : 1;
 }
 
-int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src)
+int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* dif)
 {
-	/**
-	 * How to check overflow:
-	 * Consider two unsigned 32bits value: v1 and v2.
-	 * If (v1 + v2 < v1 || v1 + v2 < v2), then overflow happen.
-	 */
+	return eaf_time_addclock_ext(dst, dst, dif, 0);
+}
 
-	/* store result temporary */
-	eaf_clock_time_t tmp = *dst;
-
-	/* add seconds first */
-	tmp.tv_sec += src->tv_sec;
-	if (tmp.tv_sec < dst->tv_sec || tmp.tv_sec < src->tv_sec)
-	{// check overflow
-		return -1;
-	}
-
-	uint64_t extra_sec = 0;
-	/* format result microseconds */
+int eaf_time_fmtclock_ext(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src, int flags)
+{
+	eaf_clock_time_t tmp = *src;
 	while (tmp.tv_usec >= USEC_IN_SEC)
 	{
-		tmp.tv_usec -= USEC_IN_SEC;
-		extra_sec++;
-	}
-	/* format source microseconds */
-	uint32_t orig_usec = src->tv_usec;
-	while (orig_usec >= USEC_IN_SEC)
-	{
-		orig_usec -= USEC_IN_SEC;
-		extra_sec++;
-	}
-
-	/* now we can add microseconds */
-	tmp.tv_usec += orig_usec;
-	if (tmp.tv_usec >= USEC_IN_SEC)
-	{
-		extra_sec++;
+		tmp.tv_sec++;
 		tmp.tv_usec -= USEC_IN_SEC;
 	}
 
-	uint64_t orig_sec = tmp.tv_sec;
-	tmp.tv_sec += extra_sec;
-	if (tmp.tv_sec < orig_sec || tmp.tv_sec < extra_sec)
-	{// check overflow
-		return -1;
+	/* Check overflow */
+	int flag_overflow = !!(tmp.tv_sec < src->tv_sec);
+	if (flag_overflow && !(flags & EAF_TIME_IGNORE_OVERFLOW))
+	{
+		goto fin;
 	}
 
 	*dst = tmp;
-	return 0;
+
+fin:
+	return 0 - flag_overflow;
+}
+
+int eaf_time_addclock_ext(_Out_ eaf_clock_time_t* dst,
+	_In_ const eaf_clock_time_t* src, _In_ const eaf_clock_time_t* dif, int flags)
+{
+	int flag_overflow = 0;
+	eaf_clock_time_t tmp;
+
+	/* Copy src to tmp */
+	{
+		int step_overflow = eaf_time_fmtclock_ext(&tmp, src, flags);
+		flag_overflow += step_overflow;
+		if (step_overflow && !(flags & EAF_TIME_IGNORE_OVERFLOW))
+		{
+			goto fin;
+		}
+	}
+
+	/* Add seconds */
+	{
+		int step_overflow;
+
+		uint64_t tmp_sec = tmp.tv_sec;
+		tmp.tv_sec += dif->tv_sec;
+		step_overflow = tmp.tv_sec < tmp_sec;	/* Check overflow */
+		flag_overflow += step_overflow;
+		if (step_overflow && !(flags & EAF_TIME_IGNORE_OVERFLOW))
+		{
+			goto fin;
+		}
+	}
+
+	/* Convert microseconds to seconds */
+	{
+		int step_overflow;
+
+		uint64_t tmp_sec = tmp.tv_sec;
+		uint32_t tmp_usec = dif->tv_usec;
+		while (tmp_usec >= USEC_IN_SEC)
+		{
+			tmp_usec -= USEC_IN_SEC;
+			tmp.tv_sec++;
+		}
+
+		step_overflow = tmp.tv_sec < tmp_sec;
+		flag_overflow += step_overflow;
+		if (step_overflow && !(flags & EAF_TIME_IGNORE_OVERFLOW))
+		{
+			goto fin;
+		}
+		tmp.tv_usec += tmp_usec;
+	}
+
+	/* Fix microseconds */
+	{
+		int step_overflow;
+
+		uint64_t tmp_sec = tmp.tv_sec;
+		while (tmp.tv_usec >= USEC_IN_SEC)
+		{
+			tmp.tv_sec++;
+			tmp.tv_usec -= USEC_IN_SEC;
+		}
+
+		step_overflow = tmp.tv_sec < tmp_sec;
+		flag_overflow += step_overflow;
+		if (step_overflow && !(flags & EAF_TIME_IGNORE_OVERFLOW))
+		{
+			goto fin;
+		}
+	}
+
+	*dst = tmp;
+
+fin:
+	return 0 - !!flag_overflow;
+}
+
+int eaf_time_addclock_msec(_Inout_ eaf_clock_time_t* dst, _In_ uint64_t msec)
+{
+	eaf_clock_time_t tmp = { 0, 0 };
+	while (msec >= MSEC_IN_SEC)
+	{
+		msec -= MSEC_IN_SEC;
+		tmp.tv_sec++;
+	}
+	tmp.tv_usec = (uint32_t)(msec * 1000);
+	return eaf_time_addclock(dst, &tmp);
 }

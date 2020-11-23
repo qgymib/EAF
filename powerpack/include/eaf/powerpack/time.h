@@ -15,6 +15,8 @@ extern "C" {
 
 #include "eaf/eaf.h"
 
+#define EAF_TIME_IGNORE_OVERFLOW	(0x01 << 0x00)
+
 /**
  * @brief Clock time
  */
@@ -74,10 +76,53 @@ int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 /**
  * @brief Add `src' to `dst'.
  * @param[in,out] dst	Destination
- * @param[in] src		Source
+ * @param[in] dif		Source
  * @return				0: success; -1: overflow, and dst is not modified
  */
-int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src);
+int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* dif);
+
+/**
+ * @brief Add `src' with `dif' and store the result into `dst'.
+ *
+ * By default, the `dst' is left untouched if overflow will happen. But if
+ * `flags' contains #EAF_TIME_IGNORE_OVERFLOW, the `dst' still store the result,
+ * and -1 is returned.
+ *
+ * @note It is safe if `dst' and `src' point to the same location.
+ * @param[in] dst	Destination
+ * @param[in] src	Source
+ * @param[in] dif	The time need to add
+ * @param[in] flags	zero or following values:
+ *					+ #EAF_TIME_IGNORE_OVERFLOW
+ * @return			0 if overflow not happen, -1 if overflow occur
+ *
+ */
+int eaf_time_addclock_ext(_Out_ eaf_clock_time_t* dst,
+	_In_ const eaf_clock_time_t* src, _In_ const eaf_clock_time_t* dif, int flags);
+
+/**
+ * @brief Format `src' and store the result into `dst'
+ *
+ * By default, the `dst' is left untouched if overflow will happen. But if
+ * `flags' contains #EAF_TIME_IGNORE_OVERFLOW, `dst' still sotre the result,
+ * and -1 is returned.
+ *
+ * @note It is safe if `dst' and `src' point to the same location.
+ * @param[in] dst	Destination
+ * @param[in] src	Source
+ * @param[in] flags	zero or following values:
+ *					+ #EAF_TIME_IGNORE_OVERFLOW
+ * @return			0 if overflow not happen, -1 if overflow occur
+ */
+int eaf_time_fmtclock_ext(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src, int flags);
+
+/**
+ * @brief Add `dst' by `msec' millisecond(s)
+ * @param[in,out] dst	Destination
+ * @param[in] msec		millisecond(s)
+ * @return				0: success; -1: overflow, and dst is not modified
+ */
+int eaf_time_addclock_msec(_Inout_ eaf_clock_time_t* dst, _In_ uint64_t msec);
 
 /**
  * @}
