@@ -23,7 +23,7 @@ extern "C" {
 typedef struct eaf_clock_time
 {
 	uint64_t	tv_sec;		/**< second */
-	uint32_t	tv_usec;	/**< microsecond */
+	uint32_t	tv_nsec;	/**< nanosecond */
 }eaf_clock_time_t;
 
 /**

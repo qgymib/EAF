@@ -74,7 +74,7 @@ int eaf_time_get(_Out_ eaf_clock_time_t* tv)
 	}
 
 	tv->tv_sec = uv_tv.tv_sec;
-	tv->tv_usec = uv_tv.tv_usec;
+	tv->tv_nsec = uv_tv.tv_usec * 1000;
 
 	return eaf_errno_success;
 #endif
@@ -89,7 +89,7 @@ int eaf_time_get(_Out_ eaf_clock_time_t* tv)
 	ularge.LowPart = file_time.dwLowDateTime;
 	ularge.HighPart = file_time.dwHighDateTime;
 	tv->tv_sec = (int64_t)((ularge.QuadPart - epoch) / 10000000L);
-	tv->tv_usec = (int32_t)(((ularge.QuadPart - epoch) % 10000000L) / 10);
+	tv->tv_nsec = (int32_t)(((ularge.QuadPart - epoch) % 10000000L) * 100);
 	return 0;
 #else
 	struct timeval time;
@@ -99,7 +99,7 @@ int eaf_time_get(_Out_ eaf_clock_time_t* tv)
 	}
 
 	tv->tv_sec = (uint64_t)time.tv_sec;
-	tv->tv_usec = (uint32_t)time.tv_usec;
+	tv->tv_nsec = (uint32_t)time.tv_usec * 1000;
 	return 0;
 #endif
 }
@@ -177,7 +177,7 @@ int eaf_time_getclock(_Out_ eaf_clock_time_t* ts)
 	microseconds = (double)t.QuadPart / g_getclocktime_ctx.frequencyToMicroseconds;
 	t.QuadPart = (LONGLONG)microseconds;
 	ts->tv_sec = t.QuadPart / 1000000;
-	ts->tv_usec = t.QuadPart % 1000000;
+	ts->tv_nsec = (t.QuadPart % 1000000) * 1000;
 	return 0;
 
 #else
@@ -188,7 +188,7 @@ int eaf_time_getclock(_Out_ eaf_clock_time_t* ts)
 	}
 
 	ts->tv_sec = tmp_ts.tv_sec;
-	ts->tv_usec = tmp_ts.tv_nsec / 1000;
+	ts->tv_nsec = tmp_ts.tv_nsec;
 	return 0;
 #endif
 }
@@ -198,18 +198,18 @@ int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 {
 	eaf_clock_time_t tmp_dif;
 	const eaf_clock_time_t* large_t = (t1->tv_sec > t2->tv_sec) ?
-	t1 : (t1->tv_sec < t2->tv_sec ? t2 : (t1->tv_usec > t2->tv_usec ? t1 : t2));
+	t1 : (t1->tv_sec < t2->tv_sec ? t2 : (t1->tv_nsec > t2->tv_nsec ? t1 : t2));
 	const eaf_clock_time_t* little_t = large_t == t1 ? t2 : t1;
 
 	tmp_dif.tv_sec = large_t->tv_sec - little_t->tv_sec;
-	if (large_t->tv_usec < little_t->tv_usec)
+	if (large_t->tv_nsec < little_t->tv_nsec)
 	{
-		tmp_dif.tv_usec = little_t->tv_usec - large_t->tv_usec;
+		tmp_dif.tv_nsec = little_t->tv_nsec - large_t->tv_nsec;
 		tmp_dif.tv_sec--;
 	}
 	else
 	{
-		tmp_dif.tv_usec = large_t->tv_usec - little_t->tv_usec;
+		tmp_dif.tv_nsec = large_t->tv_nsec - little_t->tv_nsec;
 	}
 
 	if (diff != NULL)
@@ -217,7 +217,7 @@ int eaf_time_diffclock(_In_ const eaf_clock_time_t* t1,
 		*diff = tmp_dif;
 	}
 
-	if (tmp_dif.tv_sec == 0 && tmp_dif.tv_usec == 0)
+	if (tmp_dif.tv_sec == 0 && tmp_dif.tv_nsec == 0)
 	{
 		return 0;
 	}
@@ -232,10 +232,10 @@ int eaf_time_addclock(_Inout_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t
 int eaf_time_fmtclock_ext(_Out_ eaf_clock_time_t* dst, _In_ const eaf_clock_time_t* src, int flags)
 {
 	eaf_clock_time_t tmp = *src;
-	while (tmp.tv_usec >= USEC_IN_SEC)
+	while (tmp.tv_nsec >= NSEC_IN_SEC)
 	{
 		tmp.tv_sec++;
-		tmp.tv_usec -= USEC_IN_SEC;
+		tmp.tv_nsec -= NSEC_IN_SEC;
 	}
 
 	/* Check overflow */
@@ -286,10 +286,10 @@ int eaf_time_addclock_ext(_Out_ eaf_clock_time_t* dst,
 		int step_overflow;
 
 		uint64_t tmp_sec = tmp.tv_sec;
-		uint32_t tmp_usec = dif->tv_usec;
-		while (tmp_usec >= USEC_IN_SEC)
+		uint32_t tmp_nsec = dif->tv_nsec;
+		while (tmp_nsec >= NSEC_IN_SEC)
 		{
-			tmp_usec -= USEC_IN_SEC;
+			tmp_nsec -= NSEC_IN_SEC;
 			tmp.tv_sec++;
 		}
 
@@ -299,7 +299,7 @@ int eaf_time_addclock_ext(_Out_ eaf_clock_time_t* dst,
 		{
 			goto fin;
 		}
-		tmp.tv_usec += tmp_usec;
+		tmp.tv_nsec += tmp_nsec;
 	}
 
 	/* Fix microseconds */
@@ -307,10 +307,10 @@ int eaf_time_addclock_ext(_Out_ eaf_clock_time_t* dst,
 		int step_overflow;
 
 		uint64_t tmp_sec = tmp.tv_sec;
-		while (tmp.tv_usec >= USEC_IN_SEC)
+		while (tmp.tv_nsec >= NSEC_IN_SEC)
 		{
 			tmp.tv_sec++;
-			tmp.tv_usec -= USEC_IN_SEC;
+			tmp.tv_nsec -= NSEC_IN_SEC;
 		}
 
 		step_overflow = tmp.tv_sec < tmp_sec;
@@ -335,6 +335,6 @@ int eaf_time_addclock_msec(_Inout_ eaf_clock_time_t* dst, _In_ uint64_t msec)
 		msec -= MSEC_IN_SEC;
 		tmp.tv_sec++;
 	}
-	tmp.tv_usec = (uint32_t)(msec * 1000);
+	tmp.tv_nsec = (uint32_t)(msec * 1000 * 1000);
 	return eaf_time_addclock(dst, &tmp);
 }

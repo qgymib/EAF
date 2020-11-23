@@ -48,7 +48,7 @@ TEST_F(powerpack_time, clocktime_diff)
 	ASSERT_LT_D32(eaf_time_diffclock(&t1, &t2, &dif), 0);
 	ASSERT_GT_D32(eaf_time_diffclock(&t2, &t1, &dif), 0);
 
-	ASSERT_GT_U64(dif.tv_sec * 1000 * 1000 + dif.tv_usec, 0);
+	ASSERT_GT_U64(dif.tv_sec * 1000 * 1000 + dif.tv_nsec, 0);
 }
 
 TEST_F(powerpack_time, clocktime_add)
@@ -58,5 +58,5 @@ TEST_F(powerpack_time, clocktime_add)
 
 	ASSERT_EQ_D32(eaf_time_addclock(&t1, &t2), 0);
 	ASSERT_EQ_U64(t1.tv_sec, 2);
-	ASSERT_EQ_U32(t1.tv_usec, 0);
+	ASSERT_EQ_U32(t1.tv_nsec, 0);
 }

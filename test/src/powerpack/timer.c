@@ -69,6 +69,6 @@ TEST_F(powerpack_timer, delay)
 	eaf_clock_time_t diff;
 	ASSERT_LT_D32(eaf_time_diffclock(&s_test_timer_delay_ctx.s_timer_start, &s_test_timer_delay_ctx.s_timer_stop, &diff), 0);
 
-	uint32_t msec = (uint32_t)diff.tv_sec * 1000 + diff.tv_usec / 1000;
+	uint32_t msec = (uint32_t)diff.tv_sec * 1000 + diff.tv_nsec / 1000 / 1000;
 	ASSERT_GE_D32(msec, s_test_timer_delay_ctx.s_delay_timeout * 0.8);
 }
