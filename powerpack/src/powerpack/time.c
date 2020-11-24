@@ -144,7 +144,7 @@ int eaf_time_getsystem(_Out_ eaf_calendar_time_t* tv)
 	tv->hour = tmp_tm.tm_hour;
 	tv->minute = tmp_tm.tm_min;
 	tv->second = tmp_tm.tm_sec;
-	tv->mseconds = tmp_clock.tv_usec / 1000;
+	tv->mseconds = tmp_clock.tv_nsec / 1000 / 1000;
 
 	return eaf_errno_success;
 #endif
