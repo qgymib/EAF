@@ -1,0 +1,5 @@
+<map id="eaf_map" name="eaf_map">
+<area shape="rect" id="node1" title="Map implemented as red&#45;black tree." alt="" coords="37,201,109,228"/>
+<area shape="rect" id="node2" href="$group__EAF-MapLow.html#structeaf__map__low" title="red&#45;black tree" alt="" coords="23,112,122,139"/>
+<area shape="rect" id="node3" href="$group__EAF-MapLow.html#structeaf__map__low__node" title="eaf_map_low node" alt="" coords="5,14,140,41"/>
+</map>

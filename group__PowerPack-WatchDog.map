@@ -1,0 +1,5 @@
+<map id="WatchDog" name="WatchDog">
+<area shape="rect" id="node1" href="$group__PowerPack.html" title=" " alt="" coords="5,5,95,31"/>
+<area shape="rect" id="node3" title=" " alt="" coords="143,5,225,31"/>
+<area shape="rect" id="node2" href="$group__PowerPack-WatchDog-HeartBeat.html" title=" " alt="" coords="273,5,355,31"/>
+</map>

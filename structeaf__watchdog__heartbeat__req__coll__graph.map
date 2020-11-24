@@ -1,0 +1,4 @@
+<map id="eaf_watchdog_heartbeat_req" name="eaf_watchdog_heartbeat_req">
+<area shape="rect" id="node1" title="Request for watchdog message: heartbeat." alt="" coords="5,95,195,121"/>
+<area shape="rect" id="node2" href="$group__PowerPack-Time.html#structeaf__clock__time" title="Clock time." alt="" coords="45,5,155,32"/>
+</map>
